@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.9.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.10.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -25,7 +25,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer and the **model evaluation** layer are ported; the **uncertainty** estimates, the **anomaly** scorers and the **distribution change** tests are **not ported** |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer and the **anomaly detection** layer are ported; the **uncertainty** estimates and the **distribution change** tests are **not ported** |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
@@ -100,7 +100,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
-| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer and the model evaluation layer |
+| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer and the anomaly detection layer |
 | `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
@@ -167,6 +167,23 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   the categorical score is the mean of the scores of the classes, which is the
   Brier score of the classes. The score of the upstream is estimated from a
   hundred samples of the conditional, and so is the score of the port.
+- The median absolute deviation of the `gcm` package is the median of the
+  absolute deviations divided by the third quartile of the standard normal
+  distribution, like `statsmodels.robust.mad` computes it. The divisor is
+  `0.6744897501960817`, so the deviation of the port is the one of the upstream
+  and not the plain median of the absolute deviations.
+- The bandwidth of the kernel density estimator of the `gcm` package is the one
+  of Silverman, which is the standard deviation of the samples times the fifth
+  root of four thirds of the inverse of their number, like the upstream. The
+  density is the sum of the Gaussian kernels of the samples divided by the
+  number of the samples and by the bandwidth, which is the density of the
+  `KernelDensity` of scikit-learn.
+- The anomaly scorers of the `gcm` package count the samples of the distribution
+  that are equal to a sample, that are greater than it and that are smaller than
+  it with a binary search over the sorted samples of the distribution, so the
+  counts are the counts of the upstream and the scores are the same numbers. The
+  samples that are not a number are equal to each other and are neither greater
+  nor smaller than any other sample, like the comparisons of numpy count them.
 
 ## Deliberate differences from upstream
 
@@ -349,6 +366,25 @@ following ways:
 - `gcm` writes the numbers of the report of the falsification with the text of
   the number, which is the shortest text that reads the number back. Upstream
   writes them with two decimals and with one decimal.
+- `gcm` estimates the density of the inverse density scorer with the kernel
+  density estimator of the upstream. Upstream uses the Bayesian Gaussian mixture
+  of the upstream by default, which needs the variational inference of
+  `sklearn.mixture.BayesianGaussianMixture` and is **not ported**; the scorer of
+  the port takes the kernel based estimator.
+- `gcm` builds its anomaly scorers with a constructor per scorer instead of a
+  class per scorer, because MoonBit has no inheritance. The information
+  theoretic scorer of the port takes the scorer it wraps, like the upstream
+  does.
+- `gcm` counts the samples of the distribution that are equal to a sample, that
+  are greater than it and that are smaller than it with a binary search over the
+  sorted samples of the distribution, where the upstream counts them with a
+  vectorised comparison over the whole distribution. The counts and the scores
+  are the same numbers.
+- `gcm` draws the samples of the anomaly scores of a causal model from the
+  generator it is given. Upstream draws them from the global generator of
+  numpy, so the scores of the port and of the upstream differ on the same rows;
+  they agree on the node with the largest score, which is what the upstream test
+  asserts.
 
 ## Development
 

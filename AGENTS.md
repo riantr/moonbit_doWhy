@@ -209,6 +209,27 @@ statsmodels / scikit-learn conventions are deliberate:
   standard deviation, like the `crps` of the upstream, and the categorical
   score is the mean of the scores of the classes, which is the Brier score of
   the classes.
+- The median absolute deviation of the `gcm` package is the median of the
+  absolute deviations divided by the third quartile of the standard normal
+  distribution, like `statsmodels.robust.mad` computes it. The divisor is
+  `0.6744897501960817`, so the deviation of the port is the one of the upstream
+  and not the plain median of the absolute deviations.
+- The bandwidth of the kernel density estimator of the `gcm` package is the one
+  of Silverman, which is the standard deviation of the samples times the fifth
+  root of four thirds of the inverse of their number, like the upstream. The
+  density is the sum of the Gaussian kernels of the samples divided by the
+  number of the samples and by the bandwidth, which is the density of the
+  `KernelDensity` of scikit-learn.
+- The anomaly scorers of the `gcm` package count the samples of the distribution
+  that are equal to a sample, that are greater than it and that are smaller than
+  it with a binary search over the sorted samples of the distribution, so the
+  counts are the counts of the upstream and the scores are the same numbers. The
+  samples that are not a number are equal to each other and are neither greater
+  nor smaller than any other sample, like the comparisons of numpy count them.
+  A **median** of the samples that holds a value that is not a number is a value
+  that is not a number, like the median of numpy, and the port has to check for
+  it itself, because the sort of the `utils` package does not order the values
+  that are not a number.
 
 ## Package layout
 
@@ -222,7 +243,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer and the model evaluation layer |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer and the anomaly detection layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -306,3 +327,17 @@ README makes, so they are tracked in the repository:
   fixtures of the script are the same numbers. The global generator of numpy is
   seeded before every fixture, because the noise the upstream draws and the
   folds of its cross validation come from it.
+- `gcm_anomaly_reference.py` computes the numbers of the anomaly detection layer
+  -- the scores of the six scorers on the toy fixtures, the score of the inverse
+  density scorer with the kernel based estimator, the node with the largest
+  anomaly score of every scorer of the causal model and the conditional anomaly
+  score of the upstream -- with the upstream `dowhy.gcm.anomaly_scorers` and
+  `dowhy.gcm.anomaly` code, which is where the expectations of the tests of the
+  layer come from. The upstream module `dowhy.gcm.anomaly` imports the names it
+  needs from the package `dowhy.gcm`, which the loader stubs out, so the stub
+  has to carry them **before** the module is read. The assignment of the
+  mechanisms of the upstream runs a process pool, whose workers cannot import
+  the stubbed package, so the number of the jobs has to be set to one. The
+  fixtures of the layer are drawn from the generator of the `utils` package of
+  the port, and the script reproduces that generator in Python, so that the
+  fixtures of the port and the fixtures of the script are the same numbers.

@@ -433,3 +433,47 @@ graph, identification, estimation, refutation.
   than one parent needs `kernel_independence_test`.
 
 [0.0.9]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.9
+
+## [0.0.10] - 2026-11-01
+
+### Added
+
+- `gcm` -- the anomaly detection layer of `dowhy.gcm`, the port of
+  `dowhy.gcm.anomaly_scorers` and of the detection part of
+  `dowhy.gcm.anomaly`:
+  - `AnomalyScorer`, the scorers of the layer, with a constructor per scorer:
+    the median CDF quantile scorer, the rescaled median CDF quantile scorer, the
+    rank based scorer, the information theoretic scorer, the mean deviation
+    scorer, the median deviation scorer and the inverse density scorer;
+  - `anomaly_scores`, the anomaly score of every node of a causal model, and
+    `conditional_anomaly_scores`, the anomaly score of a sample in the
+    conditional distribution of its target;
+  - `AnomalyScorerFactory`, the factory of the scorers, which is the argument
+    the upstream takes.
+- `gcm` -- `DensityEstimator`, the kernel based density estimator of
+  `dowhy.gcm.density_estimators`, with the bandwidth of Silverman.
+- `_verify/gcm_anomaly_reference.py` -- the upstream reference of the layer. It
+  computes the numbers of the upstream scorers and of the upstream anomaly
+  scores with the upstream code itself, so the expectations of the tests of the
+  port are the numbers of the upstream rather than a reading of it.
+
+### Notes
+
+- The scores of the scorers on the toy fixtures of the upstream test file
+  `tests/gcm/test_anomaly_scorers.py` are deterministic, and the tests of the
+  port compare them with a tight tolerance. The anomaly scores of a causal model
+  depend on the samples the mechanisms draw, which the upstream draws from the
+  global generator of numpy and the port draws from the generator it is given,
+  so the tests of these numbers assert the node with the largest score, which is
+  what the upstream test file `tests/gcm/test_anomaly.py` asserts.
+- The inverse density scorer of the port estimates the density with the kernel
+  based estimator of the upstream. The upstream uses the Bayesian Gaussian
+  mixture of the upstream by default, which needs the variational inference of
+  `sklearn.mixture.BayesianGaussianMixture` and is **not ported**.
+- The port counts the samples of the distribution that are equal to a sample,
+  that are greater than it and that are smaller than it with a binary search
+  over the sorted samples of the distribution, where the upstream counts them
+  with a vectorised comparison over the whole distribution. The counts and the
+  scores are the same numbers.
+
+[0.0.10]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.10
