@@ -39,7 +39,10 @@ jobs:
       - name: Resolve release version
         id: release
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+          # A manual dispatch may name the tag explicitly, and it may also
+          # rely on the ref it was started from. An empty input falls back to
+          # the ref, exactly like the checkout step does.
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ -n "${{ inputs.tag }}" ]; then
             tag="${{ inputs.tag }}"
           else
             tag="$GITHUB_REF_NAME"
@@ -64,7 +67,11 @@ jobs:
 
       - name: Install MoonBit
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s -- "$MOON_VERSION"
+          # The MoonBit CDN only serves the "latest" binaries: every
+          # versioned path answers 403, so the toolchain cannot be pinned
+          # from here. The version check below is therefore a policy about
+          # what the runner found, not a download.
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: MoonBit version
@@ -72,9 +79,14 @@ jobs:
           moon version --all
           moonrun --version
           installed="$(moon version --all | head -1 | awk '{print $2}')"
-          if [ "$installed" != "$MOON_VERSION" ]; then
-            echo "Expected MoonBit $MOON_VERSION, got $installed" >&2
+          echo "MoonBit $installed (the gate was verified against $MOON_VERSION)"
+          oldest="$(printf '%s\n%s\n' "$MOON_VERSION" "$installed" | sort -V | head -1)"
+          if [ "$oldest" != "$MOON_VERSION" ]; then
+            echo "::error::MoonBit $installed is OLDER than the verified $MOON_VERSION; the source may need a newer toolchain."
             exit 1
+          fi
+          if [ "$installed" != "$MOON_VERSION" ]; then
+            echo "::warning::MoonBit $installed is NEWER than the verified $MOON_VERSION. Every gate below has to pass as it is; if the formatter changed, `moon fmt --check` is where that shows up."
           fi
 
       # Refresh the registry metadata. This package has no external
