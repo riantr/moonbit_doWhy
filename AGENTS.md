@@ -38,6 +38,21 @@ These are properties of the MoonBit toolchain this repository builds with
 - **`test` is a reserved word**, so it cannot be used as a method name either:
   the independence test of the `cm` package exposes `FisherZ::check(..)`, not
   `FisherZ::test(..)`.
+- **`method` and `alias` are reserved words too.** The compiler only warns
+  about them, but a warning is a failure in this repository, so a field or a
+  binding may not be called `method`.
+- **A top level definition without `pub` is visible in the whole package**, so
+  two files of one package may not define the same name. The helpers of the
+  `gcm` package therefore carry a prefix (`falsify_parents_of`) when two files
+  need the same one.
+- **A public enumeration still warns about a variant that is never
+  constructed**, so an enumeration holds only the variants that are built. The
+  `FalsifyConst` of the `gcm` package therefore holds the four validation
+  methods and not the field names of the upstream dictionaries.
+- **A struct with a `mut` field has reference semantics**: a copy of it shares
+  its state with the original, and a function that takes it mutates the state
+  of the caller. The generator of the `utils` package relies on it, so a
+  generator may be handed to several functions and they all draw from it.
 - **A source file must not be named `*_test.mbt`.** That pattern is the
   toolchain's test-file pattern, so the file is excluded from the package
   build and the types it defines stay unresolved. A package that implements
