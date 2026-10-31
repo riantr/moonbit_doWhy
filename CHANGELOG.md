@@ -171,3 +171,47 @@ graph, identification, estimation, refutation.
   itself rather than from a reading of it.
 
 [0.0.4]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.4
+
+## [0.0.5] - 2026-11-01
+
+### Added
+
+- `gcm` -- the structural causal model layer of `dowhy.gcm`:
+  - the prediction models of `dowhy.gcm.ml`: the linear regression, the
+    logistic regression of two classes and the invertible functions of the
+    post non-linear models;
+  - the causal mechanisms of `dowhy.gcm.causal_mechanisms`: the additive noise
+    model, the discrete additive noise model, the post non-linear model and the
+    categorical model of a classifier;
+  - the stochastic models of `dowhy.gcm.stochastic_models`: the empirical
+    distribution, the empirical categorical distribution and the normal, the
+    Laplace and the uniform distribution;
+  - the probabilistic causal model of `dowhy.gcm.causal_models`, with the
+    validation of the assignment of the mechanisms and of the structure of the
+    graph;
+  - the fitting and the sampling of `dowhy.gcm.fitting_sampling`;
+  - the automatic assignment of the mechanisms of `dowhy.gcm.auto`;
+  - the one-hot encoding of the discrete parents of a node, which is the
+    encoding of `dowhy.gcm.util.general`.
+- `_verify/gcm_scm_reference.py` -- the upstream reference of the layer. It
+  computes the numbers of the upstream tests of `tests/gcm/test_fcms.py` with
+  the upstream code itself, so the expectations of the tests of the port are
+  the numbers of the upstream rather than a reading of it.
+
+### Fixed
+
+- The prediction model of the `gcm` package now centres the design before the
+  least squares fit, like `sklearn.linear_model.LinearRegression` does. The
+  one-hot encoding of a categorical parent and the intercept are collinear, so
+  the two conventions spread the same fit over the columns differently: the
+  uncentred one gave the coefficients `[2, -7.5, 7.5, 2.5]` and the intercept
+  `2.5` for the categorical fixture of the upstream, where the upstream gives
+  `[2, -5 - 10/3, 10 - 10/3, 5 - 10/3]` and the intercept `10/3`. Both
+  describe the same function, but only the centred one is the number of the
+  upstream, so the port uses it.
+- A distribution whose parameters were given keeps them when it is fitted,
+  like the `ScipyDistribution` of the upstream does. A distribution whose
+  parameters are to be estimated says so with
+  `StochasticModel::with_estimated_parameters`.
+
+[0.0.5]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.5

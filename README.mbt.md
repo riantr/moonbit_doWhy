@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.4.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.5.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -25,7 +25,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values and the independence tests are ported; the causal mechanisms, the probabilistic causal models and the fitting of a causal model are **not ported**, they need the prediction model layer of `dowhy.gcm.ml` |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the probabilistic causal models, the fitting of a causal model and the automatic assignment of the mechanisms are ported; the **model evaluation**, the **uncertainty** estimates, the **what-if** queries, the **anomaly** scorers and the **distribution change** tests are **not ported** |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
@@ -100,7 +100,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
-| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values and the independence tests |
+| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms and the fitting of a causal model |
 | `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
@@ -132,6 +132,13 @@ statsmodels and scikit-learn are deliberate rather than accidental:
 - The one-hot encoder drops the first category of every column, like
   `pandas.get_dummies` and like the `Encoders` helper of upstream, and it
   learns its categories in lexicographic order, like `numpy.unique`.
+- The prediction model of the `gcm` package fits the way
+  `sklearn.linear_model.LinearRegression` does: it centres the features and the
+  target before the least squares fit and computes the intercept from the
+  offsets. The centring matters, because the one-hot encoding of a categorical
+  parent and the intercept are collinear and the two conventions spread the
+  same fit over the columns differently. The least squares fit of the `utils`
+  package has no intercept at all, so the two are not interchangeable.
 
 ## Deliberate differences from upstream
 
@@ -194,6 +201,31 @@ following ways:
   estimation function, instead of seeding the global generator of numpy
   before the call, and its F-test adds the intercept column itself, because
   the least squares fit of the `utils` package has none.
+- `gcm` has **one prediction model per kind**: the linear regression and the
+  logistic regression. Upstream wraps the whole zoo of the scikit-learn
+  estimators and picks one of them by cross validation, so the mechanism that
+  is fitted can be a random forest or a support vector machine; the port fits
+  the model the kind of the target asks for.
+- `gcm` draws the randomness of a causal model from an explicit generator
+  instead of the global generator of numpy, so the samples of a model are
+  reproducible.
+- `gcm` has one causal model type. The upstream distinguishes the
+  probabilistic causal model from the structural one, but every mechanism of
+  the port is a functional causal model, so the two are the same here.
+- `gcm` encodes the discrete parents of a node with the categories the
+  encoder was fitted on and encodes a category it has not seen with zeros,
+  like the `OneHotEncoder(handle_unknown="ignore")` of upstream; the encoder
+  of `dowhy.utils.encoding` drops the first category instead, because that is
+  what the upstream helper of the estimators does.
+- `gcm` does not select the distribution of a root node automatically. The
+  upstream compares every continuous family of scipy against the data and
+  keeps the one with the smallest divergence; the port uses the distribution
+  it was given.
+- `gcm` has three parametric noise distributions -- the normal, the Laplace
+  and the uniform -- and the empirical one. Upstream has a parametric
+  distribution of every family of scipy and a Bayesian Gaussian mixture, which
+  the port does not have, because the mixture needs the variational inference
+  of `sklearn.mixture.BayesianGaussianMixture`.
 
 ## Development
 

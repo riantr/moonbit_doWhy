@@ -51,7 +51,17 @@ These are properties of the MoonBit toolchain this repository builds with
   functions take as an argument.
 - **The `for` loops are `for i in 0..<n { }` and `for i = 0; i < n; i = i + 1
   { }`.** The C style does not accept `_` as the variable name, and the
-  inclusive range is `0..<=n`.
+  inclusive range is `0..<=n`. `for i = 0..<n { }` is **not** the range loop:
+  the `=` makes it a C style loop with no update, and the compiler reports
+  `unused_loop_variable`.
+- **There is no record update syntax.** `{ self, field: value }` does not
+  compile; every field of a record literal has to be written out. The
+  `ProbabilisticCausalModel` of the `gcm` package is the reason this is
+  written down: a record that is built from another one has to spell out
+  every field.
+- **A struct field that holds a container does not need `mut`.** `Map::set`
+  mutates the map in place, so `mut map : Map[String, Int]` warns with
+  `unused_mut`. The `mut` is only for a field whose *value* is rebound.
 - **`moon check` does not see the usage that comes from `*_test.mbt` files.**
   A package whose only sources are test files reports `unused_package` for
   every import. A package needs at least one real source file, or its
@@ -120,7 +130,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values and the independence tests |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms and the fitting of a causal model |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -148,3 +158,7 @@ README makes, so they are tracked in the repository:
 - `identifier_reference.py` computes the upstream identification results with
   the upstream Python code, which is where the expected adjustment sets of
   `src/identifiers/test_graphs.mbt` come from.
+- `gcm_scm_reference.py` computes the numbers of the causal mechanisms, of the
+  fitting of a causal model and of the sampling from it with the upstream
+  `dowhy.gcm` code, which is where the expectations of the tests of the
+  structural causal model layer come from.

@@ -1,3 +1,6 @@
 import {
+  "moonbitlang/core/math",
+  "riantr/moonbit_dowhy/api",
+  "riantr/moonbit_dowhy/graph",
   "riantr/moonbit_dowhy/utils",
 }
