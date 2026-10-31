@@ -5,6 +5,7 @@
 
 *.mbt    text eol=lf
 *.mod    text eol=lf
+moon.pkg text eol=lf
 *.md     text eol=lf
 *.py     text eol=lf
 *.yml    text eol=lf

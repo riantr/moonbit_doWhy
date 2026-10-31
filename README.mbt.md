@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.2.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.3.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -16,9 +16,13 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | --- | --- | --- |
 | Causal graph, d-separation | `dowhy.graph`, `dowhy.causal_graph` | ported |
 | Identification | `dowhy.causal_identifier` | ported (backdoor, frontdoor, general adjustment, IV, mediation) |
-| Estimation | `dowhy.causal_estimators` | ported (linear regression, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage, regression discontinuity) |
+| Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage, regression discontinuity) |
 | Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome, random common cause, unobserved common cause) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset` and the fixtures the upstream tests use) |
+| Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
+| Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
+| Intervention sampling | `dowhy.do_sampler`, `dowhy.do_samplers` | ported (the weighting, multivariate weighting and kernel density samplers) -- the MCMC sampler is **not ported**, it needs an inference engine upstream takes from PyMC3 |
+| Time series | `dowhy.timeseries` | ported (the temporal graph and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
 | Graphical causal models | `dowhy.gcm` | **not ported** -- upstream depends on AutoGluon, CatBoost and symbolic-equation fitting |
@@ -84,14 +88,17 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 
 | Package | Import path | Ports |
 | --- | --- | --- |
-| `api` | `riantr/moonbit_dowhy/api` | the subset of `pandas.DataFrame` the estimators use |
-| `utils` | `riantr/moonbit_dowhy/utils` | matrices, least squares, distributions, descriptive statistics, a deterministic generator |
+| `api` | `riantr/moonbit_dowhy/api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder |
+| `utils` | `riantr/moonbit_dowhy/utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, a deterministic generator |
 | `graph` | `riantr/moonbit_dowhy/graph` | `dowhy.graph`, `dowhy.causal_graph` |
 | `identifiers` | `riantr/moonbit_dowhy/identifiers` | `dowhy.causal_identifier` |
 | `model` | `riantr/moonbit_dowhy/model` | `dowhy.causal_model`, `dowhy.causal_estimator` (the estimate objects) |
 | `estimators` | `riantr/moonbit_dowhy/estimators` | `dowhy.causal_estimators` |
 | `refuters` | `riantr/moonbit_dowhy/refuters` | `dowhy.causal_refuters` |
 | `datasets` | `riantr/moonbit_dowhy/datasets` | `dowhy.datasets` and the deterministic test fixtures |
+| `data_transformers` | `riantr/moonbit_dowhy/data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
+| `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
+| `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
 | `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
@@ -116,11 +123,19 @@ statsmodels and scikit-learn are deliberate rather than accidental:
 - The logistic regression minimises `sum_i log_loss(y_i, p_i) + 1/(2C) ||w||^2`,
   the convention of `sklearn.linear_model.LogisticRegression` with its default
   `penalty="l2"` and `C=1.0`.
+- The generalised linear model is fitted with iteratively reweighted least
+  squares and **without** a penalty, the convention of `statsmodels.api.GLM`;
+  the covariance of its coefficients is the pseudo inverse of the weighted
+  Gram matrix, and the dispersion of the binomial and the poisson family is
+  fixed at one.
+- The one-hot encoder drops the first category of every column, like
+  `pandas.get_dummies` and like the `Encoders` helper of upstream, and it
+  learns its categories in lexicographic order, like `numpy.unique`.
 
 ## Deliberate differences from upstream
 
-Three behaviours differ on purpose, and each one is a case where the upstream
-code is order-dependent rather than wrong in an absolute sense:
+Five behaviours of the core differ on purpose, and each one is a case where
+the upstream code is order-dependent rather than wrong in an absolute sense:
 
 - The backdoor identifier enumerates its candidate adjustment variables in
   sorted order. Upstream iterates over a Python `set`, so its order depends
@@ -131,6 +146,34 @@ code is order-dependent rather than wrong in an absolute sense:
 - The efficient backdoor criterion (the Smucler-Sapienza-Rotnitzky min-cut)
   is not implemented. It returns an empty adjustment set together with a
   message that says so, instead of returning a wrong one.
+- The propensity score estimators compute the scores of the data they are
+  asked about with the model and the encoder that were fitted on the training
+  data, so the scores follow the rows of that data. Upstream assigns the
+  scores of the training data to the new rows by position, which mixes two
+  different rows up. The scores of the training data itself are the same
+  either way.
+- The generalised linear model estimator reports the analytic confidence
+  interval and standard error of the effect, computed with the delta method
+  from the covariance of the coefficients. Upstream leaves the interval to
+  the bootstrap, because a link function other than the identity makes the
+  effect a function of the coefficients rather than one of them.
+
+The two newer packages differ from upstream in the following ways:
+
+- `do_samplers` replaces the `df.causal.do(...)` accessor of the pandas
+  extension with a plain function, because the port has no accessor mechanism.
+  The continuous treatment and the kernel density sampler use a Gaussian
+  conditional density around the least squares fit where upstream uses
+  `KDEMultivariateConditional`, and the categorical treatment uses the one
+  versus rest logistic regression of upstream. The **MCMC sampler is not
+  ported**: upstream samples a Bayesian network with PyMC3 and NUTS, and a
+  hand written sampler would quietly change the numbers, so the method
+  reports that it is unavailable instead of returning a wrong answer.
+- `timeseries` keeps the link types of the upstream array representation as
+  their label strings (`"-->"`, `"<--"`, `"o-o"`, `"x-x"`), because the
+  toolchain cannot construct the variants of an enum of another package. The
+  CSV and DOT readers are not ported, because the library has no file IO;
+  `create_graph_from_edges` is the data form they feed.
 
 ## Development
 

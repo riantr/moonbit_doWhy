@@ -103,8 +103,8 @@ statsmodels / scikit-learn conventions are deliberate:
 
 | Package | Ports |
 | --- | --- |
-| `api` | the subset of `pandas.DataFrame` the estimators use |
-| `utils` | matrices, least squares, distributions, descriptive statistics |
+| `api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder |
+| `utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics |
 | `graph` | `dowhy.graph`, `dowhy.causal_graph` |
 | `identifiers` | `dowhy.causal_identifier` |
 | `model` | `dowhy.causal_model`, `dowhy.causal_estimator` (estimate objects) |
@@ -112,6 +112,9 @@ statsmodels / scikit-learn conventions are deliberate:
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
+| `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
+| `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
+| `timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `tests` | the cross-package integration tests |
 | `examples` | the runnable quick start |
 

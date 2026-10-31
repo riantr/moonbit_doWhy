@@ -21,6 +21,8 @@ pub enum EstimatorKind {
   TwoStageRegression
   /// Regression discontinuity.
   RegressionDiscontinuity
+  /// A generalised linear model, with the family of the estimator.
+  GeneralizedLinearModel
 }
 
 ///|
@@ -92,10 +94,24 @@ pub struct CausalEstimator {
   mut rd_local_data : @api.DataFrame?
   /// The fitted model of the regression based estimators.
   mut model : @utils.OlsFit
+  /// The fitted model of the generalised linear model estimator.
+  mut glm_model : @utils.GlmFit
+  /// The family of the generalised linear model estimator.
+  mut glm_family : @utils.GlmFamily
+  /// The encoders of the discrete columns, one per set of variables.
+  ///
+  /// The encoders are fitted when the estimator is fitted, so that the
+  /// encoding of the data does not depend on the order the rows arrive in.
+  encoders : @api.Encoders
   /// The columns of the design matrix, in order.
   mut features : Array[String]
   /// The fitted propensity scores.
   mut propensities : Array[Double]
+  /// The coefficients of the fitted propensity score model.
+  ///
+  /// The scores of a data frame are computed from them, so that the scores
+  /// follow the rows of the data they are used with.
+  mut propensity_beta : Array[Double]
   /// The adjustment variables the estimator uses.
   mut adjustment_names : Array[String]
   /// The effect modifiers the estimator uses.
@@ -240,6 +256,24 @@ pub fn CausalEstimator::regression_discontinuity(
 }
 
 ///|
+/// A generalised linear model estimator for the given estimand.
+///
+/// The family decides the link of the model: a binomial family fits a logistic
+/// regression, a poisson family fits a count model and the gaussian family
+/// fits an ordinary least squares model.
+pub fn CausalEstimator::generalized_linear_model(
+  estimand : @identifiers.IdentifiedEstimand,
+  family : @utils.GlmFamily,
+) -> CausalEstimator {
+  let estimator = CausalEstimator::new(
+    estimand,
+    EstimatorKind::GeneralizedLinearModel,
+  )
+  estimator.glm_family = family
+  estimator
+}
+
+///|
 fn CausalEstimator::new(
   estimand : @identifiers.IdentifiedEstimand,
   kind : EstimatorKind,
@@ -258,8 +292,12 @@ fn CausalEstimator::new(
     rd_bandwidth: 0.0,
     rd_local_data: None,
     model: @utils.OlsFit::empty(),
+    glm_model: @utils.GlmFit::empty(),
+    glm_family: @utils.GlmFamily::gaussian(),
+    encoders: @api.Encoders::new(true),
     features: [],
     propensities: [],
+    propensity_beta: [],
     adjustment_names: [],
     effect_modifier_names: [],
     treatment_name: "",
@@ -392,6 +430,7 @@ pub fn CausalEstimator::with_estimand(
   copy.rd_variable_name = self.rd_variable_name
   copy.rd_threshold_value = self.rd_threshold_value
   copy.rd_bandwidth = self.rd_bandwidth
+  copy.glm_family = self.glm_family
   copy.confidence_level = self.confidence_level
   copy.num_simulations = self.num_simulations
   copy.sample_size_fraction = self.sample_size_fraction

@@ -107,6 +107,31 @@ pub fn DataFrame::has_column(self : DataFrame, name : String) -> Bool {
 }
 
 ///|
+/// The names of the numeric columns of the frame, in order.
+///
+/// The estimators use it to pick the columns of a design matrix out of an
+/// encoded frame, whose discrete columns became numeric ones.
+pub fn DataFrame::numeric_column_names(self : DataFrame) -> Array[String] {
+  let names : Array[String] = []
+  for name in self.order {
+    match self.columns.get(name) {
+      Some(Numeric(_)) => names.push(name)
+      _ => ()
+    }
+  }
+  names
+}
+
+///|
+/// Whether the given column holds discrete values.
+pub fn DataFrame::is_discrete(self : DataFrame, name : String) -> Bool {
+  match self.columns.get(name) {
+    Some(Discrete(_)) => true
+    _ => false
+  }
+}
+
+///|
 /// The raw payload of a column.
 pub fn DataFrame::column(self : DataFrame, name : String) -> Column? {
   self.columns.get(name)

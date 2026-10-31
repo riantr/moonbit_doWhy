@@ -133,6 +133,26 @@ fn CausalModel::build_estimator(
       @estimators.CausalEstimator::instrumental_variable(estimand, "")
     "frontdoor.two_stage_regression" =>
       @estimators.CausalEstimator::two_stage_regression(estimand)
+    "backdoor.generalized_linear_model" =>
+      @estimators.CausalEstimator::generalized_linear_model(
+        estimand,
+        @utils.GlmFamily::gaussian(),
+      )
+    "backdoor.generalized_linear_model.gaussian" =>
+      @estimators.CausalEstimator::generalized_linear_model(
+        estimand,
+        @utils.GlmFamily::gaussian(),
+      )
+    "backdoor.generalized_linear_model.binomial" =>
+      @estimators.CausalEstimator::generalized_linear_model(
+        estimand,
+        @utils.GlmFamily::binomial(),
+      )
+    "backdoor.generalized_linear_model.poisson" =>
+      @estimators.CausalEstimator::generalized_linear_model(
+        estimand,
+        @utils.GlmFamily::poisson(),
+      )
     _ =>
       abort(
         "The method " + method_name + " is not supported by this port of DoWhy",
@@ -146,6 +166,10 @@ fn CausalModel::build_estimator(
 /// `method_name` names the estimator, e.g. `"backdoor.linear_regression"`.
 /// The first segment of the name selects the identifier, exactly like
 /// `dowhy` does.
+///
+/// When the effect has not been identified yet, it is identified with the
+/// identifier of the method name, so that a model that is used for a single
+/// estimate does not need an explicit `identify_effect` call.
 pub fn CausalModel::estimate_effect(
   self : CausalModel,
   method_name : String,
@@ -156,6 +180,9 @@ pub fn CausalModel::estimate_effect(
 ) -> @model.CausalEstimate {
   // The identifier of the estimator is the first segment of its name.
   let identifier = first_segment(method_name)
+  if !self.estimand.has_estimand(identifier) {
+    let _ = self.identify_effect(identifier)
+  }
   self.estimand.set_identifier_method(identifier)
   let estimator = self.build_estimator(method_name)
   estimator.fit(self.data, effect_modifier_names)

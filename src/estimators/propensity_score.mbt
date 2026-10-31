@@ -2,12 +2,21 @@
 
 ///|
 /// The propensity scores of the data, clipped to the configured bounds.
+///
+/// The scores are computed with the model and the encoder that were fitted
+/// when the estimator was fitted, which is what the `predict_proba` method of
+/// the upstream propensity score estimator does. The scores therefore follow
+/// the rows of the data they are computed for, and the estimate does not
+/// change when the rows of the data are permuted.
 fn CausalEstimator::propensity_scores_of(
   self : CausalEstimator,
   data : @api.DataFrame,
 ) -> Array[Double] {
   let scores = if data.has_column("propensity_score") {
     data.numeric("propensity_score")
+  } else if self.propensity_beta.length() > 0 {
+    let design = self.build_common_cause_design(data)
+    @utils.logistic_predict(self.propensity_beta, design)
   } else {
     self.propensities.copy()
   }

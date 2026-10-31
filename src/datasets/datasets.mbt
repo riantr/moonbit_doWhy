@@ -233,6 +233,44 @@ pub fn LinearConfig::confounded() -> LinearConfig {
 }
 
 ///|
+/// A binary outcome: the confounded scenario whose outcome is a binary
+/// variable, the scenario the generalised linear model estimator of the
+/// upstream test suite uses.
+pub fn LinearConfig::binary_outcome() -> LinearConfig {
+  {
+    beta: 2.0,
+    num_common_causes: 1,
+    num_instruments: 0,
+    num_effect_modifiers: 0,
+    num_frontdoor_variables: 0,
+    num_treatments: 1,
+    num_discrete_common_causes: 0,
+    num_discrete_effect_modifiers: 0,
+    treatment_is_binary: true,
+    treatment_is_category: false,
+    outcome_is_binary: true,
+  }
+}
+
+///|
+/// No common cause at all and a binary outcome.
+pub fn LinearConfig::no_confounding_binary_outcome() -> LinearConfig {
+  {
+    beta: 2.0,
+    num_common_causes: 0,
+    num_instruments: 0,
+    num_effect_modifiers: 0,
+    num_frontdoor_variables: 0,
+    num_treatments: 1,
+    num_discrete_common_causes: 0,
+    num_discrete_effect_modifiers: 0,
+    treatment_is_binary: true,
+    treatment_is_category: false,
+    outcome_is_binary: true,
+  }
+}
+
+///|
 /// Two common causes: the confounded scenario with a wider confounder set.
 pub fn LinearConfig::two_common_causes() -> LinearConfig {
   {

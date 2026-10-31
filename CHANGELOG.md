@@ -70,3 +70,43 @@ graph, identification, estimation, refutation.
   discovery package.
 
 [0.0.2]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.2
+
+## [0.0.3] - 2026-10-31
+
+### Added
+
+- `data_transformers` -- `dowhy.data_transformers`: the PCA reducer, with the
+  components, the explained variance ratios and the standardised variant. The
+  numbers are the ones `sklearn.decomposition.PCA` produces on the same rows.
+- `do_samplers` -- `dowhy.do_sampler` and `dowhy.do_samplers`: the weighting,
+  the multivariate weighting and the kernel density sampler, the state
+  propensity score and the variable types. The MCMC sampler is not ported; it
+  needs the PyMC3 sampler of upstream, and the method says so instead of
+  returning a wrong answer.
+- `timeseries` -- `dowhy.timeseries`: the temporal graph with its causal time
+  lags, the graph builders and the temporal shift.
+- `api` -- the one-hot encoder of `dowhy.utils.encoding` and the encoder
+  registry that keeps the encoding of a column stable between the fit and the
+  estimate.
+- `utils` -- generalised linear models with the gaussian, the binomial and the
+  poisson family, fitted with iteratively reweighted least squares and without
+  a penalty, the convention of `statsmodels.api.GLM`.
+- `estimators` -- the generalised linear model estimator, the do-operator
+  `CausalEstimator::intervene` and the one-hot encoding of the discrete
+  columns of the treatment, the adjustment variables and the effect modifiers.
+- `datasets` -- two more data sets: one with a binary outcome and one with a
+  binary outcome and without a confounder.
+
+### Fixed
+
+- `CausalModel::estimate_effect` identifies the effect with the identifier of
+  the method name when it has not been identified yet. Before, a model that was
+  used for a single estimate estimated the effect with an empty adjustment
+  set, which silently dropped every confounder.
+- The propensity score estimators compute the scores of the data they are
+  asked about with the model and the encoder that were fitted on the training
+  data, so the scores follow the rows of that data. Upstream assigns the
+  scores of the training data to the new rows by position, which mixes two
+  different rows up.
+
+[0.0.3]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.3

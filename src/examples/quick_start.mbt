@@ -54,4 +54,31 @@ fn main {
     "backdoor.linear_regression", estimate, "placebo", 10, random,
   )
   println("placebo effect: " + refutation.new_effect().to_string())
+
+  // A binary outcome needs a link function, so the estimator is a
+  // generalised linear model with the binomial family.
+  let binary = @datasets.linear_dataset(
+    42,
+    2000,
+    @datasets.LinearConfig::binary_outcome(),
+  )
+  let binary_model = @moonbit_dowhy.CausalModel::new(
+    binary.frame(),
+    binary.treatments(),
+    [binary.outcome()],
+    None,
+    binary.common_causes(),
+    binary.instruments(),
+    binary.effect_modifiers(),
+    binary.frontdoor_variables(),
+  )
+  let binomial = binary_model.estimate_effect(
+    "backdoor.generalized_linear_model.binomial",
+    1.0,
+    0.0,
+    "ate",
+    [],
+  )
+  println("binomial ATE: " + binomial.estimate().to_string())
+  println("true ATE: " + binary.average_treatment_effect().to_string())
 }
