@@ -110,3 +110,64 @@ graph, identification, estimation, refutation.
   different rows up.
 
 [0.0.3]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.3
+
+## [0.0.4] - 2026-11-01
+
+### Added
+
+- `gcm` -- the portable core of `dowhy.gcm`:
+  - the configuration of the package and the general helpers: the geometric
+    median, the set difference of the rows of a matrix, the scaling of the
+    columns and the permutation of the rows;
+  - the merging of p values: the average rule of Gasparini and Wang, the
+    quantile rule of Meinshausen and the false discovery rate control of
+    Benjamini and Hochberg;
+  - the F test of a nested model, the marginal expectation of an
+    intervention and the bootstrap confidence intervals;
+  - the Kullback-Leibler divergences: the categorical one, the one of
+    probability vectors, the nearest neighbour estimator and the classifier
+    estimator;
+  - the kernel density estimator;
+  - the Shapley values, with the exact, the exact fast, the subset sampling,
+    the permutation and the early stopping approximations;
+  - the independence tests: the regression based one and the generalised
+    covariance measure.
+  The causal mechanisms, the probabilistic causal models and the fitting of a
+  causal model are **not ported**: they need the prediction model layer of
+  `dowhy.gcm.ml`, which upstream fits with AutoGluon, CatBoost and a symbolic
+  equation fitter. The `GaussianMixtureDensityEstimator` is **not ported**
+  either, because upstream uses the variational inference of
+  `sklearn.mixture.BayesianGaussianMixture`.
+- `utils` -- the chi-square and the F distribution, the regularised incomplete
+  gamma function and the Pearson, the Spearman and the Kendall rank
+  correlations, with the numbers `scipy.stats` produces.
+- `utils` -- `gammaincc`, the regularised upper incomplete gamma function, and
+  `ln`, `exp`, `nan` and `is_nan`, so that the packages that need them do not
+  have to import the `math` package themselves.
+
+### Fixed
+
+- **The error function of the `utils` package was wrong.** Its series was the
+  one of a function without the factorial of the order and without the
+  alternating signs, so `erfc(0.75)` came out as `-0.4225` instead of
+  `0.2888`, and `normal_cdf(1.0)` as `1.1352` instead of `0.8413`. The
+  generalised linear model estimator takes its confidence interval from
+  `normal_ppf`, whose value at 0.975 was `1.8101` instead of `1.95996`, so
+  **every confidence interval of that estimator was too narrow**, and the
+  p-values of the Fisher-z test of the `cm` package were too small. The error
+  function is now computed from the regularised upper incomplete gamma
+  function, which the package already had, and it agrees with SciPy to about
+  1e-15 over the whole range of the arguments.
+- The tests of the Fisher-z test and of the confidence interval of the
+  generalised linear model estimator now pin the numbers they check. They
+  asserted inequalities only, which is why the wrong error function went
+  unnoticed.
+
+### Changed
+
+- The upstream `dowhy.gcm` modules are now loadable from Python without
+  installing the package, with the helper `_verify/upstream_gcm.py`. The
+  reference numbers of the new package therefore come from the upstream code
+  itself rather than from a reading of it.
+
+[0.0.4]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.4

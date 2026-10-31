@@ -218,6 +218,21 @@ def main() -> None:
     print("DIRECTED", " ".join(f"{labels[a]}->{labels[b]}" for a, b in directed))
     print("COLLIDERS", " ".join(f"{labels[a]}-{labels[b]}-{labels[c]}" for a, b, c in colliders))
 
+    # The Fisher z test of the fixture of `src/cm/pc_test.mbt`, whose expected
+    # numbers the test pins. The critical value is the quantile of the standard
+    # normal distribution, and the p value comes from the normal distribution
+    # as well, so both of them change with the error function of the port.
+    test_rows = 500
+    test_data = fixture(test_rows, 7)
+    test_corr = correlation_matrix(test_data, labels)
+    correlation, p_value = fisher_z(test_corr, test_rows, 0, 1, [])
+    print("FISHER_Z")
+    print(f"  critical_value = {norm.ppf(1.0 - 0.05 / 2.0):.15f}")
+    print(f"  correlation = {correlation:.15f}")
+    print(f"  p_value = {p_value:.15f}")
+    _, independent_p_value = fisher_z(test_corr, test_rows, 0, 2, [])
+    print(f"  independent_p_value = {independent_p_value:.15f}")
+
 
 if __name__ == "__main__":
     main()

@@ -168,6 +168,20 @@ test "the estimator reports the confidence interval of the generalised linear mo
   assert_true(estimate.confidence_interval_upper() > estimate.value)
   assert_true(estimate.standard_error() > 0.0)
   assert_true(estimate.p_value() < 0.05)
+  // The interval is the estimate plus and minus the quantile of the standard
+  // normal distribution times the standard error, so the half width of the
+  // interval pins that quantile, and with it the error function of the `utils`
+  // package. The quantile itself is the one of SciPy.
+  let half_width = (
+      estimate.confidence_interval_upper() -
+      estimate.confidence_interval_lower()
+    ) /
+    2.0
+  let quantile = @utils.normal_ppf(0.975)
+  assert_true((quantile - 1.959963984540054).abs() < 1.0e-12)
+  assert_true(
+    (half_width - quantile * estimate.standard_error()).abs() < 1.0e-12,
+  )
 }
 
 ///|

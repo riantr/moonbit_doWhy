@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.3.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.4.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -25,11 +25,11 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **not ported** -- upstream depends on AutoGluon, CatBoost and symbolic-equation fitting |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values and the independence tests are ported; the causal mechanisms, the probabilistic causal models and the fitting of a causal model are **not ported**, they need the prediction model layer of `dowhy.gcm.ml` |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
-the numbers the upstream implementation produces. The three rows marked *not
+the numbers the upstream implementation produces. The rows marked *not
 ported* are stated plainly rather than approximated: a wrong answer is worse
 than a missing one.
 
@@ -100,6 +100,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
+| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values and the independence tests |
 | `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
@@ -158,7 +159,8 @@ the upstream code is order-dependent rather than wrong in an absolute sense:
   the bootstrap, because a link function other than the identity makes the
   effect a function of the coefficients rather than one of them.
 
-The two newer packages differ from upstream in the following ways:
+The `do_samplers`, `timeseries` and `gcm` packages differ from upstream in the
+following ways:
 
 - `do_samplers` replaces the `df.causal.do(...)` accessor of the pandas
   extension with a plain function, because the port has no accessor mechanism.
@@ -174,6 +176,24 @@ The two newer packages differ from upstream in the following ways:
   toolchain cannot construct the variants of an enum of another package. The
   CSV and DOT readers are not ported, because the library has no file IO;
   `create_graph_from_edges` is the data form they feed.
+- `gcm` carries the two settings of `dowhy.gcm.config` in a `Config` value
+  that the functions take as an argument, because MoonBit has no mutable
+  global for them to live in, and it runs nothing in parallel.
+- `gcm` detects a categorical input from the numeric shape instead of from
+  the numpy dtype, so a distinct number is a category of the categorical
+  divergence and `auto_estimate_kl_divergence` does not dispatch to it.
+  The `GaussianMixtureDensityEstimator` is **not ported**, because upstream
+  uses the variational inference of `sklearn.mixture.BayesianGaussianMixture`;
+  the kernel density estimator is ported exactly.
+- `gcm` draws the folds of the regression based independence test with its
+  own generator instead of numpy's shuffled `KFold`, so its p-value differs
+  from the upstream's on the same rows, and it regresses on the conditioning
+  variable with the ordinary least squares fit where upstream selects a model
+  automatically. Both make the same decision on the same data.
+- `gcm` draws a seed for every bootstrap resample and hands it to the
+  estimation function, instead of seeding the global generator of numpy
+  before the call, and its F-test adds the intercept column itself, because
+  the least squares fit of the `utils` package has none.
 
 ## Development
 

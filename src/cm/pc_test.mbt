@@ -54,6 +54,23 @@ test "the fisher z test separates the dependent from the independent variables" 
 }
 
 ///|
+test "the fisher z test reproduces the numbers of scipy" {
+  let frame = linear_gaussian_dag(500, 7UL)
+  let labels = fixture_labels()
+  let corr = @cm.correlation_matrix(frame, labels)
+  let cit = @cm.FisherZ::new(corr, 500, 0.05)
+  // The critical value and the p value are the ones of the standard normal
+  // distribution, which `_verify/pc_reference.py` prints. They are pinned
+  // because a wrong error function of the `utils` package would silently
+  // change every p value of this test and still let it pass.
+  assert_true((cit.critical_value() - 1.959963984540054).abs() < 1.0e-12)
+  let dependent = cit.check(0, 1, [])
+  assert_true((dependent.correlation() - 0.506582499400277).abs() < 1.0e-10)
+  let independent = cit.check(0, 2, [])
+  assert_true((independent.p_value() - 0.078482349770418).abs() < 1.0e-10)
+}
+
+///|
 test "the pc algorithm recovers the skeleton of a linear gaussian dag" {
   let frame = linear_gaussian_dag(1000, 42UL)
   let labels = fixture_labels()

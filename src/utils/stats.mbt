@@ -169,57 +169,49 @@ pub fn round_half_even(x : Double) -> Double {
 }
 
 ///|
+/// The "not a number" value, like `numpy.nan`.
+///
+/// The p-value merging of the `gcm` package drops the values that are not a
+/// number, so the value has to be reachable from there.
+pub fn nan() -> Double {
+  @double.not_a_number
+}
+
+///|
+/// Whether the value is "not a number".
+pub fn is_nan(x : Double) -> Bool {
+  x != x
+}
+
+///|
+/// The natural logarithm of a positive number.
+pub fn ln(x : Double) -> Double {
+  @math.ln(x)
+}
+
+///|
+/// The exponential of a number.
+pub fn exp(x : Double) -> Double {
+  @math.exp(x)
+}
+
+///|
 /// Complementary error function.
 ///
-/// A continued fraction / series split gives close to machine precision for
-/// the whole range of arguments.
+/// It is `1 - erf(x)`, the probability that a normal distributed variable with
+/// the mean zero and the variance one half is above `x`.
+///
+/// The port computes it from the regularised upper incomplete gamma function
+/// with the shape one half, because `erfc(x) = Q(1/2, x^2)`. The series and
+/// the continued fraction of that function are the ones of the gamma
+/// distribution, so the whole range of the arguments is covered with the
+/// precision of SciPy.
 pub fn erfc(x : Double) -> Double {
   let ax = x.abs()
-  if ax < 1.0 {
-    // Series expansion of erf.
-    let xx = x * x
-    let mut sum = 1.0
-    let mut term = 1.0
-    let mut n = 0
-    while n < 300 {
-      term = term * xx / (n * 2 + 1).to_double()
-      sum = sum + term
-      if term.abs() < 1.0e-18 * sum.abs() {
-        break
-      }
-      n = n + 1
-    }
-    let erf = x * sum * 2.0 / @math.PI.sqrt()
-    return 1.0 - erf
+  if ax == 0.0 {
+    return 1.0
   }
-  // Continued fraction for erfc(x) = exp(-x^2)/(x*sqrt(pi)) * F
-  let xx = x * x
-  let tiny = 1.0e-300
-  let mut b = xx + 1.0
-  let mut c = 1.0 / tiny
-  let mut d = 1.0 / b
-  let mut h = d
-  let mut i = 1
-  while i < 300 {
-    let an = -i.to_double() * (i.to_double() - 1.0)
-    b = b + 2.0
-    d = an * d + b
-    if d.abs() < 1.0e-300 {
-      d = 1.0e-300
-    }
-    c = b + an / c
-    if c.abs() < 1.0e-300 {
-      c = 1.0e-300
-    }
-    d = 1.0 / d
-    let del = d * c
-    h = h * del
-    if (del - 1.0).abs() < 1.0e-17 {
-      break
-    }
-    i = i + 1
-  }
-  let q = @math.exp(-xx) * h / @math.PI.sqrt()
+  let q = gammaincc(0.5, ax * ax)
   if x > 0.0 {
     q
   } else {

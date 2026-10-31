@@ -43,6 +43,15 @@ These are properties of the MoonBit toolchain this repository builds with
   build and the types it defines stay unresolved. A package that implements
   its own test type lives in `independence.mbt`, not
   `independence_test.mbt`.
+- **There is no top-level `let mut`.** A module level `let` and a `const` are
+  allowed, but a mutable global is a parse error (`unexpected token 'mut'`).
+  A setting that upstream keeps in a module global therefore has to be passed
+  explicitly here: the `gcm` package carries the `show_progress_bars` and the
+  `default_n_jobs` of `dowhy.gcm.config` in a `Config` value that the
+  functions take as an argument.
+- **The `for` loops are `for i in 0..<n { }` and `for i = 0; i < n; i = i + 1
+  { }`.** The C style does not accept `_` as the variable name, and the
+  inclusive range is `0..<=n`.
 - **`moon check` does not see the usage that comes from `*_test.mbt` files.**
   A package whose only sources are test files reports `unused_package` for
   every import. A package needs at least one real source file, or its
@@ -111,6 +120,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values and the independence tests |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |

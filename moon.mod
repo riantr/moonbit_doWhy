@@ -1,6 +1,6 @@
 name = "riantr/moonbit_dowhy"
 
-version = "0.0.3"
+version = "0.0.4"
 
 readme = "README.mbt.md"
 
@@ -20,9 +20,11 @@ keywords = [
   "refutation",
   "identifiers",
   "estimators",
+  "shapley-values",
+  "independence-test",
 ]
 
-description = "MoonBit port of DoWhy 0.14 (PyWhy). Causal graph construction and analysis, effect identification (backdoor / frontdoor / complete adjustment), estimation (linear regression, generalized linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage, regression discontinuity), refutation (bootstrap, placebo treatment, data subset, dummy outcome, unobserved common cause), intervention sampling (do samplers), temporal graphs and causal discovery (the PC algorithm with the Fisher-z test). Pure MoonBit with zero external runtime dependencies."
+description = "MoonBit port of DoWhy 0.14 (PyWhy). Causal graph construction and analysis, effect identification (backdoor / frontdoor / complete adjustment), estimation (linear regression, generalized linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage, regression discontinuity), refutation (bootstrap, placebo treatment, data subset, dummy outcome, unobserved common cause), intervention sampling (do samplers), temporal graphs, causal discovery (the PC algorithm with the Fisher-z test) and the portable core of the graphical causal models (the p-value merging, the bootstrap confidence intervals, the Kullback-Leibler divergences, the density estimators, the Shapley values and the independence tests). Pure MoonBit with zero external runtime dependencies."
 
 source = "src"
 
