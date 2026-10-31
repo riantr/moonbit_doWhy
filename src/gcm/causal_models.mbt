@@ -168,6 +168,11 @@ pub fn ProbabilisticCausalModel::set_encoder(
 ///|
 /// A copy of the model whose mechanisms and graph can be changed without
 /// changing the original.
+///
+/// This is the port of `dowhy.gcm.causal_models.ProbabilisticCausalModel.clone`,
+/// which clones the causal model but keeps the causal mechanisms untrained. The
+/// mechanisms of the copy therefore have to be fitted again before they can be
+/// used.
 pub fn ProbabilisticCausalModel::clone(
   self : ProbabilisticCausalModel,
 ) -> ProbabilisticCausalModel {

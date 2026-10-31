@@ -22,6 +22,9 @@ pub struct PredictionModel {
   intercept : Double
   /// Whether the model has been fitted.
   fitted : Bool
+  /// Whether the parameters of the model are fixed, which means that the model
+  /// is never fitted again.
+  fixed : Bool
 }
 
 ///|
@@ -29,19 +32,27 @@ pub struct PredictionModel {
 ///
 /// This is the port of `dowhy.gcm.ml.create_linear_regressor`.
 pub fn PredictionModel::linear() -> PredictionModel {
-  { coefficients: [], intercept: 0.0, fitted: false, }
+  { coefficients: [], intercept: 0.0, fitted: false, fixed: false, }
 }
 
 ///|
 /// A prediction model with the given parameters, which is never fitted again.
 ///
 /// This is the port of
-/// `dowhy.gcm.ml.create_linear_regressor_with_given_parameters`.
+/// `dowhy.gcm.ml.create_linear_regressor_with_given_parameters`. The parameters
+/// of such a model are its hyper parameters and not the result of a fit, so the
+/// fit of the model does nothing and the clone of the model keeps them.
 pub fn PredictionModel::with_fixed_parameters(
   coefficients : Array[Double],
   intercept : Double,
 ) -> PredictionModel {
-  { coefficients: coefficients.copy(), intercept, fitted: true, }
+  { coefficients: coefficients.copy(), intercept, fitted: true, fixed: true, }
+}
+
+///|
+/// Whether the parameters of the model are fixed.
+pub fn PredictionModel::has_fixed_parameters(self : PredictionModel) -> Bool {
+  self.fixed
 }
 
 ///|
@@ -72,16 +83,33 @@ pub fn PredictionModel::intercept(self : PredictionModel) -> Double {
 /// a categorical parent and the intercept are collinear, and the two
 /// conventions spread the same fit over the columns differently. The centred
 /// one is the convention of the upstream, so it is the one the port uses.
+///
+/// The fit of a model whose parameters are fixed does nothing, which is the
+/// fit of `dowhy.gcm.ml.regression.LinearRegressionWithFixedParameter`.
 pub fn PredictionModel::fit(
   self : PredictionModel,
   x : @utils.Matrix,
   y : Array[Double],
 ) -> PredictionModel {
   let _ = self
+  if self.fixed {
+    // The upstream keeps the parameters of a model whose parameters are fixed.
+    return {
+      coefficients: self.coefficients.copy(),
+      intercept: self.intercept,
+      fitted: true,
+      fixed: true,
+    }
+  }
   let p = x.ncols()
   let n = x.nrows()
   if p == 0 {
-    return { coefficients: [], intercept: @utils.mean(y), fitted: true, }
+    return {
+      coefficients: [],
+      intercept: @utils.mean(y),
+      fitted: true,
+      fixed: false,
+    }
   }
   let offsets : Array[Double] = []
   for j = 0; j < p; j = j + 1 {
@@ -103,7 +131,7 @@ pub fn PredictionModel::fit(
   for j = 0; j < p; j = j + 1 {
     intercept = intercept - offsets[j] * coefficients[j]
   }
-  { coefficients, intercept, fitted: true, }
+  { coefficients, intercept, fitted: true, fixed: false, }
 }
 
 ///|
@@ -131,14 +159,21 @@ pub fn PredictionModel::predict(
 ///|
 /// A copy of the model.
 ///
-/// The coefficients are copied, so the copy can be fitted again without
-/// changing the original.
+/// This is the port of `dowhy.gcm.ml.regression.SklearnRegressionModel.clone`,
+/// which clones the model with the same hyper parameters but not fitted. A
+/// model whose parameters are fixed keeps them, because they are its hyper
+/// parameters and not the result of a fit; that is the clone of
+/// `dowhy.gcm.ml.regression.LinearRegressionWithFixedParameter`.
 pub fn PredictionModel::clone(self : PredictionModel) -> PredictionModel {
-  {
-    coefficients: self.coefficients.copy(),
-    intercept: self.intercept,
-    fitted: self.fitted,
+  if self.fixed {
+    return {
+      coefficients: self.coefficients.copy(),
+      intercept: self.intercept,
+      fitted: self.fitted,
+      fixed: true,
+    }
   }
+  { coefficients: [], intercept: 0.0, fitted: false, fixed: false, }
 }
 
 ///|
@@ -267,15 +302,15 @@ pub fn ClassificationModel::predict(
 
 ///|
 /// A copy of the model.
+///
+/// This is the port of
+/// `dowhy.gcm.ml.classification.SklearnClassificationModel.clone`, which clones
+/// the model with the same hyper parameters but not fitted.
 pub fn ClassificationModel::clone(
   self : ClassificationModel,
 ) -> ClassificationModel {
-  {
-    coefficients: self.coefficients.copy(),
-    intercept: self.intercept,
-    classes: self.classes.copy(),
-    fitted: self.fitted,
-  }
+  let _ = self
+  { coefficients: [], intercept: 0.0, classes: [], fitted: false, }
 }
 
 ///|

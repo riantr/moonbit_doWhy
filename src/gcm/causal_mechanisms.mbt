@@ -392,15 +392,33 @@ pub fn StochasticModel::draw_category_samples(
 
 ///|
 /// A copy of the model.
+///
+/// This is the port of `dowhy.gcm.stochastic_models.ScipyDistribution.clone`
+/// and of `dowhy.gcm.stochastic_models.EmpiricalDistribution.clone`. The clone
+/// of a distribution is not fitted: the samples of an empirical distribution
+/// and the estimated parameters of a parametric one are the result of a fit.
+/// The parameters that were given to a distribution are its hyper parameters,
+/// so the clone of such a distribution keeps them.
 pub fn StochasticModel::clone(self : StochasticModel) -> StochasticModel {
+  if self.fixed_parameters {
+    return {
+      kind: self.kind,
+      samples: [],
+      categories: [],
+      loc: self.loc,
+      scale: self.scale,
+      fixed_parameters: true,
+      fitted: true,
+    }
+  }
   {
     kind: self.kind,
-    samples: self.samples.copy(),
-    categories: self.categories.copy(),
-    loc: self.loc,
-    scale: self.scale,
-    fixed_parameters: self.fixed_parameters,
-    fitted: self.fitted,
+    samples: [],
+    categories: [],
+    loc: 0.0,
+    scale: 0.0,
+    fixed_parameters: false,
+    fitted: false,
   }
 }
 
@@ -763,6 +781,11 @@ pub fn CausalMechanism::draw_categorical_samples(
 
 ///|
 /// A copy of the mechanism.
+///
+/// This is the port of `dowhy.gcm.causal_mechanisms.AdditiveNoiseModel.clone`,
+/// of its discrete and of its post non-linear counterpart. The clone of a
+/// mechanism is not fitted, because the prediction model and the noise model it
+/// holds are cloned without their fit.
 pub fn CausalMechanism::clone(self : CausalMechanism) -> CausalMechanism {
   {
     kind: self.kind,

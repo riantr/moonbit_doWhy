@@ -52,6 +52,18 @@ test "the fit of the linear model leaves the model it is called on alone" {
 }
 
 ///|
+test "the clone of the linear model is not fitted" {
+  let model = @gcm.PredictionModel::linear().fit(ml_column([1.0, 2.0, 3.0]), [
+    3.0, 5.0, 7.0,
+  ])
+  let copy = model.clone()
+  assert_false(copy.is_fitted())
+  assert_eq(copy.coefficients().length(), 0)
+  // The original keeps its fit.
+  assert_true(ml_near(model.coefficients()[0], 2.0, 1.0e-9))
+}
+
+///|
 test "the clone of the linear model is fitted on its own" {
   let model = @gcm.PredictionModel::linear().fit(ml_column([1.0, 2.0, 3.0]), [
     3.0, 5.0, 7.0,
@@ -59,8 +71,25 @@ test "the clone of the linear model is fitted on its own" {
   let copy = model.clone()
   let refitted = copy.fit(ml_column([1.0, 2.0, 3.0]), [30.0, 50.0, 70.0])
   assert_true(ml_near(model.coefficients()[0], 2.0, 1.0e-9))
-  assert_true(ml_near(copy.coefficients()[0], 2.0, 1.0e-9))
   assert_true(ml_near(refitted.coefficients()[0], 20.0, 1.0e-9))
+}
+
+///|
+test "the clone of the linear model of fixed parameters keeps them" {
+  let model = @gcm.PredictionModel::with_fixed_parameters([2.0], 1.0)
+  let copy = model.clone()
+  assert_true(copy.is_fitted())
+  assert_true(copy.has_fixed_parameters())
+  assert_true(ml_near(copy.coefficients()[0], 2.0, 1.0e-12))
+  assert_true(ml_near(copy.intercept(), 1.0, 1.0e-12))
+}
+
+///|
+test "the fit of the linear model of fixed parameters keeps them" {
+  let model = @gcm.PredictionModel::with_fixed_parameters([2.0], 1.0)
+  let fitted = model.fit(ml_column([1.0, 2.0, 3.0]), [30.0, 50.0, 70.0])
+  assert_true(ml_near(fitted.coefficients()[0], 2.0, 1.0e-12))
+  assert_true(ml_near(fitted.intercept(), 1.0, 1.0e-12))
 }
 
 ///|
@@ -93,6 +122,18 @@ test "the logistic model predicts the class of every row" {
   let predictions = model.predict(ml_column([-3.0, 3.0]))
   assert_eq(predictions[0], "a")
   assert_eq(predictions[1], "b")
+}
+
+///|
+test "the clone of the logistic model is not fitted" {
+  let x = ml_column([-3.0, -2.5, -2.0, -1.5, 1.5, 2.0, 2.5, 3.0])
+  let y = ["a", "a", "a", "a", "b", "b", "b", "b"]
+  let model = @gcm.ClassificationModel::logistic().fit(x, y)
+  let copy = model.clone()
+  assert_false(copy.is_fitted())
+  assert_eq(copy.classes().length(), 0)
+  // The original keeps its fit.
+  assert_eq(model.classes().length(), 2)
 }
 
 ///|

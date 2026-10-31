@@ -215,3 +215,42 @@ graph, identification, estimation, refutation.
   `StochasticModel::with_estimated_parameters`.
 
 [0.0.5]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.5
+
+## [0.0.6] - 2026-11-01
+
+### Added
+
+- `gcm` -- the what-if layer of `dowhy.gcm`:
+  - the interventions on the nodes of a causal model, which are the port of the
+    interventions of `dowhy.gcm.whatif`: the atomic intervention `do(X := 2)`
+    and the soft intervention `do(X := X + 1)`, for a numeric node and for a
+    categorical one;
+  - the data and the noise of a causal model, which is the port of
+    `dowhy.gcm._noise`: the noise of a model is recovered from the observed
+    data, and the data of a model follow from its noise;
+  - the what-if queries of `dowhy.gcm.whatif`: the interventional samples of a
+    fitted model, the counterfactual samples of an observed row and the average
+    causal effect of two sets of interventions;
+  - the `fit_and_compute` of `dowhy.gcm.confidence_intervals_cms`, which
+    refits the causal model on a subset of the training data before it
+    evaluates the causal query, so that the bootstrap interval takes the
+    uncertainty of the fit into account.
+- `_verify/gcm_whatif_reference.py` -- the upstream reference of the layer. It
+  computes the numbers of the upstream tests of `tests/gcm/test_whatif.py` with
+  the upstream code itself, so the expectations of the tests of the port are the
+  numbers of the upstream rather than a reading of it.
+
+### Fixed
+
+- The clone of a causal model keeps its mechanisms untrained, like the clone of
+  the upstream does. The upstream clones a model with `sklearn.clone`, so the
+  prediction model, the classifier and the distribution of the copy have to be
+  fitted again before they can be used. The parameters that were given to a
+  model are its hyper parameters and not the result of a fit, so the clone of a
+  model with fixed parameters keeps them.
+- The restricted model of the average causal effect shares the mechanisms of the
+  model of the caller instead of cloning them, because the upstream restricts a
+  model with a view of its graph, and a view keeps the mechanisms of the nodes
+  it holds.
+
+[0.0.6]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.6

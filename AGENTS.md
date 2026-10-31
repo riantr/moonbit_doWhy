@@ -86,7 +86,7 @@ These are properties of the MoonBit toolchain this repository builds with
 
 MoonBit's containers are mutable and a struct copy copies the *references* to
 them, so a "copy" that only copies the struct shares its state with the
-original. Three of these cost real debugging time here:
+original. Four of these cost real debugging time here:
 
 - **`Map::set` mutates the map in place.** Copy the map (`map.copy()`) before
   setting into it, or the "new" frame mutates the old one.
@@ -98,6 +98,12 @@ original. Three of these cost real debugging time here:
   `CausalEstimator::with_estimand(..)` returned `self` and mutated it in
   place, which silently corrupted the estimator the caller had handed in.
   The `cm` package and the refuters depend on the copy semantics.
+- **A `clone` of a causal model keeps its mechanisms untrained.** The upstream
+  clones a model with `sklearn.clone`, so the copy has to be fitted again
+  before it can be used. The port follows that rule, which means a function
+  that needs the *fitted* mechanisms of a model -- the restricted model of the
+  average causal effect, for instance -- has to **share** them instead of
+  cloning them.
 
 ## Numerical conventions
 
@@ -117,6 +123,14 @@ statsmodels / scikit-learn conventions are deliberate:
 - Logistic regression minimises `sum_i log_loss(y_i, p_i) + 1/(2C) ||w||²`,
   the convention of `sklearn.linear_model.LogisticRegression` with the
   default `penalty="l2"` and `C=1.0`.
+- The prediction model of the `gcm` package **centres** its design, the way
+  `sklearn.linear_model.LinearRegression` does: it centres the features and
+  the target before the least squares fit and computes the intercept from the
+  offsets. The centring matters, because the one-hot encoding of a
+  categorical parent and the intercept are collinear, so the two conventions
+  spread the same fit over the columns differently. The least squares fit of
+  the `utils` package has no intercept at all, so the two are not
+  interchangeable.
 
 ## Package layout
 
@@ -130,7 +144,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms and the fitting of a causal model |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model and the what-if queries |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -162,3 +176,8 @@ README makes, so they are tracked in the repository:
   fitting of a causal model and of the sampling from it with the upstream
   `dowhy.gcm` code, which is where the expectations of the tests of the
   structural causal model layer come from.
+- `gcm_whatif_reference.py` computes the numbers of the what-if layer -- the
+  interventional samples, the counterfactual samples, the average causal
+  effect, the noise of a model and the data of a model -- with the upstream
+  `dowhy.gcm` code, which is where the expectations of the tests of the
+  what-if queries come from.

@@ -321,6 +321,21 @@ test "the normal distribution keeps the parameters it was given" {
 }
 
 ///|
+test "the clone of a mechanism is not fitted" {
+  let x = mechanism_column([1.0, 2.0, 3.0, 4.0])
+  let model = @gcm.CausalMechanism::additive_noise(
+    @gcm.PredictionModel::linear(),
+  ).fit(x, [3.0, 5.0, 7.0, 9.0])
+  let copy = model.clone()
+  assert_false(copy.prediction_model().is_fitted())
+  assert_false(copy.noise_model().is_fitted())
+  // The original keeps its fit.
+  assert_true(
+    mechanism_near(model.prediction_model().coefficients()[0], 2.0, 1.0e-9),
+  )
+}
+
+///|
 test "the clone of a mechanism is fitted on its own" {
   let x = mechanism_column([1.0, 2.0, 3.0, 4.0])
   let model = @gcm.CausalMechanism::additive_noise(
@@ -334,4 +349,25 @@ test "the clone of a mechanism is fitted on its own" {
   assert_true(
     mechanism_near(refitted.prediction_model().coefficients()[0], 20.0, 1.0e-9),
   )
+}
+
+///|
+test "the clone of a distribution is not fitted" {
+  let values : Array[Double] = []
+  for i in 0..<100 {
+    values.push(1.0 + 0.5 * i.to_double())
+  }
+  let model = @gcm.StochasticModel::empirical().fit(values)
+  let copy = model.clone()
+  assert_false(copy.is_fitted())
+  assert_eq(copy.samples().length(), 0)
+}
+
+///|
+test "the clone of a distribution of fixed parameters keeps them" {
+  let model = @gcm.StochasticModel::normal(2.0, 3.0)
+  let copy = model.clone()
+  assert_true(copy.is_fitted())
+  assert_true(mechanism_near(copy.loc(), 2.0, 1.0e-12))
+  assert_true(mechanism_near(copy.scale(), 3.0, 1.0e-12))
 }
