@@ -475,5 +475,10 @@ graph, identification, estimation, refutation.
   over the sorted samples of the distribution, where the upstream counts them
   with a vectorised comparison over the whole distribution. The counts and the
   scores are the same numbers.
+- The attribution of the anomalies -- the contribution of the upstream nodes to
+  the anomaly score of a sample -- is **not ported**. The upstream needs the
+  noise of the upstream nodes of a target and a Shapley estimator that computes
+  the values of every sample at once, while the Shapley estimator of the port
+  computes the values of one set function at a time.
 
 [0.0.10]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.10

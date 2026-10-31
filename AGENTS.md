@@ -55,7 +55,15 @@ These are properties of the MoonBit toolchain this repository builds with
 - **A public enumeration still warns about a variant that is never
   constructed**, so an enumeration holds only the variants that are built. The
   `FalsifyConst` of the `gcm` package therefore holds the four validation
-  methods and not the field names of the upstream dictionaries.
+  methods and not the field names of the upstream dictionaries. The warning does
+  not go away when the variant is built in a `*_test.mbt` file, because
+  `moon check` does not see that usage: a variant that only the tests build has
+  to be built by a **non-test** source file, which is what the constructors of
+  the anomaly scorers of the `gcm` package are for.
+- **A `const` needs an upper case identifier.** A lower case name is a lexing
+  error, and the message names a `let` as the alternative. The two constants of
+  the anomaly scorers of the `gcm` package are therefore `ANOMALY_SCORER_EPS` and
+  `ANOMALY_MAD_NORMALISATION`.
 - **A struct with a `mut` field has reference semantics**: a copy of it shares
   its state with the original, and a function that takes it mutates the state
   of the caller. The generator of the `utils` package relies on it, so a
