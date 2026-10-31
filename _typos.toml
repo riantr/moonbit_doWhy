@@ -1,0 +1,67 @@
+[files]
+extend-exclude = [
+  # The Python helpers under _verify/ are development tooling: they read the
+  # upstream DoWhy checkout from an absolute path that only exists on the
+  # machine that generated them, so they are not part of the shipped library.
+  # They are still tracked in the repository -- they are the evidence for the
+  # upstream reference numbers the MoonBit tests are compared against -- but
+  # they are not prose, so the spell checker has nothing to say about them.
+  "_verify/*.py",
+]
+
+[default.extend-words]
+# The project, the registry and the upstream project it ports.
+dowhy = "dowhy"
+moonbit = "moonbit"
+mooncakes = "mooncakes"
+riantr = "riantr"
+pysh = "pysh"
+
+# Causal inference vocabulary that the dictionary does not know.
+backdoor = "backdoor"
+frontdoor = "frontdoor"
+dsep = "dsep"
+dseparated = "dseparated"
+dag = "dag"
+dags = "dags"
+cpdag = "cpdag"
+acyclic = "acyclic"
+
+# The name of the efficient backdoor criterion this port deliberately does
+# not implement. The three surnames are quoted from the upstream paper.
+Smucler = "Smucler"
+Sapienza = "Sapienza"
+Rotnitzky = "Rotnitzky"
+
+# The estimators and the tools this port names after their upstream
+# counterparts.
+psw = "psw"
+psm = "psm"
+ips = "ips"
+aipw = "aipw"
+wls = "wls"
+ols = "ols"
+gmm = "gmm"
+iv = "iv"
+rd = "rd"
+gcm = "gcm"
+
+# The names of the propensity score weight columns. `cips` and `tips` are
+# upstream DoWhy's own spellings, taken from the column names it writes in
+# `dowhy/causal_estimators/propensity_score_weighting_estimator.py`
+# ("cips_weight", "tips_weight", "cips_normalized_weight",
+# "cips_stabilized_weight"). They stand for the "corrected" and the
+# "treated"/"complier" inverse propensity weights. The port reproduces the
+# upstream names, so the spell checker must not correct them.
+cips = "cips"
+tips = "tips"
+ipst = "ipst"
+ipsc = "ipsc"
+
+# The names of the causal discovery algorithms upstream offers. `GES` is the
+# greedy equivalence search of upstream `dowhy.graph_learners`, `CDT` is the
+# causal discovery toolbox and `LiNGAM` is the linear non-acyclic model. The
+# port does not implement them, but it names them when it says so.
+GES = "GES"
+CDT = "CDT"
+LiNGAM = "LiNGAM"

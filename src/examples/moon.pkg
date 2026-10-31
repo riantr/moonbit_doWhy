@@ -1,0 +1,7 @@
+import {
+  "riantr/moonbit_dowhy",
+  "riantr/moonbit_dowhy/datasets",
+  "riantr/moonbit_dowhy/utils",
+}
+
+pkgtype(kind: "executable")

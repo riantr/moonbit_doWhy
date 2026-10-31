@@ -1,0 +1,13 @@
+# The line endings of the source files are the repository's business, not the
+# clone's. A clone must not depend on the cloner's `core.autocrlf` to
+# reproduce the tree, because the release gate (`moon fmt --check`) and the
+# verification scripts under `_verify/` both read the files as they are.
+
+*.mbt    text eol=lf
+*.mod    text eol=lf
+*.md     text eol=lf
+*.py     text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.toml   text eol=lf
+LICENSE  text eol=lf

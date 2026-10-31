@@ -1,0 +1,143 @@
+name: publish-package
+run-name: publish moonbit_dowhy ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag, for example v0.0.1"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-moonbit_dowhy-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 1
+      TYPOS_VERSION: v1.19.0
+      # The toolchain the source is written against. `moon fmt --check` is
+      # sensitive to the formatter of the version, so the gate has to run the
+      # pinned one: installing "latest" would make the release depend on
+      # whatever the toolchain does that week.
+      MOON_VERSION: 0.1.20261028
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+      - name: Resolve release version
+        id: release
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="$GITHUB_REF_NAME"
+          fi
+
+          case "$tag" in
+            v*) version="${tag#v}" ;;
+            *)
+              echo "Release tag must use the v* format, got: $tag" >&2
+              exit 1
+              ;;
+          esac
+
+          manifest_version="$(awk -F'"' '/^version = / { print $2; exit }' moon.mod)"
+          if [ "$version" != "$manifest_version" ]; then
+            echo "Tag version $version does not match moon.mod version $manifest_version" >&2
+            exit 1
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s -- "$MOON_VERSION"
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: MoonBit version
+        run: |
+          moon version --all
+          moonrun --version
+          installed="$(moon version --all | head -1 | awk '{print $2}')"
+          if [ "$installed" != "$MOON_VERSION" ]; then
+            echo "Expected MoonBit $MOON_VERSION, got $installed" >&2
+            exit 1
+          fi
+
+      # Refresh the registry metadata. This package has no external
+      # dependencies, so nothing is expected to change; the step is here so
+      # that a future dependency bump is picked up by the gate rather than by
+      # the publish step.
+      - name: Update dependencies
+        run: moon update
+
+      - name: Check package (all 4 backends, --deny-warn)
+        run: |
+          for target in native wasm wasm-gc js; do
+            echo "::group::moon check --target $target --deny-warn"
+            moon check --target "$target" --deny-warn
+            echo "::endgroup::"
+          done
+
+      - name: Test package (all 4 backends, --deny-warn)
+        run: |
+          for target in native wasm wasm-gc js; do
+            echo "::group::moon test --target $target --deny-warn"
+            moon test --target "$target" --deny-warn
+            echo "::endgroup::"
+          done
+
+      - name: Check formatting
+        run: moon fmt --check
+
+      - name: Download typos
+        run: curl -LsSf https://github.com/crate-ci/typos/releases/download/$TYPOS_VERSION/typos-$TYPOS_VERSION-x86_64-unknown-linux-musl.tar.gz | tar zxf - -C "${CARGO_HOME:-$HOME/.cargo}/bin"
+
+      - name: Check typos
+        run: typos
+
+      # The README is the only thing the registry puts in front of a user, so
+      # it has to name the version that is being published. The step runs
+      # immediately before the publish step for that reason.
+      - name: Check the README names the released version
+        run: python3 .github/scripts/check_readme_sync.py
+
+      - name: Publish to Mooncakes
+        run: |
+          # WHAT THE SECRET MUST CONTAIN: the JSON BODY of
+          # ~/.moon/credentials.json -- an object with a non-empty "token"
+          # and a "username" key -- NOT a bare token string. The step below
+          # writes $SECRET straight to that path, so a bare token produces a
+          # file that does not parse and `moon publish` fails with an opaque
+          # authentication error.
+          if [ -z "$SECRET" ]; then
+            echo "::error::MOONCAKES_RIANTR_TOKEN is not set on this repository; moon publish cannot authenticate. If it IS set, check its SHAPE: it must be the JSON body of ~/.moon/credentials.json, not a bare token."
+            exit 1
+          fi
+          mkdir -p "$HOME/.moon"
+          printf '%s' "$SECRET" > "$HOME/.moon/credentials.json"
+          trap 'rm -f "$HOME/.moon/credentials.json"' EXIT
+          moon publish
+        env:
+          SECRET: ${{ secrets.MOONCAKES_RIANTR_TOKEN }}
+
+      - name: Create GitHub Release
+        run: |
+          gh release create "${{ steps.release.outputs.tag }}" \
+            --title "moonbit_dowhy ${{ steps.release.outputs.version }}" \
+            --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -1,0 +1,17 @@
+# Build output of the MoonBit toolchain.
+_build/
+.moon/
+
+# Editor and OS noise.
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Python caches of the verification helpers under _verify/.
+__pycache__/
+*.pyc
+
+# The auto-generated package interfaces. They are refreshed with `moon info`
+# and are written into the published archive by the toolchain itself.
+pkg.generated.mbti
