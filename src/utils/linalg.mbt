@@ -70,12 +70,31 @@ pub fn mat_inverse(m : Matrix) -> Matrix? {
 /// Symmetric eigen decomposition by the cyclic Jacobi method.
 ///
 /// Returns the eigenvalues together with the eigenvectors stored as columns.
+///
+/// The iteration stops when the off-diagonal part of the matrix is negligible
+/// against the matrix itself: the sum of the squares of the off-diagonal
+/// elements has to be at most the square of the machine epsilon times the sum
+/// of the squares of the elements of the matrix. The criterion is relative on
+/// purpose. An absolute criterion leaves the off-diagonal elements of the
+/// matrix at a size of about `3e-8`, which is enough for the eigenvalues of a
+/// matrix with a well separated spectrum, but not for the eigenvalues of a
+/// nearly degenerate one: those are then only accurate to about `1e-9`.
 pub fn jacobi_eigen(a : Matrix) -> (Array[Double], Matrix) {
   let n = a.nrows()
   let m = a.copy()
   let v = Matrix::identity(n)
-  let eps = 1.0e-15
+  // The machine epsilon of a double, and the limit the residual of the
+  // iteration has to fall below.
+  let epsilon = 2.220446049250313e-16
+  let mut total = 0.0
+  for i = 0; i < n; i = i + 1 {
+    for j = 0; j < n; j = j + 1 {
+      total = total + m.get(i, j) * m.get(i, j)
+    }
+  }
+  let limit = epsilon * epsilon * total
   let mut sweep = 0
+  let mut previous = 0.0
   while sweep < 100 {
     sweep = sweep + 1
     let mut off = 0.0
@@ -84,9 +103,15 @@ pub fn jacobi_eigen(a : Matrix) -> (Array[Double], Matrix) {
         off = off + m.get(i, j) * m.get(i, j)
       }
     }
-    if off <= eps {
+    if off <= limit {
       break
     }
+    if sweep > 1 && off > previous * 0.5 {
+      // The iteration does not improve the residual any more, so it has
+      // reached the floor of the method.
+      break
+    }
+    previous = off
     for p = 0; p < n - 1; p = p + 1 {
       for q = p + 1; q < n; q = q + 1 {
         let apq = m.get(p, q)

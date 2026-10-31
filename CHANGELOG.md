@@ -254,3 +254,59 @@ graph, identification, estimation, refutation.
   it holds.
 
 [0.0.6]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.6
+
+## [0.0.7] - 2026-11-01
+
+### Added
+
+- `gcm` -- the validation layer of `dowhy.gcm`:
+  - the kernel based independence test, which is the port of
+    `dowhy.gcm.independence_test.kernel`: the kernel conditional independence
+    test of `causal-learn`, in its unconditional and in its conditional form,
+    with the gamma approximation of its null distribution. It is the default
+    independence test of the upstream validation;
+  - `refute_causal_structure`, which validates the assumptions of a causal
+    graph against the data: the dependence of every edge and the local Markov
+    condition of every node, with the Benjamini-Hochberg control of the false
+    discovery rate;
+  - `refute_invertible_model`, which validates that the causal mechanisms of a
+    model can be represented by an invertible functional causal model.
+- `_verify/gcm_validation_reference.py` -- the upstream reference of the layer.
+  It computes the numbers of the upstream validation module with the upstream
+  code itself, so the expectations of the tests of the port are the numbers of
+  the upstream rather than a reading of it.
+- `_verify/gen_validation_testdata.py` and
+  `_verify/gen_validation_invertible_testdata.py` -- the generators of the
+  fixtures of the tests of the layer. They replace the random draws of the
+  upstream with the draws of a fixed seed, so that the MoonBit test and the
+  upstream reference see the very same rows.
+
+### Fixed
+
+- The eigen decomposition of `utils.jacobi_eigen` now stops when the
+  off-diagonal part of the matrix is negligible **against the matrix itself**,
+  instead of when the sum of the squares of the off-diagonal elements is at
+  most `1e-15`. The old criterion was absolute, so it left the off-diagonal
+  elements of the matrix at a size of about `3e-8`. That is enough for a
+  matrix with a well separated spectrum, but not for a nearly degenerate one:
+  the eigenvalues of the latter were only accurate to about `1e-9`. The
+  regressed kernel matrix of the conditional kernel test has a nearly
+  degenerate tail, so the p-value of the test moved by `1.6e-09` relative to
+  the upstream. With the relative criterion the port agrees with the upstream
+  to about `8e-12`, which is the noise floor of the upstream itself.
+  `jacobi_eigen` is shared with the estimators, the ordinary least squares fit
+  and the PCA reducer, and the change does not move any of their numbers.
+
+### Notes
+
+- The port always fits a linear regressor for the automatic assignment of a
+  mechanism, so the validation of the invertible model of a **non-linear**
+  relation rejects the model in the port and does not in upstream, which picks
+  its model by cross validation out of a zoo of estimators and can capture the
+  relation. The validation of a linear relation agrees in both.
+- The kernel based independence test of the upstream draws the subset of at
+  most 1000 rows that its median trick uses from the global generator of
+  numpy, so the p-value of a large sample depends on that draw. The port draws
+  it from the generator it is given, which makes its p-values reproducible.
+
+[0.0.7]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.7

@@ -131,6 +131,39 @@ statsmodels / scikit-learn conventions are deliberate:
   spread the same fit over the columns differently. The least squares fit of
   the `utils` package has no intercept at all, so the two are not
   interchangeable.
+- The kernel based independence test of the `gcm` package reproduces the
+  **gamma approximation** of `causal-learn`'s KCI test, the way the upstream
+  validation uses it: the null distribution is a gamma distribution whose two
+  parameters come from the trace and the sum of the squares of the centred
+  kernel matrices. The median trick of the kernel width draws a random subset
+  of at most 1000 rows when there are more rows than that, so the p-value of
+  a large sample depends on the generator that draws it.
+- The eigen decomposition of `utils.jacobi_eigen` stops when the off-diagonal
+  part of the matrix is negligible **against the matrix itself**: the sum of
+  the squares of the off-diagonal elements has to be at most the square of the
+  machine epsilon times the sum of the squares of the elements. The criterion
+  has to be relative. An absolute criterion leaves the off-diagonal elements at
+  a size of about `3e-8`, which is enough for a matrix with a well separated
+  spectrum but not for a nearly degenerate one: the eigenvalues of the latter
+  are then only accurate to about `1e-9`, and the KCI test of the `gcm`
+  package — whose regressed kernel matrix has a nearly degenerate tail — moves
+  by `1.6e-09` in its p-value. `utils.jacobi_eigen` is shared with the
+  estimators, the OLS fit and the PCA reducer, so the criterion is the one
+  that all of them use.
+- The inverse of the regressor of the regression centring of the KCI test is
+  computed with the Gauss-Jordan elimination of `utils.mat_inverse`, not with
+  an eigen decomposition. The regressor is nearly singular — its smallest
+  eigenvalue is the shift of `1e-3` — and its eigenvalues are clustered, so
+  the pseudo inverse divides by them and turns the absolute error of an eigen
+  decomposition into a relative error of the inverse.
+- The false discovery rate control of the `gcm` package is the
+  Benjamini-Hochberg **step-up** procedure of
+  `statsmodels.stats.multitest.multipletests(method="fdr_bh")`: the adjusted
+  p-value of the `i`-th smallest p-value is the minimum of `m / j * p_j` over
+  all `j >= i`, capped at 1, and a hypothesis is rejected when its adjusted
+  p-value is at most the level. It is **not** the `merge_p_values_fdr` of the
+  package, which is the port of the merging of the upstream and returns the
+  smallest adjusted p-value.
 
 ## Package layout
 
@@ -144,7 +177,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model and the what-if queries |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries and the validation layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -181,3 +214,23 @@ README makes, so they are tracked in the repository:
   effect, the noise of a model and the data of a model -- with the upstream
   `dowhy.gcm` code, which is where the expectations of the tests of the
   what-if queries come from.
+- `gen_validation_testdata.py` generates `src/gcm/validation_testdata.mbt`
+  mechanically from the upstream fixtures of `tests/gcm/test_validation.py`,
+  with the draws of the upstream replaced by the draws of a fixed seed, so the
+  expected p-values cannot be mistranscribed.
+- `gen_validation_invertible_testdata.py` generates
+  `src/gcm/validation_invertible_testdata.mbt`, the linear fixture of the
+  invertible model tests. It is a file of its own, because the non-linear
+  fixture of `gen_validation_testdata.py` cannot be used for that: the
+  automatic assignment of the port always fits a linear regressor and therefore
+  cannot capture a non-linear relation.
+- `gcm_validation_reference.py` computes the numbers of the validation layer --
+  the p-values of the kernel based independence test on every fixture, the
+  outcome and the summary of the validation of the causal structure and the
+  outcome of the validation of the invertible model -- with the upstream
+  `dowhy.gcm` code, which is where the expectations of the tests of the
+  validation layer come from. The upstream needs the `causal-learn` package
+  for its kernel based test, and its bootstrap runs have to be kept in one
+  process (`dowhy.gcm.config.set_default_n_jobs(1)`), because the workers of a
+  process pool cannot import the upstream package when it is read from its
+  files.

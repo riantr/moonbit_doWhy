@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.6.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.7.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -25,7 +25,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms and the **what-if queries** are ported; the **model evaluation**, the **uncertainty** estimates, the **anomaly** scorers and the **distribution change** tests are **not ported** |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries** and the **validation** layer are ported; the **model evaluation**, the **uncertainty** estimates, the **anomaly** scorers and the **distribution change** tests are **not ported** |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
@@ -100,7 +100,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
-| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model and the what-if queries |
+| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries and the validation layer |
 | `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
@@ -139,6 +139,14 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   parent and the intercept are collinear and the two conventions spread the
   same fit over the columns differently. The least squares fit of the `utils`
   package has no intercept at all, so the two are not interchangeable.
+- The eigen decomposition of the `utils` package stops when the off-diagonal
+  part of the matrix is negligible **against the matrix itself**. The criterion
+  is relative, because an absolute one leaves the off-diagonal elements at a
+  size of about `3e-8`, and the eigenvalues of a nearly degenerate matrix are
+  then only accurate to about `1e-9`. The conditional kernel test of the `gcm`
+  package regresses on a nearly degenerate kernel matrix, so the criterion is
+  the difference between a p-value that is off by `1.6e-09` and one that agrees
+  with the upstream to `8e-12`.
 
 ## Deliberate differences from upstream
 
@@ -197,6 +205,37 @@ following ways:
   from the upstream's on the same rows, and it regresses on the conditioning
   variable with the ordinary least squares fit where upstream selects a model
   automatically. Both make the same decision on the same data.
+- `gcm` always uses the median trick for the kernel width of the kernel based
+  independence test and always approximates the null distribution with a gamma
+  distribution. Upstream takes the width from the caller (`est_width`) and can
+  also simulate the null distribution instead of approximating it, which the
+  port does not do. The median trick draws a random subset of at most 1000 rows
+  when there are more rows than that, so the kernel width -- and with it the
+  p-value -- depends on the generator; upstream draws the subset from the
+  global generator of numpy, the port from the generator it is given.
+- `gcm` runs the bootstrap runs of the kernel based independence test one
+  after another and draws their randomness from the generator it is given.
+  Upstream runs them in a process pool with `joblib` and draws from the global
+  generator of numpy, and its `bootstrap_n_jobs` parameter has no counterpart.
+- `gcm` encodes nothing for the kernel based independence test, because the
+  matrices of the port hold numbers only. Upstream one-hot encodes the
+  categorical data it is given, which the port cannot represent.
+- `gcm` controls the false discovery rate with the Benjamini-Hochberg step-up
+  procedure of `statsmodels`, which is the method the upstream validation uses
+  by default. Upstream passes the name of the method to `multipletests`, which
+  knows several of them; the port has the one the upstream uses.
+- `gcm` computes the inverse of the regressor of the conditional kernel test
+  with the Gauss-Jordan elimination of the `utils` package, where upstream
+  computes it with the singular value decomposition of `numpy.linalg.pinv`. The
+  regressor is nearly singular and its eigenvalues are clustered, so the eigen
+  decomposition of the port pairs them wrongly and the pseudo inverse turns
+  its absolute error into a relative error of `6.6e-06`. The elimination
+  solves the system directly and agrees with the upstream to `8e-12`.
+- `gcm` always fits a linear regressor for the automatic assignment of a
+  mechanism, so the validation of the invertible model of a non-linear
+  relation rejects the model in the port and does not in upstream, which picks
+  its model by cross validation out of a zoo of estimators and can capture the
+  relation. The validation of a linear relation agrees in both.
 - `gcm` draws a seed for every bootstrap resample and hands it to the
   estimation function, instead of seeding the global generator of numpy
   before the call, and its F-test adds the intercept column itself, because

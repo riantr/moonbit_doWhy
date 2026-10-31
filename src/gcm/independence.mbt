@@ -5,6 +5,21 @@
 /// `dowhy.gcm.independence_test.generalised_cov_measure`.
 
 ///|
+/// An independence test on the samples of two variables.
+///
+/// The test takes the samples of X, the samples of Y and the samples of the
+/// conditioning variable Z, which is absent when the test is a marginal one.
+/// It returns the p-value of the null hypothesis that X and Y are independent,
+/// given Z.
+///
+/// This is the type of the argument of the tests of `dowhy.gcm.validation`. The
+/// upstream takes two different callables there, one for the marginal test and
+/// one for the conditional one; the port takes one callable for both, because
+/// the tests of the port take the conditioning variable as an argument that
+/// may be absent.
+pub type IndependenceTest = (@utils.Matrix, @utils.Matrix, @utils.Matrix?) -> Double
+
+///|
 /// The p-value of the null hypothesis that X and Y are independent given Z.
 ///
 /// The idea is that X helps in predicting Y when X and Y are dependent, and
