@@ -135,6 +135,12 @@ jobs:
           # writes $SECRET straight to that path, so a bare token produces a
           # file that does not parse and `moon publish` fails with an opaque
           # authentication error.
+          #
+          # The credentials are normalised and validated before the publish,
+          # because the secret can reach the runner with a byte order mark
+          # in front of it. That is a valid secret and an INVALID json file
+          # at the same time, and the failure it produces says nothing about
+          # the cause. The validation turns it into a message that names it.
           if [ -z "$SECRET" ]; then
             echo "::error::MOONCAKES_RIANTR_TOKEN is not set on this repository; moon publish cannot authenticate. If it IS set, check its SHAPE: it must be the JSON body of ~/.moon/credentials.json, not a bare token."
             exit 1
@@ -142,6 +148,7 @@ jobs:
           mkdir -p "$HOME/.moon"
           printf '%s' "$SECRET" > "$HOME/.moon/credentials.json"
           trap 'rm -f "$HOME/.moon/credentials.json"' EXIT
+          python3 .github/scripts/prepare_credentials.py
           moon publish
         env:
           SECRET: ${{ secrets.MOONCAKES_RIANTR_TOKEN }}
