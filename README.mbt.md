@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.7.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.8.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -25,7 +25,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries** and the **validation** layer are ported; the **model evaluation**, the **uncertainty** estimates, the **anomaly** scorers and the **distribution change** tests are **not ported** |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer and the **falsification** layer are ported; the **model evaluation**, the **uncertainty** estimates, the **anomaly** scorers and the **distribution change** tests are **not ported** |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
@@ -100,7 +100,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
-| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries and the validation layer |
+| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer and the falsification layer |
 | `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
@@ -147,6 +147,13 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   package regresses on a nearly degenerate kernel matrix, so the criterion is
   the difference between a p-value that is off by `1.6e-09` and one that agrees
   with the upstream to `8e-12`.
+- The generalised covariance measure of the `gcm` package regresses X and Y on
+  Z with the ordinary least squares fit **with an intercept**, which is the
+  `sklearn.linear_model.LinearRegression` of the upstream, and it takes the
+  standard deviation of the products of the residuals with `ddof = 0`, like
+  `numpy.std`. The upstream takes the prediction model from its caller, so the
+  upstream test of the falsification layer fits a linear regressor, and the
+  p-values of the port and of the upstream agree to `1e-12`.
 
 ## Deliberate differences from upstream
 
@@ -276,6 +283,33 @@ following ways:
   and the upstream `bootstrap_sampling` alias is a `functools.partial`; the port
   has neither, because the `confidence_intervals` of the port hands the seed of
   the resample to the estimation function already.
+- `gcm` takes **one** independence test for the falsification layer, of the type
+  `IndependenceTest`, whose third argument is the optional conditioning
+  variable. Upstream takes two callables there, one for the marginal test and
+  one for the conditional test; the marginal test of the port is the one that is
+  called without the conditioning variable.
+- `gcm` builds the set of the non-descendants of a node in the order of the
+  graph. Upstream builds it in an arbitrary order, because it iterates over a
+  Python `set`; the triples of the parental d-separations are the same.
+- `gcm` chooses the pairs of the pairwise dependencies with the generator it is
+  given, and it runs the tests of a validation one after another. Upstream
+  chooses the pairs from the global generator of numpy and runs the tests in a
+  process pool with `joblib`.
+- `gcm` reports the summaries of the falsification layer in structures with
+  named fields. Upstream reports them in dictionaries that are keyed by the
+  constants of its `FalsifyConst` enumeration, and it binds the data and the
+  parameters of a method with a `partial` object; the port passes the methods
+  and the data separately.
+- `gcm` **does not plot** the result of a falsification. The plotting
+  functions of the upstream are not ported, because the port has no plotting.
+- `gcm` cannot represent the categorical fixture of the upstream test of the
+  falsification layer, so that test case is not ported: the data frame of the
+  port holds one numeric or one discrete column per name, and the kernel based
+  independence test of the port takes numeric matrices only.
+- `gcm` exposes `data_covers_graph` instead of raising when the data is only
+  available for a subset of the nodes of the graph and the caller does not
+  allow it. MoonBit has no exceptions, so the check is a public function and
+  the function that needs it aborts.
 
 ## Development
 

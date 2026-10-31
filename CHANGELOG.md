@@ -310,3 +310,61 @@ graph, identification, estimation, refutation.
   it from the generator it is given, which makes its p-values reproducible.
 
 [0.0.7]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.7
+
+## [0.0.8] - 2026-11-02
+
+### Added
+
+- `gcm` -- the falsification layer of `dowhy.gcm`, the port of
+  `dowhy.gcm.falsify`:
+  - `validate_lmc`, which validates the local Markov condition of a graph
+    against the data: a node is conditionally independent of its non-descendants
+    given its parents;
+  - `validate_pd`, which validates the pairwise dependencies of a graph: a node
+    is dependent on each of its ancestors;
+  - `validate_tpa`, which validates the parental d-separations of a graph against
+    a reference graph: two graphs that violate none of them lie in the same
+    Markov equivalence class;
+  - `validate_cm`, which validates the causal minimality of a graph: a node is
+    conditionally independent of each of its parents given its other parents;
+  - `run_validations`, which runs the validation methods of a graph, and
+    `PValuesMemory`, which holds the p-values of the tests that were already
+    run, so that the test of the conditional independence of `X` and `Y` given
+    `Z` is not run twice for the two orders of the pair;
+  - `falsify_graph`, which falsifies a graph with a permutation test: the
+    number of the violations of the local Markov condition of a random
+    permutation of the nodes of the graph is the null distribution of the test,
+    and `PermuteNodes` generates those permutations;
+  - `apply_suggestions`, which removes the edges of a graph whose causal
+    minimality was violated.
+- `_verify/gcm_falsify_reference.py` -- the upstream reference of the layer. It
+  computes the numbers of the upstream falsification module with the upstream
+  code itself, so the expectations of the tests of the port are the numbers of
+  the upstream rather than a reading of it.
+- `_verify/gen_falsify_testdata.py` -- the generator of the fixtures of the
+  tests of the layer. It replaces the random draws of the upstream with the
+  draws of a fixed seed, so that the MoonBit test and the upstream reference
+  see the very same rows.
+
+### Notes
+
+- The upstream test of the **categorical** fixture of the falsification layer is
+  not ported: the data frame of the port holds one numeric or one discrete
+  column per name, and the kernel based independence test of the port takes
+  numeric matrices only. The other fifteen upstream test cases are ported.
+- The falsification layer takes **one** independence test, of the type
+  `IndependenceTest`, whose third argument is the optional conditioning
+  variable. Upstream takes two callables there, one for the marginal test and
+  one for the conditional test; the marginal test of the port is the one that is
+  called without the conditioning variable.
+- The upstream builds the set of the non-descendants of a node in an arbitrary
+  order and chooses the pairs of the pairwise dependencies at random from the
+  global generator of numpy. The port uses the order of the graph and draws the
+  pairs from the generator it is given.
+- The p-values of the port and of the upstream agree to `1e-12`. The upstream
+  fits the regression of the generalised covariance measure with the singular
+  value decomposition of `scipy.linalg.lstsq` and the port with the pseudo
+  inverse of the ordinary least squares fit, and a p-value in the far tail of
+  the normal distribution amplifies the difference between the two fits.
+
+[0.0.8]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.8

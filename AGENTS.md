@@ -164,6 +164,16 @@ statsmodels / scikit-learn conventions are deliberate:
   p-value is at most the level. It is **not** the `merge_p_values_fdr` of the
   package, which is the port of the merging of the upstream and returns the
   smallest adjusted p-value.
+- The generalised covariance measure of the `gcm` package regresses X and Y on
+  Z with the ordinary least squares fit **with an intercept**, which is the
+  `sklearn.linear_model.LinearRegression` of the upstream, and it takes the
+  standard deviation of the products of the residuals with `ddof = 0`, like
+  `numpy.std`. The upstream takes the prediction model from its caller, so the
+  upstream test of the falsification layer fits a linear regressor. The
+  p-values of the port and of the upstream agree to `1e-12`; the tolerance of
+  the tests of the falsification layer is `1e-12`, because a p-value in the
+  far tail of the normal distribution amplifies the difference between the
+  two least squares fits.
 
 ## Package layout
 
@@ -177,7 +187,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries and the validation layer |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer and the falsification layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -234,3 +244,17 @@ README makes, so they are tracked in the repository:
   process (`dowhy.gcm.config.set_default_n_jobs(1)`), because the workers of a
   process pool cannot import the upstream package when it is read from its
   files.
+- `gen_falsify_testdata.py` generates `src/gcm/falsify_testdata.mbt`
+  mechanically from the fixtures of `tests/gcm/test_falsify.py`, with the
+  draws of the upstream replaced by the draws of a fixed seed, so the
+  expected p-values cannot be mistranscribed.
+- `gcm_falsify_reference.py` computes the numbers of the falsification layer --
+  the summary of every validation method of every fixture, with the p-value of
+  every test, and the outcome of the falsification of the collider and of the
+  chain -- with the upstream `dowhy.gcm` code, which is where the expectations
+  of the tests of the falsification layer come from. The upstream module
+  `dowhy.gcm.falsify` reaches the plotting module of `dowhy.gcm.util` and the
+  prediction models of `dowhy.gcm.ml`, so the loader has to read the real
+  `dowhy.gcm.util` and the real `dowhy.gcm.ml` **after** the stubbed packages
+  exist, and the paths of the stubbed packages have to be pointed at the real
+  directories of the upstream before they are read.
