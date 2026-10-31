@@ -41,6 +41,13 @@ These are properties of the MoonBit toolchain this repository builds with
 - **`method` and `alias` are reserved words too.** The compiler only warns
   about them, but a warning is a failure in this repository, so a field or a
   binding may not be called `method`.
+- **An `Option` has no `or` operator.** `or` is the operator of the booleans, so
+  `value or 0` does not compile; the option has `unwrap_or(default)`.
+- **`is_none()` is deprecated** in favour of `x is None`, and `x != None` needs
+  the `Eq` trait, which the structs of the port do not implement, so a test for
+  the presence of a value is a `match` on the option.
+- **`String::to_string` of a `StringView` is deprecated** in favour of
+  `to_owned`, which allocates the string the caller keeps.
 - **A top level definition without `pub` is visible in the whole package**, so
   two files of one package may not define the same name. The helpers of the
   `gcm` package therefore carry a prefix (`falsify_parents_of`) when two files
@@ -189,6 +196,19 @@ statsmodels / scikit-learn conventions are deliberate:
   the tests of the falsification layer is `1e-12`, because a p-value in the
   far tail of the normal distribution amplifies the difference between the
   two least squares fits.
+- The conditional expectation of a causal mechanism of the `gcm` package is the
+  prediction of its model with the noise of zero. Every continuous model of
+  the upstream is a post non-linear model, because the additive noise model of
+  the upstream is a subclass of it, so the upstream takes that branch for every
+  continuous model and the port takes it for every continuous kind of the port.
+  The normalised mean squared error divides the root mean squared error by the
+  standard deviation of the observed values, like the `nmse` of the upstream,
+  and the F1 measure is the macro average of the measures of the classes, like
+  the `f1_score` of scikit-learn with `average="macro"` and `zero_division=0`.
+  The continuous ranked probability score divides the target values by their
+  standard deviation, like the `crps` of the upstream, and the categorical
+  score is the mean of the scores of the classes, which is the Brier score of
+  the classes.
 
 ## Package layout
 
@@ -202,7 +222,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer and the falsification layer |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer and the model evaluation layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -273,3 +293,16 @@ README makes, so they are tracked in the repository:
   `dowhy.gcm.util` and the real `dowhy.gcm.ml` **after** the stubbed packages
   exist, and the paths of the stubbed packages have to be pointed at the real
   directories of the upstream before they are read.
+- `gcm_model_evaluation_reference.py` computes the numbers of the mechanism
+  evaluation layer -- the normalised mean squared error, the continuous ranked
+  probability score, the outcome of the test of the invertibility assumption and
+  the performance of the mechanisms of an evaluated model -- with the upstream
+  `dowhy.gcm.model_evaluation` code, which is where the expectations of the
+  tests of the layer come from. The upstream module imports the names it needs
+  from the package `dowhy.gcm`, which the loader stubs out, so the stub has to
+  carry them **before** the module is read. The fixtures of the layer are drawn
+  from the generator of the `utils` package of the port, and the script
+  reproduces that generator in Python, so that the fixtures of the port and the
+  fixtures of the script are the same numbers. The global generator of numpy is
+  seeded before every fixture, because the noise the upstream draws and the
+  folds of its cross validation come from it.

@@ -68,11 +68,15 @@ pub fn RejectionResult::to_string(self : RejectionResult) -> String {
 /// This is the port of the `fdr_control_method` argument of the upstream, which
 /// is a string there and an enumeration here. The upstream hands the string to
 /// `statsmodels.stats.multitest.multipletests`, which knows several methods;
-/// the port knows the method of Benjamini and Hochberg only.
+/// the port knows the method of Benjamini and Hochberg and the Bonferroni
+/// correction.
 pub enum FdrControlMethod {
   ///
   /// The step up procedure of Benjamini and Hochberg.
   FdrBh
+  ///
+  /// The Bonferroni correction.
+  FdrBonferroni
 }
 
 ///|
@@ -81,6 +85,14 @@ pub enum FdrControlMethod {
 /// This is the port of the `fdr_bh` method of the upstream.
 pub fn FdrControlMethod::fdr_bh() -> FdrControlMethod {
   FdrBh
+}
+
+///|
+/// The Bonferroni correction.
+///
+/// This is the port of the `bonferroni` method of the upstream.
+pub fn FdrControlMethod::fdr_bonferroni() -> FdrControlMethod {
+  FdrBonferroni
 }
 
 ///|
@@ -366,6 +378,39 @@ pub fn fdr_bh_adjust(
 }
 
 ///|
+/// The Bonferroni correction of the p-values.
+///
+/// This is the port of the `bonferroni` method of
+/// `statsmodels.stats.multitest.multipletests`. A p-value is rejected when it
+/// is at most `alpha / m`, where `m` is the number of the p-values, and the
+/// adjusted p-value is the p-value multiplied by `m`, capped at one.
+///
+/// The result holds the rejections and the adjusted p-values in the order of
+/// the given p-values.
+pub fn fdr_bonferroni_adjust(
+  p_values : Array[Double],
+  alpha : Double,
+) -> FdrControlResult {
+  let m = p_values.length()
+  if m == 0 {
+    return { reject: [], adjusted_p_values: [], }
+  }
+  let limit = alpha / m.to_double()
+  let reject : Array[Bool] = []
+  let adjusted_p_values : Array[Double] = []
+  for p_value in p_values {
+    reject.push(p_value <= limit)
+    let adjusted = p_value * m.to_double()
+    if adjusted > 1.0 {
+      adjusted_p_values.push(1.0)
+    } else {
+      adjusted_p_values.push(adjusted)
+    }
+  }
+  { reject, adjusted_p_values, }
+}
+
+///|
 /// The indices of the p-values in ascending order.
 ///
 /// The p-values that are equal keep the order they have in the given array, so
@@ -505,6 +550,10 @@ pub fn refute_causal_structure(
       let control = fdr_bh_adjust(all_p_values, significance_level)
       (control.reject(), control.adjusted_p_values())
     }
+    Some(FdrBonferroni) => {
+      let control = fdr_bonferroni_adjust(all_p_values, significance_level)
+      (control.reject(), control.adjusted_p_values())
+    }
     None => {
       let rejected : Array[Bool] = []
       let adjusted_p_values : Array[Double] = []
@@ -606,6 +655,18 @@ pub fn refute_invertible_model(
         return NotRejected
       }
       let control = fdr_bh_adjust(all_p_values, significance_level)
+      for rejected in control.reject() {
+        if rejected {
+          return Rejected
+        }
+      }
+      NotRejected
+    }
+    Some(FdrBonferroni) => {
+      if all_p_values.length() == 0 {
+        return NotRejected
+      }
+      let control = fdr_bonferroni_adjust(all_p_values, significance_level)
       for rejected in control.reject() {
         if rejected {
           return Rejected

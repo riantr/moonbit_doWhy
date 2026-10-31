@@ -311,7 +311,7 @@ graph, identification, estimation, refutation.
 
 [0.0.7]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.7
 
-## [0.0.8] - 2026-11-02
+## [0.0.8] - 2026-11-01
 
 ### Added
 
@@ -368,3 +368,68 @@ graph, identification, estimation, refutation.
   the normal distribution amplifies the difference between the two fits.
 
 [0.0.8]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.8
+
+## [0.0.9] - 2026-11-01
+
+### Added
+
+- `gcm` -- the mechanism evaluation layer of `dowhy.gcm`, the port of
+  `dowhy.gcm.model_evaluation`:
+  - `nmse`, the normalised mean squared error of the observed and of the
+    predicted values;
+  - `crps` and `crps_categorical`, the continuous ranked probability score of a
+    probabilistic prediction, which measures its calibration;
+  - `estimate_conditional_expectations` and
+    `estimate_conditional_expectations_categorical`, the conditional expectation
+    of a causal mechanism;
+  - `evaluate_model_performances`, the performance of the causal mechanism of
+    every node of a model: the divergence of the generated and of the observed
+    distribution of a root node, and the score, the error and the coefficient of
+    the determination of a node with parents;
+  - `evaluate_invertibility_assumptions`, the test of the assumption of the
+    invertible functional causal model, which checks the independence of the
+    noise of a mechanism and of its parents;
+  - `evaluate_causal_model`, which runs the four evaluations of the layer -- the
+    performance of the mechanisms, the assumption of the invertible model, the
+    divergence of the generated distribution and the structure of the graph --
+    and `CausalModelEvaluationResult`, whose report is the summary of the
+    upstream;
+  - `EvaluationConfig` and `EvaluationOptions`, the settings of the evaluation,
+    and `kernel_independence_test`, the kernel based independence test for the
+    settings that need a generator.
+- `gcm` -- the Bonferroni correction of the false discovery rate control, which
+  the evaluation of the invertibility assumption uses by default, like the
+  upstream.
+- `gcm` -- the report of the falsification of a graph, which the report of the
+  evaluation of a model embeds.
+- `_verify/gcm_model_evaluation_reference.py` -- the upstream reference of the
+  layer. It computes the numbers of the upstream evaluation module with the
+  upstream code itself, so the expectations of the tests of the port are the
+  numbers of the upstream rather than a reading of it.
+
+### Notes
+
+- The metrics of the layer are of two kinds. The normalised mean squared error
+  and the score of a deterministic mechanism are the same numbers as the ones of
+  the upstream, and the tests of the port compare them with a tight tolerance.
+  The score of a mechanism with a noise and the performance of the mechanisms of
+  an evaluated model depend on the draws of the noise and on the folds of the
+  cross validation, which the upstream draws from the global generator of numpy
+  and the port draws from the generator it is given; the tests of these numbers
+  use the tolerances of the upstream test file
+  `tests/gcm/test_model_evaluation.py`.
+- The port compares the mechanisms of an evaluated model with **every** baseline
+  it is given. Upstream skips the baseline whose model class is the class of the
+  mechanism, and the port has one regression model and one classification model,
+  so skipping it would leave no baseline at all and the comparison would be
+  vacuous.
+- The falsification of the graph of the port takes numeric matrices only, so the
+  evaluation of a model whose data holds a categorical column does not falsify
+  the graph. The upstream one-hot encodes the categorical data and does.
+- The upstream test of the layer uses the kernel based independence test for the
+  invertibility assumption, and the reference script of the layer uses it as
+  well. The default test of the port is the generalised covariance measure,
+  which needs one dimensional variables only, so the test of a node with more
+  than one parent needs `kernel_independence_test`.
+
+[0.0.9]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.9

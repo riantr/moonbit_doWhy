@@ -1445,6 +1445,187 @@ pub fn EvaluationResult::falsifiable(self : EvaluationResult) -> Bool? {
 }
 
 ///|
+/// The report of the falsification of a graph.
+///
+/// This is the port of the `__repr__` of the `EvaluationResult` of the
+/// upstream, which writes a table of the decision of the falsification and of
+/// the suggestions for the graph.
+///
+/// The upstream writes the numbers of the table with two decimals and with one
+/// decimal; the port writes them with the text of the number, which is the
+/// shortest text that reads the number back.
+pub fn EvaluationResult::to_string(self : EvaluationResult) -> String {
+  let validation_lines : Array[String] = []
+  if self.can_evaluate {
+    let falsified = match self.falsified {
+      Some(value) => value
+      None => false
+    }
+    let falsifiable = match self.falsifiable {
+      Some(value) => value
+      None => false
+    }
+    let decision = if falsified { " " } else { " do not " }
+    let informative = if falsifiable { " " } else { " not " }
+    let lmc = self.summary.local_markov_condition()
+    let tpa = self.summary.parental_d_separations()
+    let given_violations = match lmc {
+      Some(value) => value.given_violations()
+      None => 0
+    }
+    let n_tests = match lmc {
+      Some(value) => value.n_tests()
+      None => 0
+    }
+    let p_lmc = match lmc {
+      Some(value) => value.p_value()
+      None => 0.0
+    }
+    let p_dsep = match tpa {
+      Some(value) => value.p_value()
+      None => 0.0
+    }
+    let n_permutations = match tpa {
+      Some(value) => value.perm_violations().length()
+      None => 0
+    }
+    let frac_mec = self.summary.markov_equivalence_class().length().to_string() +
+      " / " +
+      n_permutations.to_string()
+    let frac_vlmc = given_violations.to_string() + "/" + n_tests.to_string()
+    validation_lines.push(
+      "The given DAG is" +
+      informative +
+      "informative because " +
+      frac_mec +
+      " of the permutations lie in the Markov",
+    )
+    validation_lines.push(
+      "equivalence class of the given DAG (p-value: " +
+      p_dsep.to_string() +
+      ").",
+    )
+    validation_lines.push(
+      "The given DAG violates " +
+      frac_vlmc +
+      " LMCs and is better than " +
+      ((1.0 - p_lmc) * 100.0).to_string() +
+      "% of the permuted DAGs (p-value: " +
+      p_lmc.to_string() +
+      ").",
+    )
+    validation_lines.push(
+      "Based on the provided significance level (" +
+      self.significance_level.to_string() +
+      ") and because the DAG is" +
+      informative +
+      "informative,",
+    )
+    validation_lines.push("we" + decision + "reject the DAG.")
+  } else {
+    validation_lines.push("Cannot be evaluated!")
+  }
+  let suggestion_lines : Array[String] = []
+  match self.suggestions {
+    Some(suggestions) =>
+      match suggestions.causal_minimality() {
+        Some(summary) =>
+          for entry in summary.p_values().keys() {
+            let (node, parent, _) = entry
+            let violation = match summary.p_values().get(entry) {
+              Some((_, violated)) => violated
+              None => false
+            }
+            if violation {
+              suggestion_lines.push("Remove edge " + parent + " --> " + node)
+            }
+          }
+        None => ()
+      }
+    None => ()
+  }
+  falsify_table(validation_lines, suggestion_lines)
+}
+
+///|
+/// The table of the report of the falsification of a graph.
+///
+/// This is the port of the `_generate_table` of the upstream.
+fn falsify_table(
+  validation_lines : Array[String],
+  suggestion_lines : Array[String],
+) -> String {
+  let width = 105
+  let border = "+" + repeat_text("-", width - 2) + "+"
+  let mut out = border +
+    "\n" +
+    "|" +
+    centered_text("Falsification Summary", width - 2) +
+    "|\n" +
+    border +
+    "\n"
+  for line in validation_lines {
+    out = out +
+      "| " +
+      line +
+      repeat_text(" ", padding(width - 3 - line.length())) +
+      "|\n"
+  }
+  out = out + border + "\n"
+  if suggestion_lines.length() > 0 {
+    out = out +
+      "|" +
+      centered_text("Suggestions", width - 2) +
+      "|\n" +
+      border +
+      "\n"
+    for line in suggestion_lines {
+      out = out +
+        "| " +
+        line +
+        repeat_text(" ", padding(width - 3 - line.length())) +
+        "|\n"
+    }
+    out = out + border
+  } else {
+    out = out[0:out.length() - 1].to_owned()
+  }
+  out
+}
+
+///|
+/// The number of the spaces that pad a line of the table.
+fn padding(count : Int32) -> Int32 {
+  if count < 0 {
+    0
+  } else {
+    count
+  }
+}
+
+///|
+/// The text of the given number of times.
+fn repeat_text(text : String, count : Int32) -> String {
+  let mut out = ""
+  for _ in 0..<count {
+    out = out + text
+  }
+  out
+}
+
+///|
+/// The text in the middle of the given width.
+fn centered_text(text : String, width : Int32) -> String {
+  let total = width - text.length()
+  if total <= 0 {
+    return text
+  }
+  let left = total / 2
+  let right = total - left
+  repeat_text(" ", left) + text + repeat_text(" ", right)
+}
+
+///|
 /// A result of the falsification of a graph.
 ///
 /// This is the port of the `EvaluationResult` of the upstream, whose
