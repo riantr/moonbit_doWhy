@@ -42,3 +42,31 @@ graph, identification, estimation, refutation.
 - `tests` -- the cross-package integration tests.
 
 [0.0.1]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.1
+
+## [0.0.2] - 2026-10-31
+
+### Fixed
+
+- The package now declares the `wasm` backend in `supported_targets`. It
+  compiled and ran on `wasm` all along, but the registry metadata did not
+  say so, and a module created with `moon new` defaults to `preferred_target
+  = "wasm"`. A consumer that added this package and built without changing
+  the target of its module was therefore refused with "Selected backend
+  'wasm' is incompatible with the dependency graph". Declaring the backend
+  also lets the toolchain run the test suite on it, which it does not do
+  for a package that does not declare it.
+- The publish workflow installs the toolchain from the "latest" path of the
+  MoonBit CDN. Every versioned path answers 403, so the toolchain cannot be
+  pinned from the install script; the version check is now a policy about
+  what the runner found rather than a download.
+- The publish workflow validates the registry credentials before it
+  publishes them and reports the cause by name. A secret that carries a
+  byte order mark is a valid secret and an invalid json file at the same
+  time, and the failure it produced said nothing about the cause.
+
+### Changed
+
+- The registry description and the keywords now mention the causal
+  discovery package.
+
+[0.0.2]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.2
