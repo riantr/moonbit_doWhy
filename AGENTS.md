@@ -367,7 +367,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -546,6 +546,20 @@ README makes, so they are tracked in the repository:
   script holds a second fixture whose node has two parents and whose edges are
   added in an order that is not the sorted one, because the upstream takes the
   parents of a node in the sorted order.
+- `gcm_feature_relevance_reference.py` computes the numbers of the feature
+  relevance -- the relevance of every input of a linear model for every sample
+  of the baseline, and the relevance of the parents of a node of a causal model
+  -- with the upstream `dowhy.gcm.feature_relevance` code, which is where the
+  expectations of the tests of the layer come from. The fixtures of the layer
+  are drawn from the generator of the `utils` package of the port, and the
+  script reproduces that generator in Python, so that the fixtures of the port
+  and the fixtures of the script are the same rows. The upstream draws its
+  permutations with the global generator of numpy, so the relevance it computes
+  and the relevance the port computes are different numbers; the script prints
+  the relevance of the upstream next to the relation the upstream test asserts,
+  and the two agree to `3.9e-15`. The workers of the process pool of the
+  upstream cannot import the stubbed packages, so the number of the jobs has to
+  be set to one.
 - `gen_efficient_backdoor_testdata.py` generates
   `src/identifiers/test_efficient_graphs.mbt` mechanically from the fixtures of
   `tests/causal_identifiers/example_graphs_efficient.py`, so the expected

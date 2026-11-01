@@ -921,3 +921,47 @@ graph, identification, estimation, refutation.
   record.
 
 [0.0.20]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.20
+
+## [0.0.21] - 2026-11-01
+
+### Added
+
+- `gcm` -- the feature relevance, the port of `dowhy.gcm.feature_relevance`:
+  - `feature_relevance_sample`, which estimates the relevance of every input of
+    a prediction model for every sample of the baseline;
+  - `feature_relevance_distribution`, which estimates the relevance of every
+    input for the whole distribution of the inputs;
+  - `parent_relevance`, which estimates the relevance of the direct parents of
+    a node of a causal model and the relevance of its noise.
+- `_verify/gcm_feature_relevance_reference.py` -- the upstream reference of the
+  feature relevance. It runs the upstream on the very rows the port works on and
+  prints the relevance of the upstream next to the relation the upstream test
+  asserts, so that the two can be compared.
+
+### Notes
+
+- The upstream draws its permutations with the global generator of numpy, so
+  the relevance it computes and the relevance the port computes are different
+  numbers. What the two share is the relation the upstream test asserts: the
+  relevance of an input of a linear model is its coefficient times the
+  difference of the sample and the mean of the column. The upstream and the
+  relation agree to `3.9e-15`.
+- The upstream estimates the Shapley values of all the samples of the baseline
+  in one pass over the subsets of the inputs; the port estimates them for every
+  sample on its own. The two give the same numbers for a set function that
+  does not depend on the sample.
+- The upstream broadcasts the one prediction of the baseline over the
+  predictions of the background when it compares them; the port repeats the
+  prediction of the baseline for every sample of the background.
+- The prediction method of the port returns one number per row, so the two
+  tests of the upstream that use a classifier -- whose predictions are a
+  probability per class -- have no counterpart here.
+- The fixtures of the port hold fewer samples than the ones of the upstream,
+  because the upstream draws them with the global generator of numpy and the
+  exact method of the Shapley values cannot afford fifteen players and a
+  thousand samples. The relations the upstream asserts hold for every size of
+  the fixture; the tolerance of the test that compares two relevances is
+  relative, because the absolute tolerance of the upstream is a small fraction
+  of a relevance that the smaller fixture estimates less precisely.
+
+[0.0.21]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.21
