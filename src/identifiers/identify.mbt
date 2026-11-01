@@ -77,29 +77,56 @@ pub const BACKDOOR_MINCOST_EFFICIENT : String = "efficient-mincost-adjustment"
 const MAX_BACKDOOR_ITERATIONS : Int32 = 100000
 
 ///|
-/// The message that the efficient backdoor search is not implemented yet.
-pub const EFFICIENT_BACKDOOR_NOT_IMPLEMENTED : String = "the efficient backdoor (Smucler-Sapienza-Rotnitzky min-cut) search is not implemented yet"
+/// Whether the given name is one of the backdoor strategies of the upstream.
+///
+/// The strategies are the default, the exhaustive, the minimal and the maximal
+/// backdoor search and the three efficient backdoor searches of Smucler,
+/// Sapienza and Rotnitzky.
+pub fn is_backdoor_strategy(backdoor_adjustment : String) -> Bool {
+  backdoor_adjustment == BACKDOOR_DEFAULT ||
+  backdoor_adjustment == BACKDOOR_EXHAUSTIVE ||
+  backdoor_adjustment == BACKDOOR_MIN ||
+  backdoor_adjustment == BACKDOOR_MAX ||
+  backdoor_adjustment == BACKDOOR_EFFICIENT ||
+  backdoor_adjustment == BACKDOOR_MIN_EFFICIENT ||
+  backdoor_adjustment == BACKDOOR_MINCOST_EFFICIENT
+}
 
 ///|
 /// The error message of a backdoor strategy, or an empty string when the
 /// strategy is supported.
+///
+/// The upstream raises an error for a strategy it does not know, and the port
+/// reports the message instead of raising it.
 pub fn backdoor_adjustment_error(backdoor_adjustment : String) -> String {
-  if backdoor_adjustment == BACKDOOR_EFFICIENT ||
-    backdoor_adjustment == BACKDOOR_MIN_EFFICIENT ||
-    backdoor_adjustment == BACKDOOR_MINCOST_EFFICIENT {
-    EFFICIENT_BACKDOOR_NOT_IMPLEMENTED
-  } else {
+  if is_backdoor_strategy(backdoor_adjustment) {
     ""
+  } else {
+    "the backdoor strategy " + backdoor_adjustment + " is not supported"
   }
+}
+
+///|
+/// Whether the strategy is one of the three efficient backdoor searches.
+pub fn is_efficient_backdoor_strategy(backdoor_adjustment : String) -> Bool {
+  backdoor_adjustment == BACKDOOR_EFFICIENT ||
+  backdoor_adjustment == BACKDOOR_MIN_EFFICIENT ||
+  backdoor_adjustment == BACKDOOR_MINCOST_EFFICIENT
 }
 
 ///|
 /// The backdoor adjustment sets of the graph.
 ///
 /// The first component holds the adjustment sets, the second one an error
-/// message that is empty when the search succeeded. The three "efficient"
-/// strategies are not implemented yet: they return an empty list of
-/// adjustment sets and a message that says so, rather than a wrong set.
+/// message that is empty when the search succeeded.
+///
+/// The three efficient strategies are the searches of Smucler, Sapienza and
+/// Rotnitzky; they return one adjustment set, or an error message when no
+/// adjustment set of the observable variables exists. The `costs` are the
+/// costs of the variables of the minimum cost strategy; an empty list means
+/// that every variable costs one, the way the upstream assumes it when no
+/// costs are given. The `conditional_node_names` are the variables that
+/// determine the treatment.
 ///
 /// The candidate sets are enumerated in sorted order. The Python code
 /// iterates over a `set` of variables, so the order in which it finds the
@@ -112,15 +139,58 @@ pub fn identify_backdoor(
   observed_nodes : Array[String],
   backdoor_adjustment : String,
   direct_effect~ : Bool = false,
+  costs~ : Array[(String, Double)] = [],
+  conditional_node_names~ : Array[String] = [],
 ) -> (Array[AdjustmentSet], String) {
   let message = backdoor_adjustment_error(backdoor_adjustment)
   if message != "" {
     return ([], message)
   }
+  if is_efficient_backdoor_strategy(backdoor_adjustment) {
+    let (values, error) = efficient_backdoor_sets(
+      backdoor_adjustment, graph, action_nodes, outcome_nodes, observed_nodes, conditional_node_names,
+      costs,
+    )
+    if error != "" {
+      return ([], error)
+    }
+    let sets : Array[AdjustmentSet] = []
+    sets.push(AdjustmentSet::new("backdoor", values))
+    return (sets, "")
+  }
   let sets = search_backdoor(
     graph, action_nodes, outcome_nodes, observed_nodes, backdoor_adjustment, direct_effect,
   )
   (sets, "")
+}
+
+///|
+/// The adjustment set of the given efficient backdoor strategy.
+fn efficient_backdoor_sets(
+  backdoor_adjustment : String,
+  graph : @graph.DirectedGraph,
+  action_nodes : Array[String],
+  outcome_nodes : Array[String],
+  observed_nodes : Array[String],
+  conditional_node_names : Array[String],
+  costs : Array[(String, Double)],
+) -> (Array[String], String) {
+  if backdoor_adjustment == BACKDOOR_EFFICIENT {
+    efficient_backdoor_adjustment(
+      graph, action_nodes, outcome_nodes, observed_nodes, conditional_node_names,
+      costs,
+    )
+  } else if backdoor_adjustment == BACKDOOR_MIN_EFFICIENT {
+    efficient_backdoor_minimal_adjustment(
+      graph, action_nodes, outcome_nodes, observed_nodes, conditional_node_names,
+      costs,
+    )
+  } else {
+    efficient_backdoor_mincost_adjustment(
+      graph, action_nodes, outcome_nodes, observed_nodes, conditional_node_names,
+      costs,
+    )
+  }
 }
 
 ///|
@@ -580,6 +650,9 @@ fn ball_passes(
 /// The estimand carries the adjustment sets of the backdoor criterion, the
 /// instruments and the frontdoor variables, together with the assumptions
 /// that every one of them needs.
+///
+/// The `costs` and the `conditional_node_names` are the arguments of the
+/// efficient backdoor strategies; they are ignored by the other strategies.
 pub fn identify_effect_auto(
   graph : @graph.DirectedGraph,
   action_nodes : Array[String],
@@ -587,6 +660,8 @@ pub fn identify_effect_auto(
   observed_nodes : Array[String],
   estimand_type : String,
   backdoor_adjustment : String,
+  costs~ : Array[(String, Double)] = [],
+  conditional_node_names~ : Array[String] = [],
 ) -> IdentifiedEstimand {
   // Without a directed path from the treatment to the outcome the causal
   // effect is zero.
@@ -610,6 +685,8 @@ pub fn identify_effect_auto(
     observed_nodes,
     backdoor_adjustment,
     direct_effect~,
+    costs~,
+    conditional_node_names~,
   )
   if message != "" {
     abort(message)

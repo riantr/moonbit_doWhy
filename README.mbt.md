@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.16.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.17.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -15,7 +15,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Area | Upstream | This port |
 | --- | --- | --- |
 | Causal graph, d-separation | `dowhy.graph`, `dowhy.causal_graph` | ported |
-| Identification | `dowhy.causal_identifier` | ported (backdoor, frontdoor, general adjustment, IV, mediation) |
+| Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal and the three efficient strategies of Smucler-Sapienza-Rotnitzky -- frontdoor, general adjustment, IV, mediation) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage, regression discontinuity) |
 | Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome, random common cause, unobserved common cause) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset` and the fixtures the upstream tests use) |
@@ -227,9 +227,11 @@ the upstream code is order-dependent rather than wrong in an absolute sense:
 - The frontdoor identifier returns the **smallest** valid set. Upstream breaks
   out of its loop after the first match it finds and therefore returns the
   largest one.
-- The efficient backdoor criterion (the Smucler-Sapienza-Rotnitzky min-cut)
-  is not implemented. It returns an empty adjustment set together with a
-  message that says so, instead of returning a wrong one.
+- The efficient backdoor criterion (the Smucler-Sapienza-Rotnitzky min-cut) is
+  ported. It reports a message instead of raising an error, so a search that
+  fails returns an empty adjustment set together with the reason. An empty list
+  of costs means that every variable costs one, the way the upstream assumes it
+  when no costs are given.
 - The propensity score estimators compute the scores of the data they are
   asked about with the model and the encoder that were fitted on the training
   data, so the scores follow the rows of that data. Upstream assigns the

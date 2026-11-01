@@ -735,3 +735,69 @@ graph, identification, estimation, refutation.
 - The **intrinsic causal influence** of the upstream is **not ported**.
 
 [0.0.16]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.16
+
+## [0.0.17] - 2026-11-01
+
+### Added
+
+- `identifiers` -- the efficient backdoor search, the port of
+  `dowhy.causal_identifier.efficient_backdoor`:
+  - `efficient_backdoor_adjustment`, the efficient adjustment set of Smucler,
+    Sapienza and Rotnitzky (2021, Biometrika);
+  - `efficient_backdoor_minimal_adjustment`, the efficient minimal adjustment
+    set of the same paper;
+  - `efficient_backdoor_mincost_adjustment`, the efficient minimum cost
+    adjustment set, found with the minimum cut of the flow network of Smucler
+    and Rotnitzky (2022, Journal of Causal Inference).
+- `identifiers` -- the three efficient strategies are wired into
+  `identify_backdoor` and `identify_effect_auto`, which take the costs and the
+  conditional variables of the upstream.
+- `_verify/gen_efficient_backdoor_testdata.py` -- the generator of the example
+  graphs of the tests of the search. It reads the fixtures of the upstream
+  mechanically, so the expected adjustment sets cannot be mistranscribed.
+- `_verify/efficient_backdoor_reference.py` -- the upstream reference of the
+  search.
+- `_verify/efficient_backdoor_cut_probe.py` -- the script that compares the cut
+  of the upstream with the minimum cut of the same network.
+- `_verify/efficient_backdoor_extra_reference.py` -- the upstream reference of
+  the two graphs of the tests that the upstream test file does not cover.
+
+### Changed
+
+- `identifiers` -- `backdoor_adjustment_error` now rejects a strategy that is
+  not one of the strategies of the upstream, the way the upstream raises an
+  error for it. Every strategy of the upstream is supported.
+- `identifiers` -- `identify_backdoor` and `identify_effect_auto` take the
+  costs of the variables and the conditional variables of the upstream. The
+  arguments are optional and are ignored by the strategies that do not use
+  them.
+
+### Removed
+
+- `identifiers` -- `EFFICIENT_BACKDOOR_NOT_IMPLEMENTED`. The efficient backdoor
+  search is implemented now, so the message has no reason to exist.
+
+### Notes
+
+- The changelog of 0.0.1 listed the efficient backdoor strategies of the
+  upstream among the ported ones, and the changelog of 0.0.15 corrected that.
+  They are implemented now.
+- The port reports the failures of the search with a message instead of
+  raising an error, the way the rest of the port reports the failures of the
+  other searches.
+- An empty list of costs means that every variable of the graph costs one. The
+  upstream uses the same rule when it is given no costs at all, and a variable
+  without a cost has an infinite capacity in the flow network.
+- The flow network of the minimum cost strategy is solved with Dinic's
+  algorithm. The amount that is pushed along a path is the smallest residual
+  capacity of the path, and the levels of the level graph are the distances to
+  the source. The upstream finds another maximum flow when several of them
+  exist, and the cut it reports is the one that is contained in every other
+  cut; the port reproduces it on all eleven example graphs of the upstream.
+- The example graphs of the upstream that have no costs are the ones with the
+  cost of one for every variable, and the ones with explicit costs leave the
+  variables without a cost at an infinite capacity. The port follows both
+  rules, so the adjustment sets of the eleven example graphs are the ones of
+  the upstream.
+
+[0.0.17]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.17

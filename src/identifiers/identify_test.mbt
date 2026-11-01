@@ -258,10 +258,11 @@ test "the complete adjustment search returns the minimal sets" {
 }
 
 ///|
-test "the efficient backdoor search reports that it is not implemented" {
+test "the efficient backdoor strategy returns the boundary of the outcome" {
   let graph = @graph.DirectedGraph::new()
   graph.add_edge("X", "Y")
   graph.add_edge("Z", "X")
+  graph.add_edge("Z", "Y")
   let (sets, message) = @identifiers.identify_backdoor(
     graph,
     ["X"],
@@ -269,8 +270,25 @@ test "the efficient backdoor search reports that it is not implemented" {
     ["X", "Y", "Z"],
     @identifiers.BACKDOOR_EFFICIENT,
   )
+  assert_eq(message, "")
+  assert_eq(sets.length(), 1)
+  assert_true(sets[0].adjustment_variables.contains("Z"))
+  assert_eq(sets[0].adjustment_variables.length(), 1)
+}
+
+///|
+test "an unknown backdoor strategy reports that it is not supported" {
+  let graph = @graph.DirectedGraph::new()
+  graph.add_edge("X", "Y")
+  let (sets, message) = @identifiers.identify_backdoor(
+    graph,
+    ["X"],
+    ["Y"],
+    ["X", "Y"],
+    "no-such-strategy",
+  )
   assert_eq(sets.length(), 0)
-  assert_eq(message, @identifiers.EFFICIENT_BACKDOOR_NOT_IMPLEMENTED)
+  assert_true(message != "")
 }
 
 ///|

@@ -98,10 +98,25 @@ pub fn CausalModel::identify_effect(
     self.outcome,
     self.observed_nodes,
     "nonparametric-ate",
-    method_name,
+    backdoor_strategy_of(method_name),
   )
   self.estimand = estimand
   estimand
+}
+
+///|
+/// The backdoor strategy that the given identifier method uses.
+///
+/// The method names of the model are the identifiers of the upstream, and the
+/// upstream passes the name of the backdoor strategy to the identifier. A name
+/// that is not a strategy of the upstream uses the default backdoor strategy,
+/// the way the upstream does when it is given no strategy at all.
+fn backdoor_strategy_of(method_name : String) -> String {
+  if @identifiers.is_backdoor_strategy(method_name) {
+    method_name
+  } else {
+    @identifiers.BACKDOOR_DEFAULT
+  }
 }
 
 ///|

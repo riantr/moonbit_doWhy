@@ -305,6 +305,32 @@ statsmodels / scikit-learn conventions are deliberate:
   layer of the `gcm` package is a function of two samples, and the measure of
   the configuration is the Kullback-Leibler divergence of
   `auto_estimate_kl_divergence` when the caller does not give one.
+- The efficient backdoor search of the `identifiers` package is the port of
+  `dowhy.causal_identifier.efficient_backdoor`, and it has two conventions of
+  the upstream that the port has to keep:
+  - **an empty list of costs means that every variable of the graph costs
+    one.** The upstream uses a cost of one for every variable when it is given
+    no costs at all, and a variable without a cost has an infinite capacity in
+    the flow network. Seven of the eleven example graphs of the upstream have
+    no costs, so reading an empty list as "every variable is free" gives the
+    wrong minimum cut.
+  - **the minimum cut is the cut of the upstream, not just any minimum cut.**
+    The upstream finds the cut that is contained in every other cut, and the
+    port reproduces it on all eleven example graphs.
+- The flow network of that search is solved with Dinic's algorithm, and three
+  details of it decide whether the result is the one of the upstream:
+  - **the levels of the level graph are the distances to the source**, so the
+    breadth first search reads its queue from the front. A search that reads it
+    from the back is a depth first search, and the levels it assigns are not
+    the distances, so the blocking flow misses augmenting paths and the flow
+    is too small.
+  - **the unvisited sign of a level is minus one**, not zero, because the level
+    of the source is zero.
+  - **the limit of the amount that is pushed is passed down the path.** Every
+    edge of the path is pushed that same amount, which is the smallest residual
+    capacity of the path. Passing the amount back up instead pushes more on the
+    edges near the source than on the edges near the sink, and the flow is not
+    conserved.
 
 ## Package layout
 
@@ -478,3 +504,20 @@ README makes, so they are tracked in the repository:
   holds a million: the covariance of the sample is the same number either way,
   and the port keeps the fixture small enough for every backend of the
   toolchain.
+- `gen_efficient_backdoor_testdata.py` generates
+  `src/identifiers/test_efficient_graphs.mbt` mechanically from the fixtures of
+  `tests/causal_identifiers/example_graphs_efficient.py`, so the expected
+  adjustment sets of the eleven example graphs cannot be mistranscribed.
+- `efficient_backdoor_reference.py` runs the upstream `EfficientBackdoor` on the
+  eleven example graphs and prints the adjustment sets of the three strategies,
+  which is where the expectations of the tests of the search come from.
+- `efficient_backdoor_cut_probe.py` prints the flow network of one example
+  graph, the maximum flow of the upstream, the cut the upstream computes and
+  the minimum cut of the same network. It is the script that showed that the
+  cut of the upstream is the cut that is contained in every other cut, and not
+  the cut that `networkx.minimum_cut` returns.
+- `efficient_backdoor_extra_reference.py` runs the upstream on the two graphs
+  of the tests of the port that the upstream test file does not cover: the
+  graph in which the treatment is a neighbour of the outcome, so no adjustment
+  set exists, and the graph whose observable variables are not the ancestors of
+  the treatment and the outcome.
