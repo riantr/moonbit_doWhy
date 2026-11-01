@@ -965,3 +965,47 @@ graph, identification, estimation, refutation.
   of a relevance that the smaller fixture estimates less precisely.
 
 [0.0.21]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.21
+
+## [0.0.22] - 2026-11-01
+
+### Added
+
+- `gcm` -- the intrinsic causal influence, the port of
+  `dowhy.gcm.influence`:
+  - `intrinsic_causal_influence`, which estimates the contribution of the noise
+    of every ancestor of the target node to the variance of the target node;
+  - `intrinsic_causal_influence_sample`, which estimates the contribution of
+    the noise of every ancestor to every sample of the target node;
+  - `icc_variance_attribution`, the attribution function of a continuous
+    target.
+- `_verify/gcm_intrinsic_influence_reference.py` -- the upstream reference of
+  the intrinsic causal influence. It runs the upstream on the very rows the port
+  works on and prints the contributions of the upstream next to the relation
+  the upstream test asserts, so that the two can be compared.
+
+### Notes
+
+- The upstream draws its noise with the global generator of numpy, so the
+  contributions it computes and the contributions the port computes are
+  different numbers. What the two share is the relation the upstream test
+  asserts: the contribution of a node is the variance of the noise of that
+  node. On the fixture of the reference script the variance of the target is
+  `5.7182810415575` in both; the upstream contributes `0.772` to `X0` and
+  `3.948` to `X2`, the port `0.856` and `4.176`.
+- The upstream selects the model of the approximate prediction with the model
+  selection of `dowhy.gcm.auto`; the port fits a linear regression, which is
+  the model the upstream selects for a linear relation. The quality of the
+  assignment therefore has no effect on the result. On the fixture of the
+  reference script the contribution of the upstream to `X0` is `1.029` with the
+  approximate prediction and `0.772` with the exact one, while the two of the
+  port agree, because the relation of the fixture is linear.
+- The upstream propagates the noise of the exact prediction through the whole
+  model, which fails when the model holds a descendant of the target node,
+  because the noise of that descendant is not among the columns of the noise
+  samples. The port propagates it through the sub graph of the ancestors of the
+  target node.
+- The prediction method of the port returns one number per row, so the three
+  tests of the upstream that use a categorical target -- whose predictions are a
+  probability per class -- have no counterpart here.
+
+[0.0.22]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.22

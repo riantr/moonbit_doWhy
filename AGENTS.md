@@ -367,7 +367,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -560,6 +560,29 @@ README makes, so they are tracked in the repository:
   and the two agree to `3.9e-15`. The workers of the process pool of the
   upstream cannot import the stubbed packages, so the number of the jobs has to
   be set to one.
+- `gcm_intrinsic_influence_reference.py` computes the numbers of the intrinsic
+  causal influence -- the contribution of the noise of every ancestor of the
+  target node to the variance of the target, and the contribution of the noise
+  of every ancestor to a single sample of the target -- with the upstream
+  `dowhy.gcm.influence` code, which is where the expectations of the tests of
+  the layer come from. The fixture of the layer is drawn from the generator of
+  the `utils` package of the port, and the script reproduces that generator in
+  Python, so that the fixtures of the port and the fixtures of the script are
+  the same rows: the variance of the target of the chain is `5.7182810415575`
+  in both. The upstream draws its noise with the global generator of numpy, so
+  the contributions it computes and the contributions the port computes are
+  different numbers; what the two share is the relation the upstream test
+  asserts, which is that the contribution of a node is the variance of the
+  noise of that node. The assignment of the mechanisms of the upstream selects
+  a model with a cross validation, which splits the data with the global
+  generator of numpy, so the script has to seed that generator **before** the
+  model is fitted; otherwise the numbers of the script differ from one run to
+  the next. The upstream module `dowhy.gcm.influence` imports the
+  names it needs from the package `dowhy.gcm`, which the loader stubs out, so
+  the stub has to carry them **before** the module is read. The workers of the
+  process pool of the upstream cannot import the stubbed packages, so the
+  number of the jobs has to be set to one, and the `ShapleyConfig` of one job
+  has to be handed to the call.
 - `gen_efficient_backdoor_testdata.py` generates
   `src/identifiers/test_efficient_graphs.mbt` mechanically from the fixtures of
   `tests/causal_identifiers/example_graphs_efficient.py`, so the expected
