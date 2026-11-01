@@ -4,7 +4,7 @@
 /// Node and edge insertion order is preserved, which keeps the generated
 /// results (adjustment sets, paths, topological orders) deterministic.
 pub struct DirectedGraph {
-  nodes : Array[String]
+  mut nodes : Array[String]
   node_set : Set[String]
   succ : Map[String, Array[String]]
   pred : Map[String, Array[String]]
@@ -415,6 +415,85 @@ pub fn DirectedGraph::subgraph(
     }
   }
   g
+}
+
+///|
+/// The predecessors of a node, sorted by their name.
+///
+/// This is the port of `dowhy.graph.get_ordered_predecessors`. The order of the
+/// predecessors is not reliable otherwise, and the columns of a data frame are
+/// picked by the parents of a node.
+pub fn DirectedGraph::ordered_predecessors(
+  self : DirectedGraph,
+  name : String,
+) -> Array[String] {
+  let predecessors = self.predecessors(name)
+  predecessors.sort_by(fn(a, b) { a.lexical_compare(b) })
+  predecessors
+}
+
+///|
+/// The sub graph induced by the nodes that can reach the given node.
+///
+/// This is the port of `dowhy.graph.node_connected_subgraph_view`, which keeps
+/// the nodes of the graph that have a path to the given node.
+pub fn DirectedGraph::node_connected_subgraph_view(
+  self : DirectedGraph,
+  name : String,
+) -> DirectedGraph {
+  let names : Array[String] = []
+  for node in self.node_list() {
+    if self.has_path(node, name) {
+      names.push(node)
+    }
+  }
+  self.subgraph(names)
+}
+
+///|
+/// Remove the node with the given name and every edge that touches it.
+///
+/// This is the port of `networkx.DiGraph.remove_node`. Removing a node that is
+/// not in the graph does nothing.
+pub fn DirectedGraph::remove_node(self : DirectedGraph, name : String) -> Unit {
+  if !self.node_set.contains(name) {
+    return
+  }
+  self.node_set.remove(name)
+  let kept : Array[String] = []
+  for node in self.nodes {
+    if node != name {
+      kept.push(node)
+    }
+  }
+  self.nodes = kept
+  self.succ.remove(name)
+  self.pred.remove(name)
+  let kept_edges : Array[(String, String)] = []
+  for (from, to) in self.edges {
+    if from != name && to != name {
+      kept_edges.push((from, to))
+    }
+  }
+  self.edges = kept_edges
+  for node in self.nodes {
+    let children = self.succ.get(node).unwrap_or([]).copy()
+    let kept_children : Array[String] = []
+    for child in children {
+      if child != name {
+        kept_children.push(child)
+      }
+    }
+    self.succ.set(node, kept_children)
+    let parents = self.pred.get(node).unwrap_or([]).copy()
+    let kept_parents : Array[String] = []
+    for parent in parents {
+      if parent != name {
+        kept_parents.push(parent)
+      }
+    }
+    self.pred.set(node, kept_parents)
+  }
 }
 
 ///|

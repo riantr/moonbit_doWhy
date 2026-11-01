@@ -271,6 +271,26 @@ statsmodels / scikit-learn conventions are deliberate:
   last bin holds the largest value of the sample. The edges are the ones of
   `numpy.linspace(min_value, max_value, number_of_bins)`, which gives
   `number_of_bins - 1` bins, and a single edge gives no bin at all.
+- The distribution change layer of the `gcm` package keeps the mechanisms of a
+  causal model in the model, where the upstream keeps them in the node attributes
+  of the graph. `clone_causal_models` therefore clones the models where the
+  upstream clones them -- a clone of a mechanism is unfitted -- and the private
+  `copy_mechanisms` copies the fitted ones where the upstream relies on the node
+  attributes surviving the subgraph view of the target node.
+- The binary label of the test of the change of a mechanism of the `gcm` package
+  is a two column one hot matrix, like the
+  `OneHotEncoder(handle_unknown="ignore")` of the upstream, which keeps every
+  category of the label. A one hot encoder that drops a category would change
+  the kernel matrix of the test.
+- The rows of the two samples of the test of the change of a mechanism of the
+  `gcm` package are permuted with the generator the layer is given, and the
+  upstream permutes them with the global generator of numpy. The permutation is
+  not a detail: when the two samples hold the same rows, the label tells the two
+  copies of every row apart and the test finds a dependency that is not there.
+- The measure of the difference of two distributions of the distribution change
+  layer of the `gcm` package is a function of two samples, and the measure of
+  the configuration is the Kullback-Leibler divergence of
+  `auto_estimate_kl_divergence` when the caller does not give one.
 
 ## Package layout
 
@@ -284,7 +304,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer and the uncertainty estimates |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates and the distribution change layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -404,6 +424,19 @@ README makes, so they are tracked in the repository:
   script are the same numbers. The script prints the first three rows of every
   frame and the sum of every column, so the tests of the port compare the first
   rows and the sums and not the whole column.
+- `gcm_distribution_change_reference.py` computes the numbers of the distribution
+  change layer -- the p-value of the test of the change of a mechanism of every
+  node, the attribution of the change of the distribution of the target and the
+  attribution between two models that are fitted on the old and on the new data
+  -- with the upstream `dowhy.gcm.distribution_change` code, which is where the
+  expectations of the tests of the layer come from. The upstream draws its
+  permutations from the global generator of numpy, so its p-values depend on that
+  generator; the tests of the port therefore assert the decision the p-value
+  leads to and the attribution with a tolerance, and the script prints the
+  numbers of the upstream for the record. The fixtures of the layer hold a fifth
+  of the rows of the fixtures of the upstream, because the kernel based
+  conditional test of the layer inverts a kernel matrix whose size is the number
+  of the rows of the joint sample.
 - `gcm_uncertainty_reference.py` computes the numbers of the uncertainty
   estimates -- the entropy of a Gaussian sample with the three estimators, the
   variance of a Gaussian sample in one and in several dimensions, the entropy

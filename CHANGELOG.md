@@ -612,3 +612,57 @@ graph, identification, estimation, refutation.
   backend of the toolchain.
 
 [0.0.13]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.13
+
+## [0.0.14] - 2026-11-01
+
+### Added
+
+- `gcm` -- the distribution change layer, the port of
+  `dowhy.gcm.distribution_change`:
+  - `mechanism_change_test`, which tests whether the mechanism of a node
+    changed between two data sets;
+  - `distribution_change`, which attributes the change of the marginal
+    distribution of a target node between two data sets to the nodes of the
+    causal graph;
+  - `distribution_change_of_graphs`, which does the same between two models
+    that are already fitted on the old and on the new data;
+  - `estimate_distribution_change_scores`, which scores every node of a model by
+    how much its distribution changed.
+- `gcm` -- `DistributionChangeConfig`, the configuration of the layer, and
+  `DistributionChangeResult`, its result.
+- `graph` -- `DirectedGraph::ordered_predecessors`,
+  `DirectedGraph::node_connected_subgraph_view` and
+  `DirectedGraph::remove_node`, the three helpers the layer needs.
+- `_verify/gcm_distribution_change_reference.py` -- the upstream reference of the
+  layer. It computes the numbers of the upstream attribution with the upstream
+  code itself, so the expectations of the tests of the port are the numbers of
+  the upstream rather than a reading of it.
+
+### Notes
+
+- The upstream keeps the mechanisms and the root distributions in the node
+  attributes of the graph; the port keeps them in the model. The layer therefore
+  clones the models where the upstream clones them, and copies the **fitted**
+  mechanisms where the upstream relies on the node attributes surviving the
+  subgraph view of the target node. A clone of a mechanism is unfitted, so a
+  model whose mechanisms were cloned has to be fitted again before it can be
+  used.
+- The layer exposes a configuration value and a result value instead of the
+  `return_additional_info` flag and the `auto_assignment_quality` parameter of
+  the upstream. The port always returns the attribution, the change of every
+  mechanism and the two models; the caller assigns the mechanisms itself when it
+  wants to.
+- The binary label of the test of the change of a mechanism is encoded with a
+  two column one hot matrix, like the `OneHotEncoder(handle_unknown="ignore")` of
+  the upstream, which keeps every category of the label.
+- The rows of the two samples of the test of the change of a mechanism are
+  permuted with the generator the layer is given, and the upstream permutes them
+  with the global generator of numpy. The p-values therefore differ on the same
+  rows, and the decision they lead to is the same.
+- The fixtures of the layer hold a fifth of the rows of the fixtures of the
+  upstream, because the kernel based conditional test of the layer inverts a
+  kernel matrix whose size is the number of the rows of the joint sample.
+- The **robust** variant of the layer (`dowhy.gcm.distribution_change_robust`)
+  is **not ported**.
+
+[0.0.14]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.14
