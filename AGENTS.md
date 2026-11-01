@@ -294,6 +294,13 @@ statsmodels / scikit-learn conventions are deliberate:
   upstream permutes them with the global generator of numpy. The permutation is
   not a detail: when the two samples hold the same rows, the label tells the two
   copies of every row apart and the test finds a dependency that is not there.
+- The strength of an edge of the arrow strength layer of the `gcm` package is
+  measured with the difference of the variances of the two distributions of the
+  target, like the upstream does for a continuous target, and with the
+  Kullback-Leibler divergence of the class probabilities for a categorical
+  target. The upstream runs the estimate for every edge in a process pool and
+  the port runs it for one edge at a time; the estimate of one edge does not
+  depend on the others, so the strengths are the same numbers.
 - The measure of the difference of two distributions of the distribution change
   layer of the `gcm` package is a function of two samples, and the measure of
   the configuration is the Kullback-Leibler divergence of
@@ -311,7 +318,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates and the distribution change layer |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -445,6 +452,19 @@ README makes, so they are tracked in the repository:
   the fixtures of the change of the distribution hold a tenth of them, because
   the kernel based conditional test of the layer inverts a kernel matrix whose
   size is the number of the rows of the joint sample.
+- `gcm_influence_reference.py` computes the numbers of the arrow strength layer --
+  the strength of every edge that points at the target node, with the default
+  measure of the difference of the two distributions, with the Kullback-Leibler
+  divergence and with the observed samples of the parents, and the strength of
+  every input of a classifier -- with the upstream `dowhy.gcm.influence` code,
+  which is where the expectations of the tests of the layer come from. The
+  upstream draws its permutations and its noise from the global generator of
+  numpy, so its numbers depend on that generator; the tests of the port
+  therefore assert the relations the upstream test file asserts, with a
+  tolerance around the numbers the script prints. The module of the upstream
+  reads the feature relevance from the package of the upstream, which the
+  loader stubs out, so the function is put on the stubbed package before the
+  module is read.
 - `gcm_uncertainty_reference.py` computes the numbers of the uncertainty
   estimates -- the entropy of a Gaussian sample with the three estimators, the
   variance of a Gaussian sample in one and in several dimensions, the entropy

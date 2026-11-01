@@ -699,3 +699,39 @@ graph, identification, estimation, refutation.
   divergence of `auto_estimate_kl_divergence` when the caller does not give one.
 
 [0.0.15]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.15
+
+## [0.0.16] - 2026-11-01
+
+### Added
+
+- `gcm` -- the arrow strength layer, the port of `dowhy.gcm.influence`:
+  - `arrow_strength`, which computes the causal strength of every edge that
+    points at a target node;
+  - `arrow_strength_of_model`, which computes the strength of every input of a
+    mechanism;
+  - `ArrowStrengthConfig`, the configuration of the layer.
+- `_verify/gcm_influence_reference.py` -- the upstream reference of the layer. It
+  computes the numbers of the upstream arrow strength with the upstream code
+  itself, so the expectations of the tests of the port are the numbers of the
+  upstream rather than a reading of it.
+
+### Notes
+
+- The strength of an edge is measured with the difference of the variances of
+  the two distributions of the target, like the upstream does for a continuous
+  target. For a categorical target the upstream measures the Kullback-Leibler
+  divergence of the class probabilities, and the port does the same.
+- The upstream runs the estimate for every edge in a process pool and the port
+  runs it for one edge at a time. The estimate of one edge does not depend on
+  the others, so the strengths are the same numbers.
+- The upstream draws its permutations and its noise from the global generator of
+  numpy, so the numbers of the upstream depend on that generator. The tests of
+  the port assert the relations the upstream test file asserts, with a tolerance
+  around the numbers the reference script prints.
+- The samples of the conditional distribution and the number of the runs of the
+  estimate are smaller than the ones of the upstream, the way they are in the
+  other layers of the port: the upstream draws two thousand samples of the
+  conditional distribution and runs the estimate up to five thousand times.
+- The **intrinsic causal influence** of the upstream is **not ported**.
+
+[0.0.16]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.16

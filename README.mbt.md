@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.15.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.16.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -25,7 +25,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution), the **unit change** layer, the **uncertainty** estimates and the **distribution change** layer are ported; the **robust** variant of the distribution change layer is **not ported** |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution), the **unit change** layer, the **uncertainty** estimates, the **distribution change** layer and the **arrow strength** layer are ported; the **robust** variant of the distribution change layer and the **intrinsic causal influence** are **not ported** |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
@@ -100,7 +100,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
-| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates and the distribution change layer |
+| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
 | `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
@@ -483,6 +483,13 @@ following ways:
 - `gcm` takes the measure of the difference of two distributions as a function of
   two samples, and the measure of the configuration is the Kullback-Leibler
   divergence of `auto_estimate_kl_divergence` when the caller does not give one.
+- `gcm` measures the strength of an edge with the difference of the variances of
+  the two distributions of the target, like the upstream does for a continuous
+  target. For a categorical target the upstream measures the Kullback-Leibler
+  divergence of the class probabilities, and the port does the same.
+- `gcm` runs the estimate of the strength of an edge for one edge at a time,
+  while the upstream runs it for every edge in a process pool. The estimate of
+  one edge does not depend on the others, so the strengths are the same numbers.
 
 ## Development
 
