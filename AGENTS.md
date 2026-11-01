@@ -543,3 +543,9 @@ README makes, so they are tracked in the repository:
   breaks a tie in its hitting set algorithm with the iteration order of a
   dictionary of strings, and that order changes between the runs of the
   interpreter.
+- `id_identifier_reference.py` runs the upstream ID algorithm on the six graphs
+  of `tests/causal_identifiers/test_id_identifier.py` and prints the string of
+  the estimand of each of them, which is the number the tests of the port
+  compare with. The graphs have to be built with the nodes in the order of the
+  graph string of the upstream, because the order of the nodes of the graph
+  decides the order of the factors of the estimand.

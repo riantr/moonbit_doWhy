@@ -837,3 +837,38 @@ graph, identification, estimation, refutation.
   else.
 
 [0.0.18]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.18
+
+## [0.0.19] - 2026-11-01
+
+### Added
+
+- `identifiers` -- the ID algorithm of Shpitser and Pearl, the port of
+  `dowhy.causal_identifier.id_identifier`:
+  - `identify_effect_id`, which returns the estimand of the effect as a
+    product of conditional distributions and the variables the product has to
+    be summed over;
+  - `IDExpression`, `IDElement` and `IDPredictor`, the three types the
+    estimand is built from, with the accessors of their parts;
+  - `IDExpression::to_string`, which prints the estimand the way the upstream
+    prints it.
+- `_verify/id_identifier_reference.py` -- the upstream reference of the
+  algorithm. It runs the upstream on the six graphs of the upstream test file
+  and prints the string of the estimand of each of them.
+
+### Notes
+
+- The upstream keeps the variables of a sum in a Python `set`, so their order
+  changes between the runs of the interpreter. The port keeps them in the
+  order of the nodes of the graph, so its estimand does not change.
+- The order of the factors of the product follows the order of the nodes of
+  the graph, the way it does upstream. The upstream reads the graph from a
+  graph string, and the order of the nodes of that string is the order of
+  their first appearance.
+- The upstream stops at the last case of its algorithm, the one of a hedge it
+  does not handle, and reports that the effect is not identifiable. The port
+  reports the same.
+- The ID algorithm is a function of its own, the way it is upstream. It is not
+  wired into `CausalModel::identify_effect`, because the upstream returns an
+  estimand of another kind for it.
+
+[0.0.19]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.19

@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.18.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.19.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -15,7 +15,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Area | Upstream | This port |
 | --- | --- | --- |
 | Causal graph, d-separation | `dowhy.graph`, `dowhy.causal_graph` | ported |
-| Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation) |
+| Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation, and the **ID algorithm** of Shpitser-Pearl) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage, regression discontinuity) |
 | Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome, random common cause, unobserved common cause) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset` and the fixtures the upstream tests use) |
@@ -218,7 +218,7 @@ statsmodels and scikit-learn are deliberate rather than accidental:
 
 ## Deliberate differences from upstream
 
-Six behaviours of the core differ on purpose, and each one is a case where
+Seven behaviours of the core differ on purpose, and each one is a case where
 the upstream code is order-dependent rather than wrong in an absolute sense:
 
 - The backdoor identifier enumerates its candidate adjustment variables in
@@ -236,6 +236,9 @@ the upstream code is order-dependent rather than wrong in an absolute sense:
   the name of the variable. Upstream breaks it with the iteration order of a
   Python dictionary of strings, and the order of the strings changes between
   the runs of the interpreter.
+- The ID algorithm keeps the variables of a sum in the order of the nodes of
+  the graph. Upstream keeps them in a Python `set`, so their order changes
+  between the runs of the interpreter.
 - The propensity score estimators compute the scores of the data they are
   asked about with the model and the encoder that were fitted on the training
   data, so the scores follow the rows of that data. Upstream assigns the
