@@ -277,7 +277,7 @@ fn auto_parent_names(
   node : String,
 ) -> String {
   let mut names = ""
-  let parents = causal_model.graph.predecessors(node)
+  let parents = causal_model.graph.ordered_predecessors(node)
   for i = 0; i < parents.length(); i = i + 1 {
     if i > 0 {
       names = names + ","

@@ -262,7 +262,7 @@ fn whatif_node_values(
     }
     return Numbers(samples.numeric(node))
   }
-  let parents = causal_model.graph.predecessors(node)
+  let parents = causal_model.graph.ordered_predecessors(node)
   let x = whatif_design_matrix(causal_model, node, samples, parents)
   let mechanism = whatif_mechanism(causal_model, node)
   if is_classifier_kind(mechanism.kind()) {
@@ -290,7 +290,7 @@ fn whatif_counterfactual_values(
     }
     return Numbers(noise_data.numeric(node))
   }
-  let parents = causal_model.graph.predecessors(node)
+  let parents = causal_model.graph.ordered_predecessors(node)
   let x = whatif_design_matrix(causal_model, node, samples, parents)
   let mechanism = whatif_mechanism(causal_model, node)
   let noise = noise_data.numeric(node)

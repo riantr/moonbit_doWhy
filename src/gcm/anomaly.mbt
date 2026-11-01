@@ -489,7 +489,7 @@ pub fn anomaly_scores(
       let scorer = scorer_factory().fit(samples)
       results.set(node, scorer.score(anomaly_data.numeric(node)))
     } else {
-      let parents = causal_model.graph.predecessors(node)
+      let parents = causal_model.graph.ordered_predecessors(node)
       let parent_samples = design_matrix_of(
         causal_model, node, anomaly_data, parents,
       )
@@ -731,7 +731,7 @@ fn noise_dependent_values(
       values.set(node, column.copy())
       frame = frame.with_numeric(node, column)
     } else {
-      let parents = causal_model.graph.predecessors(node)
+      let parents = causal_model.graph.ordered_predecessors(node)
       let x = design_matrix_of(causal_model, node, frame, parents)
       let mechanism = mechanism_of(causal_model, node)
       let evaluated = mechanism.evaluate(x, column)

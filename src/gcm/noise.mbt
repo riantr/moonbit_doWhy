@@ -23,7 +23,7 @@ pub fn compute_data_from_noise(
     if is_root_node(causal_model, node) {
       frame = frame.with_numeric(node, noise_data.numeric(node))
     } else {
-      let parents = causal_model.graph.predecessors(node)
+      let parents = causal_model.graph.ordered_predecessors(node)
       let x = design_matrix_of(causal_model, node, frame, parents)
       let mechanism = mechanism_of(causal_model, node)
       frame = frame.with_numeric(
@@ -56,7 +56,7 @@ pub fn compute_noise_from_data(
     if is_root_node(causal_model, node) {
       frame = frame.with_numeric(node, observed_data.numeric(node))
     } else {
-      let parents = causal_model.graph.predecessors(node)
+      let parents = causal_model.graph.ordered_predecessors(node)
       let x = design_matrix_of(causal_model, node, observed_data, parents)
       let mechanism = mechanism_of(causal_model, node)
       frame = frame.with_numeric(
@@ -108,7 +108,7 @@ pub fn noise_samples_of_ancestors(
       samples = samples.with_numeric(node, values.copy())
       noise_samples = noise_samples.with_numeric(node, values.copy())
     } else {
-      let parents = causal_model.graph.predecessors(node)
+      let parents = causal_model.graph.ordered_predecessors(node)
       let x = design_matrix_of(causal_model, node, samples, parents)
       let mechanism = mechanism_of(causal_model, node)
       let noise = mechanism.noise_model.draw_samples(num_samples, rng)

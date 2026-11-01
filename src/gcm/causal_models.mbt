@@ -278,7 +278,7 @@ pub fn has_valid_local_structure(
   node : String,
 ) -> Bool {
   match model.parents_during_fit.get(node) {
-    Some(parents) => parents == model.graph.predecessors(node)
+    Some(parents) => parents == model.graph.ordered_predecessors(node)
     None => false
   }
 }

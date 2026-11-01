@@ -872,3 +872,52 @@ graph, identification, estimation, refutation.
   estimand of another kind for it.
 
 [0.0.19]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.19
+
+## [0.0.20] - 2026-11-01
+
+### Added
+
+- `gcm` -- the tests of the configuration, of the stochastic models and of the
+  noise, the port of the upstream test files `tests/gcm/test_config.py`,
+  `tests/gcm/test_stochastic_models.py` and `tests/gcm/test_noise.py`:
+  - `src/gcm/config_test.mbt` -- the two settings of the configuration are set
+    on a copy of it, because MoonBit has no mutable global;
+  - `src/gcm/stochastic_models_test.mbt` -- the parameters a fitted normal
+    distribution estimates, the samples it draws and the samples of an
+    empirical distribution;
+  - `src/gcm/noise_test.mbt` -- the data of a causal model that are computed
+    from the noise of its nodes, the noise that is computed from the data of
+    the nodes and the noise of a single row of data.
+- `_verify/gcm_stochastic_models_reference.py` -- the upstream reference of the
+  stochastic models. It runs the upstream on the very rows the port works on
+  and prints the parameters the upstream estimates on them.
+- `_verify/gcm_noise_reference.py` -- the upstream reference of the noise. It
+  runs the upstream `dowhy.gcm._noise` on the very rows the port works on and
+  prints the data and the noise it computes.
+- `_verify/strip_bom.py` -- the helper that removes the byte order mark the
+  PowerShell writes into a file it rewrites.
+
+### Fixed
+
+- The parents of a node are taken in the **sorted** order everywhere a design
+  matrix is built, the way the upstream takes them with
+  `dowhy.graph.get_ordered_predecessors`. The port took them in the order of
+  the edges of the graph, which gives a different column order -- and therefore
+  a different fit -- whenever the order of the edges is not the sorted one.
+  The parents a node is fitted with are compared against the sorted ones as
+  well, the way the upstream compares them.
+
+### Notes
+
+- The upstream `BayesianGaussianMixtureDistribution` and the beta distribution
+  are not part of the port, so the three tests of the upstream that use them
+  have no counterpart here.
+- The upstream `get_noise_dependent_function` is not part of the port, so the
+  four tests of the upstream that use it have no counterpart here.
+- The upstream draws its samples from the global generator of numpy, so the
+  samples of the upstream and of the port are different numbers. The reference
+  scripts print the samples of the port, which a replica of the generator of
+  the `utils` package reproduces, and the samples of the upstream for the
+  record.
+
+[0.0.20]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.20

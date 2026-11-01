@@ -61,7 +61,7 @@ pub fn fit_causal_model_of_target(
   training_data : @api.DataFrame,
 ) -> Unit {
   validate_causal_model_assignment(causal_model, target_node)
-  let parents = causal_model.graph.predecessors(target_node)
+  let parents = causal_model.graph.ordered_predecessors(target_node)
   if is_root_node(causal_model, target_node) {
     let root_model = match causal_model.root_model(target_node) {
       Some(model) => model
@@ -156,7 +156,7 @@ pub fn draw_samples(
   let nodes = causal_model.graph.topological_order()
   let mut frame = @api.DataFrame::new([], Map([]))
   for node in nodes {
-    let parents = causal_model.graph.predecessors(node)
+    let parents = causal_model.graph.ordered_predecessors(node)
     if is_root_node(causal_model, node) {
       let root_model = match causal_model.root_model(node) {
         Some(model) => model

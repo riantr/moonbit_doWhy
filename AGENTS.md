@@ -165,6 +165,13 @@ statsmodels / scikit-learn conventions are deliberate:
   spread the same fit over the columns differently. The least squares fit of
   the `utils` package has no intercept at all, so the two are not
   interchangeable.
+- The parents of a node are taken in the **sorted** order everywhere a design
+  matrix is built, the way the upstream takes them with
+  `dowhy.graph.get_ordered_predecessors`. The order of the edges of a graph is
+  no convention of the upstream, and a design matrix whose columns are in the
+  order of the edges fits a different model. The parents a node is fitted with
+  are compared against the sorted ones as well, the way the upstream compares
+  them in `dowhy.gcm.causal_models.validate_local_structure`.
 - The kernel based independence test of the `gcm` package reproduces the
   **gamma approximation** of `causal-learn`'s KCI test, the way the upstream
   validation uses it: the null distribution is a gamma distribution whose two
@@ -520,6 +527,25 @@ README makes, so they are tracked in the repository:
   holds a million: the covariance of the sample is the same number either way,
   and the port keeps the fixture small enough for every backend of the
   toolchain.
+- `gcm_stochastic_models_reference.py` computes the numbers of the stochastic
+  models -- the parameters a fitted normal distribution estimates, the samples it
+  draws and the samples of an empirical distribution -- with the upstream
+  `dowhy.gcm.stochastic_models` code, which is where the expectations of the
+  tests of the layer come from. The fixtures of the layer are drawn from the
+  generator of the `utils` package of the port, and the script reproduces that
+  generator in Python, so that the fixtures of the port and the fixtures of the
+  script are the same rows and the upstream estimates its parameters on the very
+  rows the port works on.
+- `gcm_noise_reference.py` computes the numbers of the noise -- the data of a
+  causal model that follow from the noise of its nodes and the noise that
+  follows from the data of the nodes -- with the upstream `dowhy.gcm._noise`
+  code, which is where the expectations of the tests of the layer come from.
+  The fixture of the layer is drawn from the generator of the `utils` package of
+  the port, and the script reproduces that generator in Python, so that the
+  fixtures of the port and the fixtures of the script are the same rows. The
+  script holds a second fixture whose node has two parents and whose edges are
+  added in an order that is not the sorted one, because the upstream takes the
+  parents of a node in the sorted order.
 - `gen_efficient_backdoor_testdata.py` generates
   `src/identifiers/test_efficient_graphs.mbt` mechanically from the fixtures of
   `tests/causal_identifiers/example_graphs_efficient.py`, so the expected
