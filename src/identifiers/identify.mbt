@@ -128,6 +128,10 @@ pub fn is_efficient_backdoor_strategy(backdoor_adjustment : String) -> Bool {
 /// costs are given. The `conditional_node_names` are the variables that
 /// determine the treatment.
 ///
+/// The `optimize_backdoor` flag replaces the search with the optimized search
+/// of the upstream, which walks the backdoor paths and finds a small set of
+/// variables that blocks all of them.
+///
 /// The candidate sets are enumerated in sorted order. The Python code
 /// iterates over a `set` of variables, so the order in which it finds the
 /// valid sets depends on the hash of the variable names and changes between
@@ -141,10 +145,15 @@ pub fn identify_backdoor(
   direct_effect~ : Bool = false,
   costs~ : Array[(String, Double)] = [],
   conditional_node_names~ : Array[String] = [],
+  optimize_backdoor~ : Bool = false,
 ) -> (Array[AdjustmentSet], String) {
   let message = backdoor_adjustment_error(backdoor_adjustment)
   if message != "" {
     return ([], message)
+  }
+  if optimize_backdoor {
+    let sets = optimized_backdoor_adjustment(graph, action_nodes, outcome_nodes)
+    return (sets, "")
   }
   if is_efficient_backdoor_strategy(backdoor_adjustment) {
     let (values, error) = efficient_backdoor_sets(
@@ -653,6 +662,8 @@ fn ball_passes(
 ///
 /// The `costs` and the `conditional_node_names` are the arguments of the
 /// efficient backdoor strategies; they are ignored by the other strategies.
+/// The `optimize_backdoor` flag replaces the backdoor search with the
+/// optimized search of the upstream.
 pub fn identify_effect_auto(
   graph : @graph.DirectedGraph,
   action_nodes : Array[String],
@@ -662,6 +673,7 @@ pub fn identify_effect_auto(
   backdoor_adjustment : String,
   costs~ : Array[(String, Double)] = [],
   conditional_node_names~ : Array[String] = [],
+  optimize_backdoor~ : Bool = false,
 ) -> IdentifiedEstimand {
   // Without a directed path from the treatment to the outcome the causal
   // effect is zero.
@@ -687,6 +699,7 @@ pub fn identify_effect_auto(
     direct_effect~,
     costs~,
     conditional_node_names~,
+    optimize_backdoor~,
   )
   if message != "" {
     abort(message)

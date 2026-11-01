@@ -801,3 +801,39 @@ graph, identification, estimation, refutation.
   the upstream.
 
 [0.0.17]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.17
+
+## [0.0.18] - 2026-11-01
+
+### Added
+
+- `identifiers` -- the optimized backdoor search, the port of
+  `dowhy.causal_identifier.backdoor`:
+  - `optimized_backdoor_adjustment`, which walks the paths between the
+    treatment and the outcome, keeps the backdoor paths and finds a small set
+    of variables that blocks all of them with the greedy hitting set algorithm
+    of the upstream;
+  - the `optimize_backdoor` flag of `identify_backdoor` and of
+    `identify_effect_auto`, which replaces the backdoor search with the
+    optimized one, the way the upstream does.
+- `_verify/optimized_backdoor_reference.py` -- the upstream reference of the
+  search. It runs the upstream on the six graphs of the upstream test file and
+  prints the sets it finds, twice, because the upstream breaks a tie in its
+  hitting set algorithm with the iteration order of a Python dictionary of
+  strings.
+
+### Notes
+
+- The port breaks the tie in the hitting set algorithm with the name of the
+  variable, so its result does not change between the runs. The upstream
+  breaks it with the iteration order of a dictionary of strings, and that
+  order changes between the runs of the interpreter. The sets the port finds
+  are the sets the upstream finds on the six graphs of the upstream test file.
+- The upstream adds a set for a pair of nodes when the whole table of the
+  pairs is not empty, and reads the pair out of that table, which raises an
+  error when the pair has no path and another pair has one. The port checks
+  the pair itself, and a pair without a path gets no set.
+- The upstream keeps the state of a pair of nodes and of a path only for its
+  own printing. The port keeps the variables that block the paths and nothing
+  else.
+
+[0.0.18]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.18

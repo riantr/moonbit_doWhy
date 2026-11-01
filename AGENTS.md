@@ -111,6 +111,10 @@ These are properties of the MoonBit toolchain this repository builds with
 - **`moon fmt` on this toolchain rewrites `Int` into `Int32` and `///` into
   `///|`.** The whole module has to be formatted with `moon fmt` before it is
   published, otherwise `moon fmt --check` fails in CI.
+- **An optional argument is supplied by its label with `name=value`.** The
+  `~` belongs to the declaration of the parameter (`name~ : Bool = false`) and
+  to the positional form of the call (`f(x, name~)`); the labelled form of the
+  call is `f(x, name=value)` and `name~=value` is a parse error.
 
 ## Aliasing hazards
 
@@ -331,6 +335,18 @@ statsmodels / scikit-learn conventions are deliberate:
     capacity of the path. Passing the amount back up instead pushes more on the
     edges near the source than on the edges near the sink, and the flow is not
     conserved.
+- The optimized backdoor search of the `identifiers` package is the port of
+  `dowhy.causal_identifier.backdoor`, and two details of it decide whether the
+  result is the one of the upstream:
+  - **the hitting set is computed over the pair that is complete, not over the
+    pair that is written to.** When the search reaches a pair of nodes whose
+    paths are known already, it takes the variables that block those paths and
+    adds them to the pairs along the way. Taking the variables of the pair
+    that is written to instead gives a different set.
+  - **a tie in the hitting set is broken with the name of the variable.** The
+    upstream breaks it with the iteration order of a Python dictionary of
+    strings, and that order changes between the runs of the interpreter, so the
+    upstream's own result is not reproducible. The port's is.
 
 ## Package layout
 
@@ -521,3 +537,9 @@ README makes, so they are tracked in the repository:
   graph in which the treatment is a neighbour of the outcome, so no adjustment
   set exists, and the graph whose observable variables are not the ancestors of
   the treatment and the outcome.
+- `optimized_backdoor_reference.py` runs the upstream optimized backdoor
+  search on the six graphs of `tests/causal_identifiers/test_optimize_backdoor.py`
+  and prints the sets it finds. It prints them twice, because the upstream
+  breaks a tie in its hitting set algorithm with the iteration order of a
+  dictionary of strings, and that order changes between the runs of the
+  interpreter.
