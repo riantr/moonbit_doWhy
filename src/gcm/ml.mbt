@@ -25,6 +25,8 @@ pub struct PredictionModel {
   /// Whether the parameters of the model are fixed, which means that the model
   /// is never fitted again.
   fixed : Bool
+  /// The custom function of an equation, when the model is one.
+  equation : EquationModel?
 }
 
 ///|
@@ -32,7 +34,13 @@ pub struct PredictionModel {
 ///
 /// This is the port of `dowhy.gcm.ml.create_linear_regressor`.
 pub fn PredictionModel::linear() -> PredictionModel {
-  { coefficients: [], intercept: 0.0, fitted: false, fixed: false, }
+  {
+    coefficients: [],
+    intercept: 0.0,
+    fitted: false,
+    fixed: false,
+    equation: None,
+  }
 }
 
 ///|
@@ -46,7 +54,13 @@ pub fn PredictionModel::with_fixed_parameters(
   coefficients : Array[Double],
   intercept : Double,
 ) -> PredictionModel {
-  { coefficients: coefficients.copy(), intercept, fitted: true, fixed: true, }
+  {
+    coefficients: coefficients.copy(),
+    intercept,
+    fitted: true,
+    fixed: true,
+    equation: None,
+  }
 }
 
 ///|
@@ -91,7 +105,19 @@ pub fn PredictionModel::fit(
   x : @utils.Matrix,
   y : Array[Double],
 ) -> PredictionModel {
-  let _ = self
+  match self.equation {
+    Some(equation) =>
+      // The custom function of an equation is fully defined, so there is
+      // nothing to fit.
+      return {
+        coefficients: self.coefficients.copy(),
+        intercept: self.intercept,
+        fitted: true,
+        fixed: true,
+        equation: Some(equation),
+      }
+    None => ()
+  }
   if self.fixed {
     // The upstream keeps the parameters of a model whose parameters are fixed.
     return {
@@ -99,6 +125,7 @@ pub fn PredictionModel::fit(
       intercept: self.intercept,
       fitted: true,
       fixed: true,
+      equation: None,
     }
   }
   let p = x.ncols()
@@ -109,6 +136,7 @@ pub fn PredictionModel::fit(
       intercept: @utils.mean(y),
       fitted: true,
       fixed: false,
+      equation: None,
     }
   }
   let offsets : Array[Double] = []
@@ -131,7 +159,7 @@ pub fn PredictionModel::fit(
   for j = 0; j < p; j = j + 1 {
     intercept = intercept - offsets[j] * coefficients[j]
   }
-  { coefficients, intercept, fitted: true, fixed: false, }
+  { coefficients, intercept, fitted: true, fixed: false, equation: None, }
 }
 
 ///|
@@ -140,6 +168,10 @@ pub fn PredictionModel::predict(
   self : PredictionModel,
   x : @utils.Matrix,
 ) -> Array[Double] {
+  match self.equation {
+    Some(equation) => return predict_equation(equation, x)
+    None => ()
+  }
   if !self.fitted {
     abort("the prediction model has not been fitted")
   }
@@ -165,15 +197,35 @@ pub fn PredictionModel::predict(
 /// parameters and not the result of a fit; that is the clone of
 /// `dowhy.gcm.ml.regression.LinearRegressionWithFixedParameter`.
 pub fn PredictionModel::clone(self : PredictionModel) -> PredictionModel {
+  match self.equation {
+    Some(equation) =>
+      // The custom function of an equation is fully defined, so the copy keeps
+      // it, like the copy of the upstream does.
+      return {
+        coefficients: [],
+        intercept: 0.0,
+        fitted: true,
+        fixed: true,
+        equation: Some(equation),
+      }
+    None => ()
+  }
   if self.fixed {
     return {
       coefficients: self.coefficients.copy(),
       intercept: self.intercept,
       fitted: self.fitted,
       fixed: true,
+      equation: None,
     }
   }
-  { coefficients: [], intercept: 0.0, fitted: false, fixed: false, }
+  {
+    coefficients: [],
+    intercept: 0.0,
+    fitted: false,
+    fixed: false,
+    equation: None,
+  }
 }
 
 ///|

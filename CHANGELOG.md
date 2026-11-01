@@ -1009,3 +1009,40 @@ graph, identification, estimation, refutation.
   probability per class -- have no counterpart here.
 
 [0.0.22]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.22
+
+## [0.0.23] - 2026-11-01
+
+### Added
+
+- `gcm` -- the equation parser, the port of `dowhy.gcm.equation_parser`:
+  - `create_causal_model_from_equations`, which builds a causal model out of a
+    set of equations, in the three forms the upstream understands: the equation
+    of a root node, the equation of a node with parents and the equation of a
+    node whose relation to its parents is unknown;
+  - `PredictionModel::with_equation`, the prediction model that evaluates the
+    custom function of an equation.
+- `_verify/gcm_equation_parser_reference.py` -- the upstream reference of the
+  equation parser. It runs the upstream on the very equations the port works on
+  and prints the graph of the model it builds, the parents of every node and
+  the predictions of the custom function, so that the two can be compared.
+
+### Notes
+
+- The upstream evaluates the custom function of an equation with the `eval` of
+  Python over the arrays of the parents; the port parses the expression and
+  evaluates it over the rows of the design matrix, because a language without
+  `eval` needs a parser. The numbers are the same for the expressions both
+  understand: the reference script prints `4.0`, `6.5` and `9.0` for the
+  custom function `0.5 * B + 2 * A` over the parents `A = [1, 2, 3]` and
+  `B = [4, 5, 6]`, and so does the port.
+- The upstream lets an expression call every function of numpy and of
+  `scipy.stats`; the port knows a fixed set of functions. The set is the one
+  the upstream tests of the equation parser use, plus the elementary ones.
+- The upstream reads the arguments of a noise model with the `literal_eval` of
+  Python; the port reads numbers only, which are the arguments the noise
+  models of the port take.
+- The upstream fits the best distribution of `scipy.stats` to the data for the
+  `parametric()` noise model of an equation; the port fits the parameters of a
+  normal distribution.
+
+[0.0.23]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.23

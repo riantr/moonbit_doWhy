@@ -115,6 +115,24 @@ These are properties of the MoonBit toolchain this repository builds with
   `~` belongs to the declaration of the parameter (`name~ : Bool = false`) and
   to the positional form of the call (`f(x, name~)`); the labelled form of the
   call is `f(x, name=value)` and `name~=value` is a parse error.
+- **There is no `&mut` parameter.** A function that has to change what its
+  caller gave it takes a struct with a `mut` field, like the parser of the
+  equation parser takes a `position : Int32` it advances itself.
+- **`derive(Eq)` goes after the closing brace of the type.** The derived
+  `equal` and `not_equal` are promoted as ordinary methods, which is
+  deprecated, so the type needs an `extend Type with Eq::{equal, not_equal}`
+  declaration. The methods then have to be used explicitly, because the
+  operators `==` and `!=` do not count as a use of them and the unused ones are
+  a warning, which is a failure in this repository.
+- **A float literal has no exponent.** `1e-12` is a parse error; the tolerance
+  is written out, `0.000000000001`.
+- **`String::trim_space` is deprecated**, use `String::trim`, which takes the
+  whitespace characters of the text by default.
+- **`String::split` returns an iterator of `StringView`**, not an array of
+  strings. A function that needs strings collects them with `to_owned`.
+- **The bounds of a range need their parentheses** when they hold arithmetic:
+  `for i in (start + 1)..<(end - 1)`. The bare form is a parse error, because
+  the `+` and the `..<` are ambiguous.
 
 ## Aliasing hazards
 
@@ -367,7 +385,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -583,6 +601,19 @@ README makes, so they are tracked in the repository:
   process pool of the upstream cannot import the stubbed packages, so the
   number of the jobs has to be set to one, and the `ShapleyConfig` of one job
   has to be handed to the call.
+- `gcm_equation_parser_reference.py` computes the numbers of the equation
+  parser -- the graph of the model the upstream builds out of a set of
+  equations, the parents of every node and the predictions of the custom
+  function of a node -- with the upstream `dowhy.gcm.equation_parser` code,
+  which is where the expectations of the tests of the layer come from. The
+  upstream module imports the names it needs from the package `dowhy.gcm`,
+  which the loader stubs out, so the stub has to carry them **before** the
+  module is read, and the constructor of `StructuralCausalModel` imports
+  `dowhy.causal_graph`, which the stubbed packages do not reach, so their
+  paths have to be pointed at the real directories of the upstream before the
+  module is read. The upstream evaluates the custom function with the `eval` of
+  Python, which returns a two dimensional array, so the script has to flatten
+  it before it prints the numbers.
 - `gen_efficient_backdoor_testdata.py` generates
   `src/identifiers/test_efficient_graphs.mbt` mechanically from the fixtures of
   `tests/causal_identifiers/example_graphs_efficient.py`, so the expected
