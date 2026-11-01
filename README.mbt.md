@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.11.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.12.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -25,7 +25,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer and the **anomaly detection** layer (the detection and the attribution) are ported; the **uncertainty** estimates and the **distribution change** tests are **not ported** |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution) and the **unit change** layer are ported; the **uncertainty** estimates and the **distribution change** tests are **not ported** |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
@@ -100,7 +100,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
-| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer and the anomaly detection layer |
+| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer and the unit change layer |
 | `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
@@ -192,6 +192,14 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   contributions is therefore the logarithm of the inverse of that relative
   frequency, which is the anomaly score of the target, and the two agree to
   `2e-15`.
+- The unit change layer of the `gcm` package puts the difference of the
+  intercepts of the two mechanisms into the contribution of the mechanism. The
+  upstream drops it, because the linear model of its fixtures is fitted without
+  an intercept; the port fits its model with one, like the fit of the `gcm`
+  package does everywhere else, so the contributions of the port would not add
+  up to the change of the output without it. The intercept of the fixtures of
+  the layer is zero up to the rounding of the fit, so the contributions of the
+  port and of the upstream are the same numbers.
 
 ## Deliberate differences from upstream
 
@@ -406,6 +414,22 @@ following ways:
   set function at a time, so the port calls it once per sample. The exact
   estimator evaluates the same subsets of the players in both, so the
   contributions are the same numbers.
+- `gcm` exposes the four functions of the unit change layer -- the linear
+  attribution, the non-linear attribution and the two input only variants --
+  instead of the `unit_change` dispatcher of the upstream. The dispatcher picks
+  between the linear and the non-linear attribution with the type of its
+  mechanism, and the port has one mechanism, which is linear, so the dispatch
+  would always take the same branch.
+- `gcm` computes the Shapley values of the unit change of one row at a time.
+  The upstream computes the values of every row at once, with a set function
+  that returns an array; the Shapley estimator of the port takes one set
+  function at a time, so the port calls it once per row. The exact estimator
+  evaluates the same subsets of the players in both, so the contributions are
+  the same numbers.
+- `gcm` has no random forest regressor, so the non-linear attribution of the
+  unit change layer is used with the linear model of the port. The upstream
+  test file `tests/gcm/test_unit_change.py` compares the linear attribution
+  with the non-linear one, and the port compares them as well.
 
 ## Development
 

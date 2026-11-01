@@ -522,3 +522,47 @@ graph, identification, estimation, refutation.
   one dimensional samples.
 
 [0.0.11]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.11
+
+## [0.0.12] - 2026-11-01
+
+### Added
+
+- `gcm` -- the unit change layer, the port of `dowhy.gcm.unit_change`:
+  - `unit_change_linear`, which attributes the change of the output of a linear
+    mechanism to the inputs that changed and to the mechanism itself;
+  - `unit_change_nonlinear`, which does the same with the Shapley values of the
+    output;
+  - `unit_change_linear_input_only` and `unit_change_nonlinear_input_only`,
+    which attribute the change of the output to the inputs alone.
+- `_verify/gcm_unit_change_reference.py` -- the upstream reference of the layer.
+  It computes the numbers of the upstream attribution with the upstream code
+  itself, so the expectations of the tests of the port are the numbers of the
+  upstream rather than a reading of it.
+
+### Notes
+
+- The upstream has a random forest regressor next to its linear one, so that it
+  can tell the linear attribution from the non-linear one. The port has one
+  model, which is linear, so the non-linear attribution of the port is used
+  with the linear model. The upstream test file
+  `tests/gcm/test_unit_change.py` compares the two attributions with each
+  other, and the tests of the port do the same.
+- The upstream `unit_change` dispatcher picks between the linear and the
+  non-linear attribution with the type of its mechanism. The port has one
+  mechanism, which is linear, so it exposes the four functions of the layer
+  instead of the dispatcher.
+- The port puts the difference of the intercepts of the two mechanisms into the
+  contribution of the mechanism. The upstream drops it, because the linear
+  model of its fixtures is fitted without an intercept; the port fits its model
+  with one, like the fit of the `gcm` package does everywhere else, so the
+  contributions of the port would not add up to the change of the output
+  without it. The intercept of the fixtures of the layer is zero up to the
+  rounding of the fit, so the contributions of the port and of the upstream are
+  the same numbers.
+- The port computes the Shapley values of the unit change of one row at a time.
+  The upstream computes the values of every row at once, with a set function
+  that returns an array; the Shapley estimator of the port takes one set
+  function at a time, so the port calls it once per row. The exact estimator
+  evaluates the same subsets of the players in both.
+
+[0.0.12]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.12

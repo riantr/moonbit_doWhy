@@ -246,6 +246,18 @@ statsmodels / scikit-learn conventions are deliberate:
   contributions is therefore the logarithm of the inverse of that relative
   frequency, which is the anomaly score of the target, and the two agree to
   `2e-15`.
+- The unit change layer of the `gcm` package puts the difference of the
+  intercepts of the two mechanisms into the contribution of the mechanism. The
+  upstream drops it, because the linear model of its fixtures is fitted without
+  an intercept; the port fits its model with one, like the fit of the `gcm`
+  package does everywhere else, so the contributions of the port would not add
+  up to the change of the output without it. The intercept of the fixtures of
+  the layer is zero up to the rounding of the fit, so the contributions of the
+  port and of the upstream are the same numbers.
+- The number of the rows of a unit change attribution is the number of the rows
+  of the data, and **not** the number of the input columns. `inputs_of` returns
+  the columns of the data, so `background_inputs.length()` is the number of the
+  inputs; the row count is `background_data.nrows()`.
 
 ## Package layout
 
@@ -259,7 +271,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer and the anomaly detection layer |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer and the unit change layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -367,3 +379,15 @@ README makes, so they are tracked in the repository:
   that generator and are only close to the numbers of the port, which draws its
   permutations from the generator it is given. The sum of the contributions does
   not depend on the permutations at all, so it is the same number in both.
+- `gcm_unit_change_reference.py` computes the numbers of the unit change layer --
+  the contributions of the inputs and of the mechanism to the change of the
+  output of a linear and of a non-linear mechanism, and the contributions of the
+  inputs alone -- with the upstream `dowhy.gcm.unit_change` code, which is where
+  the expectations of the tests of the layer come from. The script uses the
+  `ShapleyConfig` of one job, because the workers of a process pool cannot
+  import the stubbed package. The fixtures of the layer are drawn from the
+  generator of the `utils` package of the port, and the script reproduces that
+  generator in Python, so that the fixtures of the port and the fixtures of the
+  script are the same numbers. The script prints the first three rows of every
+  frame and the sum of every column, so the tests of the port compare the first
+  rows and the sums and not the whole column.
