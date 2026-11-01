@@ -183,6 +183,22 @@ statsmodels / scikit-learn conventions are deliberate:
   spread the same fit over the columns differently. The least squares fit of
   the `utils` package has no intercept at all, so the two are not
   interchangeable.
+- The regression based independence test of the `gcm` package is **numerically
+  unstable** for a target that is a step function of a continuous variable,
+  and the upstream marks its categorical tests as flaky because of it. The
+  normalisation of the Nystroem transformer inverts the square root of the
+  kernel matrix of the basis points, and that kernel matrix is rank deficient
+  when the variable holds one dimension, so the null space is amplified by a
+  factor of a million. The design matrix of the F-test is therefore ill
+  conditioned, and the fit of the model with the kernel features explodes in
+  some of the folds. The port solves the least squares problem the way the
+  upstream does -- the pseudo inverse of the Gram matrix of the centred
+  design matrix, which agrees with the singular value decomposition of
+  `sklearn.linear_model.LinearRegression` to seven digits on the same design
+  matrix -- so the two differ only in the folds their generators draw. The
+  fixture of the categorical tests therefore holds the 5000 samples of the
+  fixture of the upstream, which is the size at which both make the same
+  decision on every seed.
 - The parents of a node are taken in the **sorted** order everywhere a design
   matrix is built, the way the upstream takes them with
   `dowhy.graph.get_ordered_predecessors`. The order of the edges of a graph is
@@ -614,6 +630,24 @@ README makes, so they are tracked in the repository:
   module is read. The upstream evaluates the custom function with the `eval` of
   Python, which returns a two dimensional array, so the script has to flatten
   it before it prints the numbers.
+- `gcm_categorical_independence_reference.py` computes the numbers of the
+  categorical variants of the regression based independence test -- the
+  p-value of the upstream and the decision the upstream test asserts -- with
+  the upstream `dowhy.gcm.independence_test.regression` code, which is where
+  the expectations of the tests of the layer come from. The number of the
+  samples of the fixture is the argument of the script. The workers of the
+  process pool of the upstream cannot import the stubbed packages, so the
+  number of the jobs has to be set to one.
+- `replicate_port_pipeline.py`, `port_categorical_harness.py`,
+  `check_categorical_stability.py`, `check_upstream_categorical_stability.py`,
+  `compare_fit_on_upstream_matrices.py`, `compare_nystroem_normalisation.py`,
+  `compare_model_b_design.py`, `sweep_least_squares_cutoff.py`,
+  `sweep_nystroem_cutoff.py` and `search_categorical_seed.py` are the
+  instruments of the investigation of the instability of the categorical
+  independence test. They replicate the pipeline of the port in Python, so
+  that the numbers of the port can be traced without running the toolchain,
+  and they compare them with the numbers of the upstream on the same design
+  matrices. They are the evidence for the note on the instability above.
 - `gen_efficient_backdoor_testdata.py` generates
   `src/identifiers/test_efficient_graphs.mbt` mechanically from the fixtures of
   `tests/causal_identifiers/example_graphs_efficient.py`, so the expected

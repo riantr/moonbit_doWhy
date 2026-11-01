@@ -35,6 +35,56 @@ pub fn ParentEncoder::fit(
 }
 
 ///|
+/// The one-hot encoding of a column of categories.
+///
+/// This is the port of the encoding of the categorical columns of
+/// `dowhy.gcm.util.general`, which fits a
+/// `sklearn.preprocessing.OneHotEncoder(handle_unknown="ignore")` on every
+/// categorical column and applies it. Every category becomes a column of its
+/// own, in lexicographic order, and a category that was not seen when the
+/// encoder was fitted is encoded with zeros.
+///
+/// The rows are the rows of the column and the columns are the categories.
+pub fn one_hot_encode(values : Array[String]) -> @utils.Matrix {
+  let categories = sorted_distinct_labels(values)
+  let columns : Array[Array[Double]] = []
+  for category in categories {
+    let column : Array[Double] = []
+    for value in values {
+      column.push(if value == category { 1.0 } else { 0.0 })
+    }
+    columns.push(column)
+  }
+  if columns.length() == 0 {
+    return @utils.Matrix::zeros(values.length(), 0)
+  }
+  @utils.Matrix::from_columns(columns)
+}
+
+///|
+/// The one-hot encoding of the discrete columns of a frame.
+///
+/// The numeric columns keep their values and the discrete columns become one
+/// column per category, so the result holds the same rows as the frame.
+pub fn one_hot_encode_frame(data : @api.DataFrame) -> @utils.Matrix {
+  let columns : Array[Array[Double]] = []
+  for name in data.column_names() {
+    if data.is_discrete(name) {
+      let encoded = one_hot_encode(data.discrete(name))
+      for j in 0..<encoded.ncols() {
+        columns.push(encoded.col(j))
+      }
+    } else {
+      columns.push(data.numeric(name))
+    }
+  }
+  if columns.length() == 0 {
+    return @utils.Matrix::zeros(data.nrows(), 0)
+  }
+  @utils.Matrix::from_columns(columns)
+}
+
+///|
 /// The names of the columns of the design matrix.
 ///
 /// A numeric parent keeps its own name, and a discrete parent becomes one

@@ -359,6 +359,38 @@ pub fn estimate_ftest_pvalue(
   x_test_b : @utils.Matrix,
   y_test : Array[Double],
 ) -> Double {
+  estimate_ftest_pvalue_of_targets(
+    x_training_a,
+    x_training_b,
+    @utils.Matrix::from_columns([y_training]),
+    x_test_a,
+    x_test_b,
+    @utils.Matrix::from_columns([y_test]),
+  )
+}
+
+///|
+/// Estimates the p-value of the null hypothesis that a regression with less
+/// parameters reaches the same error as a regression with more parameters, for
+/// a target with several columns.
+///
+/// This is the port of `dowhy.gcm.stats.estimate_ftest_pvalue` for a target
+/// with more than one column, which is what a categorical target becomes when
+/// it is one-hot encoded. The upstream fits the models with the
+/// `LinearRegression` of scikit-learn, which fits every column of the target
+/// on its own with the same design matrix, and it sums the squared errors of
+/// every column; the port does the same.
+///
+/// The degrees of freedom of the test do not depend on the number of the
+/// columns of the target, which is what the upstream computes as well.
+pub fn estimate_ftest_pvalue_of_targets(
+  x_training_a : @utils.Matrix,
+  x_training_b : @utils.Matrix,
+  y_training : @utils.Matrix,
+  x_test_a : @utils.Matrix,
+  x_test_b : @utils.Matrix,
+  y_test : @utils.Matrix,
+) -> Double {
   let parameters_a = x_training_a.ncols()
   let parameters_b = x_training_b.ncols()
   if parameters_a <= parameters_b {
@@ -366,27 +398,39 @@ pub fn estimate_ftest_pvalue(
       "the data X_training_a should have more dimensions (model parameters) than the data X_training_b!",
     )
   }
-  let fit_a = @utils.ols_fit(with_intercept(x_training_a), y_training)
-  let predictions_a = with_intercept(x_test_a).matvec(fit_a.beta)
   let mut ssr_a = 0.0
-  for i = 0; i < y_test.length(); i = i + 1 {
-    let difference = y_test[i] - predictions_a[i]
-    ssr_a = ssr_a + difference * difference
+  for k = 0; k < y_training.ncols(); k = k + 1 {
+    let (beta_a, intercept_a) = centered_ols_fit(
+      x_training_a,
+      y_training.col(k),
+    )
+    let predictions_a = predictions_of(x_test_a, beta_a, intercept_a)
+    for i = 0; i < y_test.nrows(); i = i + 1 {
+      let difference = y_test.get(i, k) - predictions_a[i]
+      ssr_a = ssr_a + difference * difference
+    }
   }
   let mut ssr_b = 0.0
   if parameters_b > 0 {
-    let fit_b = @utils.ols_fit(with_intercept(x_training_b), y_training)
-    let predictions_b = with_intercept(x_test_b).matvec(fit_b.beta)
-    for i = 0; i < y_test.length(); i = i + 1 {
-      let difference = y_test[i] - predictions_b[i]
-      ssr_b = ssr_b + difference * difference
+    for k = 0; k < y_training.ncols(); k = k + 1 {
+      let (beta_b, intercept_b) = centered_ols_fit(
+        x_training_b,
+        y_training.col(k),
+      )
+      let predictions_b = predictions_of(x_test_b, beta_b, intercept_b)
+      for i = 0; i < y_test.nrows(); i = i + 1 {
+        let difference = y_test.get(i, k) - predictions_b[i]
+        ssr_b = ssr_b + difference * difference
+      }
     }
   } else {
     // The model without any parameter is the mean of the training target.
-    let mean_target = @utils.mean(y_training)
-    for i = 0; i < y_test.length(); i = i + 1 {
-      let difference = y_test[i] - mean_target
-      ssr_b = ssr_b + difference * difference
+    for k = 0; k < y_training.ncols(); k = k + 1 {
+      let mean_target = @utils.mean(y_training.col(k))
+      for i = 0; i < y_test.nrows(); i = i + 1 {
+        let difference = y_test.get(i, k) - mean_target
+        ssr_b = ssr_b + difference * difference
+      }
     }
   }
   let dof_diff_1 = x_test_a.ncols() - parameters_b
@@ -404,6 +448,72 @@ pub fn estimate_ftest_pvalue(
     f_statistic = f_statistic / residual_a
   }
   @utils.f_sf(f_statistic, dof_diff_1.to_double(), dof_diff_2.to_double())
+}
+
+///|
+/// The fit of a linear model with an intercept.
+///
+/// This is the fit of `sklearn.linear_model.LinearRegression`, which centres
+/// the features and the target before the least squares fit and computes the
+/// intercept from the offsets. The centring matters when the design matrix is
+/// ill-conditioned, which is the case for the kernel features of the
+/// regression based independence test: without it the fit of the port is off by
+/// more than the difference between the models of the test, and the test finds
+/// no dependence where the upstream finds one.
+///
+/// The result is the coefficient of every feature, without the intercept, and
+/// the intercept of the model.
+fn centered_ols_fit(
+  x : @utils.Matrix,
+  y : Array[Double],
+) -> (Array[Double], Double) {
+  let n = x.nrows()
+  let p = x.ncols()
+  if p == 0 {
+    return ([], @utils.mean(y))
+  }
+  let offsets : Array[Double] = []
+  for j = 0; j < p; j = j + 1 {
+    offsets.push(@utils.mean(x.col(j)))
+  }
+  let y_offset = @utils.mean(y)
+  let centred = @utils.Matrix::zeros(n, p)
+  for i = 0; i < n; i = i + 1 {
+    for j = 0; j < p; j = j + 1 {
+      centred.set(i, j, x.get(i, j) - offsets[j])
+    }
+  }
+  let centred_y : Array[Double] = []
+  for value in y {
+    centred_y.push(value - y_offset)
+  }
+  let coefficients = @utils.lstsq(centred, centred_y)
+  let mut intercept = y_offset
+  for j = 0; j < p; j = j + 1 {
+    intercept = intercept - offsets[j] * coefficients[j]
+  }
+  (coefficients, intercept)
+}
+
+///|
+/// The predictions of the given samples under a linear model with an
+/// intercept.
+fn predictions_of(
+  x : @utils.Matrix,
+  coefficients : Array[Double],
+  intercept : Double,
+) -> Array[Double] {
+  let out : Array[Double] = []
+  for i = 0; i < x.nrows(); i = i + 1 {
+    let mut value = intercept
+    for j = 0; j < x.ncols(); j = j + 1 {
+      if j < coefficients.length() {
+        value = value + coefficients[j] * x.get(i, j)
+      }
+    }
+    out.push(value)
+  }
+  out
 }
 
 ///|
@@ -444,19 +554,4 @@ fn mean_of_range(values : Array[Double], start : Int32, end : Int32) -> Double {
 /// Whether the quantile is on the interval `(0, 1]`.
 fn quantile_is_valid(quantile : Double) -> Bool {
   quantile > 0.0 && quantile <= 1.0
-}
-
-///|
-/// The matrix with a column of ones in front of its columns.
-fn with_intercept(m : @utils.Matrix) -> @utils.Matrix {
-  let rows = m.nrows()
-  let columns = m.ncols()
-  let out = @utils.Matrix::zeros(rows, columns + 1)
-  for i = 0; i < rows; i = i + 1 {
-    out.set(i, 0, 1.0)
-    for j = 0; j < columns; j = j + 1 {
-      out.set(i, j + 1, m.get(i, j))
-    }
-  }
-  out
 }

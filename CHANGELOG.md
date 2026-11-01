@@ -1046,3 +1046,45 @@ graph, identification, estimation, refutation.
   normal distribution.
 
 [0.0.23]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.23
+
+## [0.0.24] - 2026-11-01
+
+### Added
+
+- `gcm` -- the categorical variants of the regression based independence test,
+  the port of `dowhy.gcm.independence_test.regression` for data that holds
+  categories:
+  - `regression_based_with_categorical`, which takes a frame for the two
+    variables and the optional conditioning variable, one-hot encodes every
+    discrete column of them and runs the test on the encoded data;
+  - `one_hot_encode` and `one_hot_encode_frame`, the encoding of the discrete
+    columns of the `gcm` package;
+  - `estimate_ftest_pvalue_of_targets`, the F-test of `dowhy.gcm.stats` for a
+    target with more than one column, which is what a categorical target
+    becomes when it is one-hot encoded. The single target variant of the test
+    delegates to it.
+- `_verify/gcm_categorical_independence_reference.py` -- the upstream reference
+  of the categorical independence test. It runs the upstream on the very rows
+  the port works on and prints the p-value of the upstream next to the decision
+  the upstream test asserts, so that the two can be compared.
+
+### Notes
+
+- The upstream draws its folds and its basis points with the global generator of
+  numpy, so its p-value and the p-value of the port are different numbers. What
+  the two share is the decision the upstream test asserts. On the fixture of
+  the reference script the upstream finds a p-value of `1.0` for the two cases
+  that have to find no dependence and a p-value of `0.0` for the two cases that
+  have to find a dependence, and so does the port.
+- The upstream marks its categorical independence tests as flaky, because the
+  two models of the F-test have residual sums of squares of the same order in
+  the folds of the case that has to find no dependence: with a thousand samples
+  the upstream finds a dependence in half of the seeds of that case. The
+  fixture of the port therefore holds the 5000 samples of the fixture of the
+  upstream, at which both make the same decision on every seed.
+- The upstream switches to the CatBoost encoder when the data of the regression
+  based independence test holds more than seven categories; the port always
+  uses the one-hot encoder, which is the encoder the upstream uses for the
+  fixtures of its own tests.
+
+[0.0.24]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.24

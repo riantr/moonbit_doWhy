@@ -51,6 +51,75 @@ pub fn regression_based(
   max_samples_per_fold : Int32,
   rng : @utils.Random,
 ) -> Double {
+  // The variable with the lower dimension is the target.
+  let (inputs, target) = if x.ncols() < y.ncols() { (y, x) } else { (x, y) }
+  regression_based_of_matrices(
+    inputs, target, z, max_num_components_all_inputs, k_folds, p_value_adjust_func,
+    max_samples_per_fold, rng,
+  )
+}
+
+///|
+/// The regression based (conditional) independence test with categorical data.
+///
+/// This is the port of `dowhy.gcm.independence_test.regression_based` for data
+/// that holds categories. The upstream encodes the categorical columns of the
+/// variables with a one-hot encoder before the test, and it counts the
+/// columns of the variables before the encoding to decide which one is the
+/// target; the port does the same.
+///
+/// The target of the test can have more than one column, because a categorical
+/// target becomes one column per category.
+pub fn regression_based_with_categorical(
+  x : @api.DataFrame,
+  y : @api.DataFrame,
+  z : @api.DataFrame?,
+  max_num_components_all_inputs : Int32,
+  k_folds : Int32,
+  p_value_adjust_func : (Array[Double]) -> Double,
+  max_samples_per_fold : Int32,
+  rng : @utils.Random,
+) -> Double {
+  // The variable with the lower dimension is the target. The upstream counts
+  // the columns of the variables before it encodes them.
+  let (x_frame, y_frame) = if x.column_names().length() <
+    y.column_names().length() {
+    (y, x)
+  } else {
+    (x, y)
+  }
+  let conditioning = match z {
+    Some(frame) => Some(one_hot_encode_frame(frame))
+    None => None
+  }
+  regression_based_of_matrices(
+    one_hot_encode_frame(x_frame),
+    one_hot_encode_frame(y_frame),
+    conditioning,
+    max_num_components_all_inputs,
+    k_folds,
+    p_value_adjust_func,
+    max_samples_per_fold,
+    rng,
+  )
+}
+
+///|
+/// The regression based (conditional) independence test of the given matrices.
+///
+/// The inputs and the target are the matrices of the test, with the target
+/// already chosen. The target can have more than one column, which is what a
+/// categorical target becomes when it is one-hot encoded.
+fn regression_based_of_matrices(
+  inputs : @utils.Matrix,
+  target : @utils.Matrix,
+  z : @utils.Matrix?,
+  max_num_components_all_inputs : Int32,
+  k_folds : Int32,
+  p_value_adjust_func : (Array[Double]) -> Double,
+  max_samples_per_fold : Int32,
+  rng : @utils.Random,
+) -> Double {
   if max_num_components_all_inputs < 2 {
     abort(
       "the regression based independence test needs at least two components for all inputs, but only " +
@@ -63,20 +132,6 @@ pub fn regression_based(
       "the regression based independence test needs at least two folds, but only " +
       k_folds.to_string() +
       " were given",
-    )
-  }
-  // The variable with the lower dimension is the target.
-  let mut inputs = x
-  let mut target = y
-  if inputs.ncols() < target.ncols() {
-    inputs = y
-    target = x
-  }
-  if target.ncols() != 1 {
-    abort(
-      "the regression based independence test needs a target with one column, but it has " +
-      target.ncols().to_string() +
-      " columns",
     )
   }
   let scaled_inputs = scale_columns(inputs)
@@ -150,13 +205,13 @@ fn fold_p_values(
           select_rows(conditioning, testing_indices),
           transformer_z,
         )
-        estimate_ftest_pvalue(
+        estimate_ftest_pvalue_of_targets(
           training_all,
           training_z,
-          select_column(target, 0, training_indices),
+          select_rows(target, training_indices),
           testing_all,
           testing_z,
-          select_column(target, 0, testing_indices),
+          select_rows(target, testing_indices),
         )
       }
       None => {
@@ -173,13 +228,13 @@ fn fold_p_values(
           select_rows(inputs, testing_indices),
           transformer_all,
         )
-        estimate_ftest_pvalue(
+        estimate_ftest_pvalue_of_targets(
           training_all,
           @utils.Matrix::zeros(training_indices.length(), 0),
-          select_column(target, 0, training_indices),
+          select_rows(target, training_indices),
           testing_all,
           @utils.Matrix::zeros(testing_indices.length(), 0),
-          select_column(target, 0, testing_indices),
+          select_rows(target, testing_indices),
         )
       }
     }
@@ -506,21 +561,6 @@ fn select_rows(m : @utils.Matrix, indices : Array[Int32]) -> @utils.Matrix {
     rows.push(m.row(index))
   }
   @utils.Matrix::from_rows(rows)
-}
-
-///|
-/// The values of the column of the matrix with the given indices.
-fn select_column(
-  m : @utils.Matrix,
-  column : Int32,
-  indices : Array[Int32],
-) -> Array[Double] {
-  let values = m.col(column)
-  let out : Array[Double] = []
-  for index in indices {
-    out.push(values[index])
-  }
-  out
 }
 
 ///|

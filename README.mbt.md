@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.23.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.24.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -25,7 +25,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the stochastic models, the noise of a causal model, the **feature relevance**, the **intrinsic causal influence**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution), the **unit change** layer, the **uncertainty** estimates, the **distribution change** layer and the **arrow strength** layer are ported; the **robust** variant of the distribution change layer is **not ported** |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the stochastic models, the noise of a causal model, the **feature relevance**, the **intrinsic causal influence**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution), the **unit change** layer, the **uncertainty** estimates, the **distribution change** layer and the **arrow strength** layer are ported; the **robust** variant of the distribution change layer is **not ported** |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
@@ -287,6 +287,21 @@ following ways:
   from the upstream's on the same rows, and it regresses on the conditioning
   variable with the ordinary least squares fit where upstream selects a model
   automatically. Both make the same decision on the same data.
+- `gcm` takes a frame for the regression based independence test with
+  categorical data, because a matrix of the port holds numbers only, and it
+  one-hot encodes every discrete column of it. Upstream takes an array and
+  encodes the columns whose values are strings. Upstream switches to the
+  CatBoost encoder when the data holds more than seven categories; the port
+  always uses the one-hot encoder, which is the encoder the upstream uses for
+  the fixtures of its own tests.
+- The upstream marks its categorical independence tests as flaky, because the
+  two models of the F-test have residual sums of squares of the same order in
+  the folds of the case that has to find no dependence, so the decision of
+  that case depends on the folds the generator draws. The port draws its
+  folds with its own generator, so its fixture of the categorical tests holds
+  the 5000 samples of the fixture of the upstream, which is the size at which
+  both make the same decision on every seed. The reference script prints the
+  decision of the upstream on the very rows of the fixture of the port.
 - `gcm` always uses the median trick for the kernel width of the kernel based
   independence test and always approximates the null distribution with a gamma
   distribution. Upstream takes the width from the caller (`est_width`) and can
