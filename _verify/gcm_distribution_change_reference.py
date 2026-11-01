@@ -62,9 +62,9 @@ SEED = 2025
 NUM_ROWS_TEST = 100
 
 # The number of the rows of the fixtures of the change of the distribution.
-# The upstream uses a thousand rows, and the port uses a fifth of them for the
+# The upstream uses a thousand rows, and the port uses a tenth of them for the
 # reason of the fixtures of the test of the change of a mechanism.
-NUM_ROWS_DATA = 200
+NUM_ROWS_DATA = 100
 
 ML = None
 MECHANISMS = None

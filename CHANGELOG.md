@@ -666,3 +666,36 @@ graph, identification, estimation, refutation.
   is **not ported**.
 
 [0.0.14]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.14
+
+## [0.0.15] - 2026-11-01
+
+### Changed
+
+- `gcm` -- the Kullback-Leibler divergence of a sample with one column finds the
+  distance to the k-th nearest neighbour with a walk over the sorted values of
+  the sample, so the estimator costs `O(n log n)` instead of the `O(n^2)` of the
+  pairwise search. The distances are the same numbers, because the walk takes
+  the nearer of the two sides of the value first, and the distance of a single
+  column is computed like the one of two rows of two matrices. The divergence
+  of two samples of a few thousand values is the term that dominates the cost
+  of the distribution change layer, and the layer is an order of magnitude
+  faster now.
+- `gcm` -- the fixtures of the change of the distribution hold a tenth of the
+  rows of the fixtures of the upstream, where they held a fifth of them. The
+  kernel based conditional test of the layer inverts a kernel matrix whose size
+  is the number of the rows of the joint sample, so the cost of the test grows
+  with the cube of the number of the rows. The reference script of the layer
+  uses the same fixtures as the port, so the numbers it prints are the numbers
+  of the fixture of the port.
+
+### Notes
+
+- The changelog of 0.0.1 listed the efficient backdoor strategies of the
+  upstream among the ported ones. They are **not** implemented: the port
+  reports that the efficient backdoor search is not implemented yet, the way
+  the README says.
+- The port takes the measure of the difference of two distributions as a function
+  of two samples, and the measure of the configuration is the Kullback-Leibler
+  divergence of `auto_estimate_kl_divergence` when the caller does not give one.
+
+[0.0.15]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.15

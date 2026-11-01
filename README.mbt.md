@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.14.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.15.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -453,6 +453,11 @@ following ways:
   upstream asks `sklearn.neighbors.NearestNeighbors`, which builds a tree; the
   distances are the same numbers, and the one column case of the port sorts the
   values instead, which costs `O(n k)`.
+- `gcm` computes the distance to the k-th nearest neighbour of a sample with
+  one column with a walk over the sorted values, so the Kullback-Leibler
+  divergence of two samples of a few thousand values costs `O(n log n)` instead
+  of the `O(n^2)` of the pairwise search. The distances are the same numbers,
+  because the walk takes the nearer of the two sides of the value first.
 - `gcm` computes the entropy of a sample of discrete values by counting the
   distinct rows, like `numpy.unique(x, axis=0)`. The rows are identified by
   their values, so two rows that hold the same numbers are the same row.

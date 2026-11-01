@@ -265,6 +265,13 @@ statsmodels / scikit-learn conventions are deliberate:
   ten with the recurrence `ψ(x + 1) = ψ(x) + 1 / x` and uses the asymptotic
   expansion of the remainder. For an integer `n` the two agree to about
   `2e-15` at `n = 10000`.
+- The Kullback-Leibler divergence of a sample with one column of the `gcm`
+  package finds the distance to the k-th nearest neighbour with a walk over
+  the sorted values of the sample, so the estimator costs `O(n log n)` instead
+  of the `O(n^2)` of the pairwise search. The distances are the same numbers,
+  because the walk takes the nearer of the two sides of the value first, and
+  the distance of a single column is computed like the one of two rows of two
+  matrices, so the numbers of the walk and of the pairwise search are the same.
 - The bins of the discretised entropy of the `gcm` package follow the
   convention of `numpy.histogram`: every bin but the last one is half open, so
   a value that sits exactly on an edge belongs to the bin on its right, and the
@@ -433,10 +440,11 @@ README makes, so they are tracked in the repository:
   permutations from the global generator of numpy, so its p-values depend on that
   generator; the tests of the port therefore assert the decision the p-value
   leads to and the attribution with a tolerance, and the script prints the
-  numbers of the upstream for the record. The fixtures of the layer hold a fifth
-  of the rows of the fixtures of the upstream, because the kernel based
-  conditional test of the layer inverts a kernel matrix whose size is the number
-  of the rows of the joint sample.
+  numbers of the upstream for the record. The fixtures of the test of the change
+  of a mechanism hold a fifth of the rows of the fixtures of the upstream and
+  the fixtures of the change of the distribution hold a tenth of them, because
+  the kernel based conditional test of the layer inverts a kernel matrix whose
+  size is the number of the rows of the joint sample.
 - `gcm_uncertainty_reference.py` computes the numbers of the uncertainty
   estimates -- the entropy of a Gaussian sample with the three estimators, the
   variance of a Gaussian sample in one and in several dimensions, the entropy

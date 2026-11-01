@@ -39,7 +39,7 @@ const DISTRIBUTION_CHANGE_NUM_ROWS_TEST : Int32 = 100
 
 ///|
 /// The number of the rows of the fixtures of the change of the distribution.
-const DISTRIBUTION_CHANGE_NUM_ROWS_DATA : Int32 = 200
+const DISTRIBUTION_CHANGE_NUM_ROWS_DATA : Int32 = 100
 
 ///|
 /// The generator of the fixture with the given index.
@@ -281,9 +281,9 @@ test "given two data sets with different mechanisms when evaluating the change o
   assert_true(x2 > x0)
   // The attributions are the numbers of the upstream reference, up to the
   // samples that the two draw from their own generators.
-  assert_true((x3 - 1.646145295680872).abs() <= 0.4)
-  assert_true((x2 - 1.2609560993555475).abs() <= 0.4)
-  assert_true((x0 - 0.06532244032661819).abs() <= 0.3)
+  assert_true((x3 - 1.4728675570845775).abs() <= 0.4)
+  assert_true((x2 - 1.178768630016403).abs() <= 0.4)
+  assert_true((x0 - -0.02812262830348538).abs() <= 0.3)
   // The mechanism of the root node did not change, and the mechanisms of the
   // other two nodes did.
   let changes = result.mechanism_changes()

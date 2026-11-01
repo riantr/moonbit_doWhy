@@ -149,12 +149,31 @@ pub fn estimate_kl_divergence_continuous_knn(
   }
   let d = samples.ncols().to_double()
   let mut total = 0.0
-  for i = 0; i < n; i = i + 1 {
-    // The distance to the (k+1)-th neighbour inside X, the sample itself
-    // included, and the distance to the k-th neighbour inside Y.
-    let rho = kth_distance(samples, i, samples, k + 1)
-    let nu = kth_distance(samples, i, y, k)
-    total = total + d / n.to_double() * @utils.ln(nu / rho)
+  if samples.ncols() == 1 {
+    // A sample with one column is sorted once, and the distance to the k-th
+    // neighbour of a value is then found by walking the two sides of the
+    // value. The distances are the same numbers the pairwise search finds,
+    // but the search costs `O(n log n)` instead of `O(n^2)`, which matters
+    // for the estimators that compare two samples of a few thousand
+    // values.
+    let sorted_samples = sorted_column(samples)
+    let sorted_y = sorted_column(y)
+    for i in 0..<n {
+      let value = samples.get(i, 0)
+      // The distance to the (k+1)-th neighbour inside X, the sample itself
+      // included, and the distance to the k-th neighbour inside Y.
+      let rho = kth_distance_in_column(value, sorted_samples, k + 1)
+      let nu = kth_distance_in_column(value, sorted_y, k)
+      total = total + d / n.to_double() * @utils.ln(nu / rho)
+    }
+  } else {
+    for i in 0..<n {
+      // The distance to the (k+1)-th neighbour inside X, the sample itself
+      // included, and the distance to the k-th neighbour inside Y.
+      let rho = kth_distance(samples, i, samples, k + 1)
+      let nu = kth_distance(samples, i, y, k)
+      total = total + d / n.to_double() * @utils.ln(nu / rho)
+    }
   }
   total = total + @utils.ln(m.to_double() / (n - 1).to_double())
   if !is_finite(total) {
@@ -389,6 +408,75 @@ fn kth_distance(
     )
   }
   nearest[k - 1]
+}
+
+///|
+/// The values of the first column of a matrix, sorted in ascending order.
+fn sorted_column(m : @utils.Matrix) -> Array[Double] {
+  let values = m.col(0)
+  values.sort_by(fn(a, b) { @utils.compare_double(a, b) })
+  values
+}
+
+///|
+/// The distance to the `k`-th nearest value of a sorted array of values.
+///
+/// The value itself is one of the candidates when it is in the array, exactly
+/// like the row of the sample is one of the candidates of the pairwise search.
+/// The walk takes the nearer of the two sides of the value first, so the
+/// distances are handed back in ascending order.
+fn kth_distance_in_column(
+  value : Double,
+  sorted : Array[Double],
+  k : Int32,
+) -> Double {
+  let n = sorted.length()
+  // The position of the first value that is not smaller than the value.
+  let mut low = 0
+  let mut high = n
+  while low < high {
+    let middle = (low + high) / 2
+    if sorted[middle] < value {
+      low = middle + 1
+    } else {
+      high = middle
+    }
+  }
+  let mut left = low - 1
+  let mut right = low
+  let mut taken = 0
+  let mut result = 0.0
+  while taken < k {
+    if left < 0 {
+      result = column_distance(value, sorted[right])
+      right = right + 1
+    } else if right >= n {
+      result = column_distance(value, sorted[left])
+      left = left - 1
+    } else {
+      let left_distance = column_distance(value, sorted[left])
+      let right_distance = column_distance(value, sorted[right])
+      if left_distance <= right_distance {
+        result = left_distance
+        left = left - 1
+      } else {
+        result = right_distance
+        right = right + 1
+      }
+    }
+    taken = taken + 1
+  }
+  result
+}
+
+///|
+/// The distance of two values of a column.
+///
+/// The distance is computed like the one of two rows of two matrices, so that
+/// the numbers of the sorted walk and of the pairwise search are the same.
+fn column_distance(a : Double, b : Double) -> Double {
+  let difference = a - b
+  (difference * difference).sqrt()
 }
 
 ///|
