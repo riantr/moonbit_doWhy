@@ -516,6 +516,251 @@ pub fn anomaly_scores(
 }
 
 ///|
+/// The state of the attribution of the anomalies of a causal model.
+priv struct AttributionState {
+  causal_model : ProbabilisticCausalModel
+  target_node : String
+  nodes_order : Array[String]
+  distribution_noise : @utils.Matrix
+  scorer : AnomalyScorer
+  attribute_mean_deviation : Bool
+  expectation_of_score : Double
+  rng : @utils.Random
+}
+
+///|
+/// The set function of the attribution of one anomaly sample.
+///
+/// The set function takes the players that are in the subset and returns the
+/// value of the subset. The noise of the players that are in the subset comes
+/// from the anomaly sample, and the noise of the players that are not in it is
+/// permuted, so that the subset represents an interventional distribution.
+///
+/// This is the set function of `dowhy.gcm.anomaly.attribute_anomaly_scores`.
+fn AttributionState::set_function(
+  self : AttributionState,
+  anomaly_noise : Array[Double],
+  anomaly_score : Double,
+) -> (Array[Bool]) -> Double {
+  fn(subset : Array[Bool]) -> Double {
+    let num_players = subset.length()
+    let to_permute : Array[Int32] = []
+    for j in 0..<num_players {
+      if !subset[j] {
+        to_permute.push(j)
+      }
+    }
+    let feature_samples = permute_features(
+      self.distribution_noise,
+      to_permute,
+      true,
+      self.rng,
+    )
+    for j in 0..<num_players {
+      if subset[j] {
+        for row in 0..<feature_samples.nrows() {
+          feature_samples.set(row, j, anomaly_noise[j])
+        }
+      }
+    }
+    let values = noise_dependent_values(
+      self.causal_model,
+      self.target_node,
+      self.nodes_order,
+      feature_samples,
+    )
+    let scores = self.scorer.score(values)
+    if self.attribute_mean_deviation {
+      @utils.mean(scores) - self.expectation_of_score
+    } else {
+      let mut count = 0.0
+      for score in scores {
+        if score >= anomaly_score {
+          count = count + 1.0
+        }
+      }
+      @math.ln((count + 0.5) / (scores.length().to_double() + 0.5))
+    }
+  }
+}
+
+///|
+/// The contribution of every upstream node to the anomaly score of every
+/// anomaly sample.
+///
+/// This is the port of `dowhy.gcm.anomaly.attribute_anomalies`. The anomaly
+/// score of a sample is attributed to the nodes of the graph that are upstream
+/// of the target, and the contribution of a node is the Shapley value of the
+/// set function of the score.
+///
+/// The score of the target is either the information theoretic score or the
+/// deviation of the score from its expectation, which is the feature relevance
+/// of the upstream.
+///
+/// The upstream computes the Shapley values of every sample at once, while the
+/// Shapley estimator of the port takes one set function at a time, so the port
+/// computes the values of every sample on its own. The exact estimator of the
+/// port evaluates the same subsets of the players as the upstream, so the
+/// contributions are the same numbers.
+pub fn attribute_anomalies(
+  causal_model : ProbabilisticCausalModel,
+  target_node : String,
+  anomaly_samples : @api.DataFrame,
+  anomaly_scorer : AnomalyScorer,
+  attribute_mean_deviation : Bool,
+  num_distribution_samples : Int32,
+  shapley_config : ShapleyConfig,
+  rng : @utils.Random,
+) -> Map[String, Array[Double]] {
+  validate_causal_dag(causal_model)
+  if !causal_model.graph.has_node(target_node) {
+    abort(
+      "the node " + target_node + " is not in the graph of the causal model",
+    )
+  }
+  let nodes_order = ancestor_nodes_of(causal_model, target_node)
+  let (node_samples, noise_samples) = noise_samples_of_ancestors(
+    causal_model, target_node, num_distribution_samples, rng,
+  )
+  let noise_of_anomalies = compute_noise_from_data(
+    causal_model, anomaly_samples,
+  )
+  let scorer = anomaly_scorer.fit(node_samples.numeric(target_node))
+  let distribution_noise = columns_of(noise_samples, nodes_order)
+  let anomaly_noise = columns_of(noise_of_anomalies, nodes_order)
+
+  // The score of every anomaly sample.
+  let anomaly_scores : Array[Double] = []
+  for i in 0..<anomaly_noise.nrows() {
+    let values = noise_dependent_values(
+      causal_model,
+      target_node,
+      nodes_order,
+      @utils.Matrix::from_rows([anomaly_noise.row(i)]),
+    )
+    anomaly_scores.push(scorer.score(values)[0])
+  }
+
+  // The expectation of the score, which the feature relevance needs.
+  let expectation_of_score = if attribute_mean_deviation {
+    let values = noise_dependent_values(
+      causal_model, target_node, nodes_order, distribution_noise,
+    )
+    @utils.mean(scorer.score(values))
+  } else {
+    0.0
+  }
+
+  let state = {
+    causal_model,
+    target_node,
+    nodes_order,
+    distribution_noise,
+    scorer,
+    attribute_mean_deviation,
+    expectation_of_score,
+    rng,
+  }
+
+  // The contributions of every anomaly sample.
+  let contributions : Array[Array[Double]] = []
+  for i in 0..<anomaly_noise.nrows() {
+    let set_function = state.set_function(
+      anomaly_noise.row(i),
+      anomaly_scores[i],
+    )
+    contributions.push(
+      estimate_shapley_values(
+        set_function,
+        nodes_order.length(),
+        shapley_config,
+      ),
+    )
+  }
+
+  // The contributions of every node.
+  let result : Map[String, Array[Double]] = Map([])
+  for j in 0..<nodes_order.length() {
+    let values : Array[Double] = []
+    for i in 0..<contributions.length() {
+      values.push(contributions[i][j])
+    }
+    result.set(nodes_order[j], values)
+  }
+  result
+}
+
+///|
+/// The ancestors of a node and the node itself, in the topological order of
+/// the graph.
+fn ancestor_nodes_of(
+  causal_model : ProbabilisticCausalModel,
+  target_node : String,
+) -> Array[String] {
+  let ancestors = causal_model.graph.ancestors_of([target_node])
+  let out : Array[String] = []
+  for node in causal_model.graph.topological_order() {
+    if node == target_node || ancestors.contains(node) {
+      out.push(node)
+    }
+  }
+  out
+}
+
+///|
+/// The values of the target node, computed from the noise of the nodes.
+///
+/// This is the port of the exact noise dependent function of
+/// `dowhy.gcm._noise.get_noise_dependent_function`: the noise of the ancestors
+/// of the target and of the target itself determines the value of the target.
+fn noise_dependent_values(
+  causal_model : ProbabilisticCausalModel,
+  target_node : String,
+  nodes_order : Array[String],
+  noise : @utils.Matrix,
+) -> Array[Double] {
+  let mut frame = @api.DataFrame::new([], Map([]))
+  let values : Map[String, Array[Double]] = Map([])
+  for j in 0..<nodes_order.length() {
+    let node = nodes_order[j]
+    let column : Array[Double] = []
+    for i in 0..<noise.nrows() {
+      column.push(noise.get(i, j))
+    }
+    if is_root_node(causal_model, node) {
+      values.set(node, column.copy())
+      frame = frame.with_numeric(node, column)
+    } else {
+      let parents = causal_model.graph.predecessors(node)
+      let x = design_matrix_of(causal_model, node, frame, parents)
+      let mechanism = mechanism_of(causal_model, node)
+      let evaluated = mechanism.evaluate(x, column)
+      values.set(node, evaluated.copy())
+      frame = frame.with_numeric(node, evaluated)
+    }
+  }
+  match values.get(target_node) {
+    Some(target_values) => target_values
+    None =>
+      abort(
+        "the node " +
+        target_node +
+        " has no values, because it is not in the graph",
+      )
+  }
+}
+
+///|
+/// The matrix of the given columns of the given data.
+fn columns_of(frame : @api.DataFrame, names : Array[String]) -> @utils.Matrix {
+  let columns : Array[Array[Double]] = []
+  for name in names {
+    columns.push(frame.numeric(name))
+  }
+  @utils.Matrix::from_columns(columns)
+}
+
+///|
 /// The sorted samples of the distribution, where the samples that are not a
 /// number come last.
 fn sort_distribution(samples : Array[Double]) -> SortedDistribution {

@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.10.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.11.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -25,7 +25,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer and the **anomaly detection** layer are ported; the **attribution** of the anomalies, the **uncertainty** estimates and the **distribution change** tests are **not ported** |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer and the **anomaly detection** layer (the detection and the attribution) are ported; the **uncertainty** estimates and the **distribution change** tests are **not ported** |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
@@ -184,6 +184,14 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   counts are the counts of the upstream and the scores are the same numbers. The
   samples that are not a number are equal to each other and are neither greater
   nor smaller than any other sample, like the comparisons of numpy count them.
+- The attribution of the anomalies of the `gcm` package takes the noise of the
+  nodes that are in the subset of the set function from the anomaly sample and
+  permutes the noise of the nodes that are not in it, and the value of the subset
+  is the logarithm of the relative frequency of the scores of the distribution
+  that are at least the score of the anomaly sample. The sum of the
+  contributions is therefore the logarithm of the inverse of that relative
+  frequency, which is the anomaly score of the target, and the two agree to
+  `2e-15`.
 
 ## Deliberate differences from upstream
 
@@ -385,12 +393,19 @@ following ways:
   numpy, so the scores of the port and of the upstream differ on the same rows;
   they agree on the node with the largest score, which is what the upstream test
   asserts.
-- `gcm` does **not** attribute the anomalies of a sample to the upstream nodes
-  that caused them. The attribution of the upstream needs the noise of the
-  upstream nodes of a target and the Shapley values of the score, and the
-  upstream Shapley estimator computes the values of every sample at once, while
-  the Shapley estimator of the port computes the values of one set function at
-  a time.
+- `gcm` does **not** attribute the anomalies of a sample with a scorer that scores
+  several variables at once. The upstream `attribute_anomaly_scores` takes such a
+  scorer and scores the multivariate samples of the distribution, which needs
+  the density estimator of the upstream; the scorers of the port score one
+  dimensional samples, so the port attributes the anomalies with the
+  `attribute_anomalies` of the upstream, which reduces the samples of the
+  distribution to the values of the target before it scores them.
+- `gcm` computes the Shapley values of the attribution of one anomaly sample at
+  a time. The upstream computes the values of every sample at once, with a set
+  function that returns an array; the Shapley estimator of the port takes one
+  set function at a time, so the port calls it once per sample. The exact
+  estimator evaluates the same subsets of the players in both, so the
+  contributions are the same numbers.
 
 ## Development
 

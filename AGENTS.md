@@ -238,6 +238,14 @@ statsmodels / scikit-learn conventions are deliberate:
   that is not a number, like the median of numpy, and the port has to check for
   it itself, because the sort of the `utils` package does not order the values
   that are not a number.
+- The attribution of the anomalies of the `gcm` package takes the noise of the
+  nodes that are in the subset of the set function from the anomaly sample and
+  permutes the noise of the nodes that are not in it, and the value of the
+  subset is the logarithm of the relative frequency of the scores of the
+  distribution that are at least the score of the anomaly sample. The sum of the
+  contributions is therefore the logarithm of the inverse of that relative
+  frequency, which is the anomaly score of the target, and the two agree to
+  `2e-15`.
 
 ## Package layout
 
@@ -349,3 +357,13 @@ README makes, so they are tracked in the repository:
   fixtures of the layer are drawn from the generator of the `utils` package of
   the port, and the script reproduces that generator in Python, so that the
   fixtures of the port and the fixtures of the script are the same numbers.
+- `gcm_anomaly_attribution_reference.py` computes the numbers of the attribution
+  of the anomalies -- the contribution of every upstream node to the anomaly
+  score of every anomaly sample, with the information theoretic score and with
+  the feature relevance, and the total anomaly score -- with the upstream
+  `dowhy.gcm.anomaly.attribute_anomalies` code, which is where the expectations
+  of the tests of the layer come from. The attribution permutes the samples of
+  the distribution with the global generator of numpy, so its numbers depend on
+  that generator and are only close to the numbers of the port, which draws its
+  permutations from the generator it is given. The sum of the contributions does
+  not depend on the permutations at all, so it is the same number in both.

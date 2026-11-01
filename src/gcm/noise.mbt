@@ -69,6 +69,60 @@ pub fn compute_noise_from_data(
 }
 
 ///|
+/// The samples of the ancestors of a node and of the node itself, and the
+/// noise of those samples.
+///
+/// This is the port of `dowhy.gcm._noise.noise_samples_of_ancestors`. The nodes
+/// are visited in the topological order of the graph, so the samples of a node
+/// with parents are computed from the samples of its parents. The noise of a
+/// root node is its value.
+///
+/// The upstream draws the samples from the global generator of numpy; the port
+/// draws them from the given generator, so that the same generator always gives
+/// the same samples.
+pub fn noise_samples_of_ancestors(
+  causal_model : ProbabilisticCausalModel,
+  target_node : String,
+  num_samples : Int32,
+  rng : @utils.Random,
+) -> (@api.DataFrame, @api.DataFrame) {
+  validate_causal_dag(causal_model)
+  let ancestors = causal_model.graph.ancestors_of([target_node])
+  let mut samples = @api.DataFrame::new([], Map([]))
+  let mut noise_samples = @api.DataFrame::new([], Map([]))
+  for node in causal_model.graph.topological_order() {
+    if node != target_node && !ancestors.contains(node) {
+      continue
+    }
+    if is_root_node(causal_model, node) {
+      let root_model = match causal_model.root_model(node) {
+        Some(model) => model
+        None =>
+          abort(
+            "the node " +
+            node +
+            " is a root and needs a distribution, but it has none",
+          )
+      }
+      let values = root_model.draw_samples(num_samples, rng)
+      samples = samples.with_numeric(node, values.copy())
+      noise_samples = noise_samples.with_numeric(node, values.copy())
+    } else {
+      let parents = causal_model.graph.predecessors(node)
+      let x = design_matrix_of(causal_model, node, samples, parents)
+      let mechanism = mechanism_of(causal_model, node)
+      let noise = mechanism.noise_model.draw_samples(num_samples, rng)
+      noise_samples = noise_samples.with_numeric(node, noise.copy())
+      samples = samples.with_numeric(node, mechanism.evaluate(x, noise))
+    }
+    if node == target_node {
+      break
+    }
+  }
+  (samples, noise_samples)
+}
+
+///|
 /// The design matrix of the parents of a node.
 fn design_matrix_of(
   causal_model : ProbabilisticCausalModel,

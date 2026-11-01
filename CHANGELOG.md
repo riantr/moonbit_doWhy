@@ -482,3 +482,43 @@ graph, identification, estimation, refutation.
   computes the values of one set function at a time.
 
 [0.0.10]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.10
+
+## [0.0.11] - 2026-11-01
+
+### Added
+
+- `gcm` -- the attribution of the anomalies of a causal model, the port of
+  `dowhy.gcm.anomaly.attribute_anomalies`:
+  - `attribute_anomalies`, which attributes the anomaly score of every anomaly
+    sample to the nodes of the graph that are upstream of the target, with the
+    Shapley values of the score;
+  - `noise_samples_of_ancestors`, the samples of the ancestors of a node and of
+    the node itself together with their noise, which the attribution needs.
+- `_verify/gcm_anomaly_attribution_reference.py` -- the upstream reference of the
+  attribution. It computes the numbers of the upstream attribution with the
+  upstream code itself, so the expectations of the tests of the port are the
+  numbers of the upstream rather than a reading of it.
+
+### Notes
+
+- The attribution depends on the noise the mechanisms draw and on the
+  permutations the set function uses, which the upstream draws from the global
+  generator of numpy and the port draws from the generator it is given, so the
+  contributions of the port and of the upstream are close to each other and not
+  equal. The tests of the port assert the relations the upstream test file
+  `tests/gcm/test_anomaly_attribution.py` asserts and the numbers of the
+  upstream reference, with a tolerance of `0.05` that covers the difference of
+  the two generators.
+- The sum of the contributions does not depend on the permutations, so it is the
+  same number in the port and in the upstream: the two agree to `2e-15`.
+- The port computes the Shapley values of one anomaly sample at a time. The
+  upstream computes the values of every sample at once, with a set function that
+  returns an array; the Shapley estimator of the port takes one set function at
+  a time, so the port calls it once per sample. The exact estimator evaluates
+  the same subsets of the players in both.
+- The `attribute_anomaly_scores` of the upstream, which attributes the anomalies
+  with a scorer that scores several variables at once, is **not ported**. It
+  needs the density estimator of the upstream, and the scorers of the port score
+  one dimensional samples.
+
+[0.0.11]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.11
