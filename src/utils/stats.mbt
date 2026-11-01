@@ -375,6 +375,43 @@ pub fn ln_gamma(x : Double) -> Double {
 }
 
 ///|
+/// The digamma function, the derivative of the logarithm of the gamma function.
+///
+/// This is the port of `scipy.special.digamma`, which the entropy estimator of
+/// the Kozachenko-Leonenko of the `gcm` package uses. The port uses the
+/// recurrence `ψ(x + 1) = ψ(x) + 1 / x` to walk up to an argument of at least
+/// ten and the asymptotic expansion of the remainder, which is the same
+/// expansion `scipy` uses.
+///
+/// For an integer `n` the value is the harmonic number `H(n - 1)` without the
+/// Euler-Mascheroni constant, so the two agree to about `2e-15` at `n = 10000`.
+pub fn digamma(x : Double) -> Double {
+  if x <= 0.0 {
+    abort("the digamma function is not defined at " + x.to_string())
+  }
+  let mut value = x
+  let mut result = 0.0
+  while value < 10.0 {
+    result = result - 1.0 / value
+    value = value + 1.0
+  }
+  let inverse = 1.0 / value
+  let square = inverse * inverse
+  let fourth = square * square
+  let sixth = fourth * square
+  let eighth = fourth * fourth
+  let tenth = eighth * square
+  result +
+  @math.ln(value) -
+  0.5 * inverse -
+  square / 12.0 +
+  fourth / 120.0 -
+  sixth / 252.0 +
+  eighth / 240.0 -
+  5.0 * tenth / 660.0
+}
+
+///|
 /// Cumulative distribution function of Student's t distribution.
 pub fn t_cdf(t : Double, df : Double) -> Double {
   if df <= 0.0 {

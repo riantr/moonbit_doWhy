@@ -258,6 +258,19 @@ statsmodels / scikit-learn conventions are deliberate:
   of the data, and **not** the number of the input columns. `inputs_of` returns
   the columns of the data, so `background_inputs.length()` is the number of the
   inputs; the row count is `background_data.nrows()`.
+- The entropy of the `gcm` package is the entropy of `scipy.stats.entropy`, so
+  it is measured in nats and the probabilities are normalised by their sum
+  before the entropy is computed. The digamma function of the `utils` package
+  is the port of `scipy.special.digamma`: the port walks up to an argument of
+  ten with the recurrence `ψ(x + 1) = ψ(x) + 1 / x` and uses the asymptotic
+  expansion of the remainder. For an integer `n` the two agree to about
+  `2e-15` at `n = 10000`.
+- The bins of the discretised entropy of the `gcm` package follow the
+  convention of `numpy.histogram`: every bin but the last one is half open, so
+  a value that sits exactly on an edge belongs to the bin on its right, and the
+  last bin holds the largest value of the sample. The edges are the ones of
+  `numpy.linspace(min_value, max_value, number_of_bins)`, which gives
+  `number_of_bins - 1` bins, and a single edge gives no bin at all.
 
 ## Package layout
 
@@ -271,7 +284,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators` |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer and the unit change layer |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer and the uncertainty estimates |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -391,3 +404,16 @@ README makes, so they are tracked in the repository:
   script are the same numbers. The script prints the first three rows of every
   frame and the sum of every column, so the tests of the port compare the first
   rows and the sums and not the whole column.
+- `gcm_uncertainty_reference.py` computes the numbers of the uncertainty
+  estimates -- the entropy of a Gaussian sample with the three estimators, the
+  variance of a Gaussian sample in one and in several dimensions, the entropy
+  of the rows of a matrix of probabilities and the entropy of a sample of
+  discrete values -- with the upstream `dowhy.gcm.uncertainty` code, which is
+  where the expectations of the tests of the layer come from. The fixtures of
+  the layer are drawn from the generator of the `utils` package of the port, and
+  the script reproduces that generator in Python, so that the fixtures of the
+  port and the fixtures of the script are the same numbers. The multivariate
+  fixture of the script holds a hundred thousand rows, where the upstream test
+  holds a million: the covariance of the sample is the same number either way,
+  and the port keeps the fixture small enough for every backend of the
+  toolchain.

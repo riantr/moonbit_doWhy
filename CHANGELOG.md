@@ -566,3 +566,49 @@ graph, identification, estimation, refutation.
   evaluates the same subsets of the players in both.
 
 [0.0.12]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.12
+
+## [0.0.13] - 2026-11-01
+
+### Added
+
+- `gcm` -- the uncertainty estimates, the port of `dowhy.gcm.uncertainty`:
+  - `estimate_entropy_using_discretization`, which estimates the entropy of a
+    sample with a histogram of its values;
+  - `estimate_entropy_kmeans`, which estimates the entropy of a sample with the
+    Kozachenko-Leonenko estimator;
+  - `estimate_gaussian_entropy`, which estimates the entropy of a sample with
+    the Gaussian that fits it;
+  - `estimate_variance`, which is the population variance of a sample with one
+    column and the determinant of the sample covariance matrix of a sample with
+    more columns;
+  - `estimate_entropy_of_probabilities`, which is the mean of the entropies of
+    the rows of a matrix of probabilities;
+  - `estimate_entropy_discrete`, which is the entropy of the frequencies of the
+    rows of a sample of discrete values.
+- `utils` -- `mat_determinant`, the determinant of a square matrix, and
+  `digamma`, the digamma function of `scipy.special.digamma`.
+- `_verify/gcm_uncertainty_reference.py` -- the upstream reference of the layer.
+  It computes the numbers of the upstream estimates with the upstream code
+  itself, so the expectations of the tests of the port are the numbers of the
+  upstream rather than a reading of it.
+
+### Notes
+
+- The upstream shapes its numpy inputs into two dimensional matrices with
+  `shape_into_2d`; the port takes a matrix, so a vector is a matrix with one
+  column.
+- The port computes the distances to the nearest neighbours of a sample with
+  more than one column by comparing every pair of rows, which costs `O(n^2 d)`.
+  The upstream asks `sklearn.neighbors.NearestNeighbors`, which builds a tree.
+  The distances are the same numbers. For one column the port sorts the values
+  and walks the two sides of every value, which costs `O(n k)`.
+- The digamma function of the `utils` package walks up to an argument of ten
+  with the recurrence `ψ(x + 1) = ψ(x) + 1 / x` and uses the asymptotic
+  expansion of the remainder, which is the expansion `scipy` uses. For an
+  integer `n` the two agree to about `2e-15` at `n = 10000`.
+- The multivariate fixture of the layer holds a hundred thousand rows, where the
+  upstream test holds a million. The covariance of the sample is the same
+  number either way, and the port keeps the fixture small enough for every
+  backend of the toolchain.
+
+[0.0.13]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.13

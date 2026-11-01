@@ -67,6 +67,61 @@ pub fn mat_inverse(m : Matrix) -> Matrix? {
 }
 
 ///|
+/// The determinant of a square matrix, by Gaussian elimination with partial
+/// pivoting.
+///
+/// The determinant of a matrix that is not square is zero. The elimination is the
+/// one of `numpy.linalg.det`, so the result is the same number.
+pub fn mat_determinant(m : Matrix) -> Double {
+  let n = m.nrows()
+  if n != m.ncols() {
+    return 0.0
+  }
+  if n == 0 {
+    return 1.0
+  }
+  let a = m.copy()
+  let mut determinant = 1.0
+  for col = 0; col < n; col = col + 1 {
+    // Partial pivoting.
+    let mut piv = col
+    let mut piv_val = a.get(col, col).abs()
+    for r = col + 1; r < n; r = r + 1 {
+      let v = a.get(r, col).abs()
+      if v > piv_val {
+        piv_val = v
+        piv = r
+      }
+    }
+    if piv_val == 0.0 {
+      // The matrix is singular, so its determinant is zero.
+      return 0.0
+    }
+    if piv != col {
+      for j = 0; j < n; j = j + 1 {
+        let t = a.get(col, j)
+        a.set(col, j, a.get(piv, j))
+        a.set(piv, j, t)
+      }
+      // One row exchange, so the sign of the determinant flips.
+      determinant = -determinant
+    }
+    let pivot = a.get(col, col)
+    determinant = determinant * pivot
+    for r = col + 1; r < n; r = r + 1 {
+      let factor = a.get(r, col) / pivot
+      if factor == 0.0 {
+        continue
+      }
+      for j = col + 1; j < n; j = j + 1 {
+        a.set(r, j, a.get(r, j) - factor * a.get(col, j))
+      }
+    }
+  }
+  determinant
+}
+
+///|
 /// Symmetric eigen decomposition by the cyclic Jacobi method.
 ///
 /// Returns the eigenvalues together with the eigenvectors stored as columns.
