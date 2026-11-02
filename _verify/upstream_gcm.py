@@ -83,6 +83,26 @@ _ORDER: list[tuple[str, str]] = [
     ("dowhy.causal_refuter", "causal_refuter.py"),
     ("dowhy.causal_estimators.econml", "causal_estimators/econml.py"),
     ("dowhy.causal_refuters.placebo_treatment_refuter", "causal_refuters/placebo_treatment_refuter.py"),
+    (
+        "dowhy.causal_estimators.propensity_score_estimator",
+        "causal_estimators/propensity_score_estimator.py",
+    ),
+    (
+        "dowhy.causal_estimators.propensity_score_matching_estimator",
+        "causal_estimators/propensity_score_matching_estimator.py",
+    ),
+    (
+        "dowhy.causal_estimators.propensity_score_weighting_estimator",
+        "causal_estimators/propensity_score_weighting_estimator.py",
+    ),
+    (
+        "dowhy.causal_estimators.propensity_score_stratification_estimator",
+        "causal_estimators/propensity_score_stratification_estimator.py",
+    ),
+    (
+        "dowhy.causal_estimators.doubly_robust_estimator",
+        "causal_estimators/doubly_robust_estimator.py",
+    ),
 ]
 
 _PATHS = dict(_ORDER)

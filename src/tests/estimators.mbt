@@ -148,7 +148,9 @@ test "the propensity score stratification estimator recovers the true effect" {
   let dataset = confounded()
   let estimand = backdoor_estimand(dataset)
   let estimator = @estimators.CausalEstimator::propensity_score_stratification(
-    estimand, 5, 10,
+    estimand,
+    @estimators.NumStrata::fixed(5),
+    10,
   )
   estimator.fit(dataset.frame(), [])
   let estimate = estimator.estimate_effect(dataset.frame(), 1.0, 0.0, "ate")

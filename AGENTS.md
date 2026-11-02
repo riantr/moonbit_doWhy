@@ -529,6 +529,36 @@ statsmodels / scikit-learn conventions are deliberate:
   accumulated over the rows of the design matrix. The diagonal weight matrix
   would hold `n * n` doubles, which is eighty gigabytes for the hundred
   thousand rows of the upstream test suite, so it is never built.
+- The propensity scores of the `estimators` package are **not** trimmed by
+  default. The upstream trims them in the inverse propensity score weighting
+  estimator (to `0.05` and `0.95`) and in the doubly robust estimator (to
+  `0.01` and `0.99`), and it does not trim them in the matching estimator and
+  in the stratification estimator. The trimming creates huge groups of equal
+  scores, which moves the strata of the stratification estimator and the
+  matches of the matching estimator: on the hundred thousand rows of the
+  upstream estimator test suite the estimate of the stratification estimator
+  is `10.0001` with the raw scores and `10.308` with the trimmed ones, while
+  the upstream gives `10.0001`. The two estimators that trim them trim them
+  themselves, and the doubly robust estimator trims the scores of the two arms
+  separately, the way the upstream does.
+- The number of strata of the propensity score stratification estimator of the
+  `estimators` package is either given or searched for, the way the upstream
+  searches for it: the search starts with `0.5 * rows / clipping_threshold`
+  strata and halves the number until at least half of the strata hold more
+  than `clipping_threshold` units of both arms. The upstream test file uses
+  the search, and it is what makes the estimate of the estimator agree with
+  the upstream to `1e-14` on one common cause.
+- The rows of the data sets of the upstream test suites are drawn by the
+  upstream with the global generator of numpy, so the upstream runs its
+  estimator and refuter test suites on a random draw of the rows. The rows of
+  the port are fixed, and the seed of every suite is the one for which the
+  **upstream** stays inside the tolerances of its own test files on the very
+  same rows: `_verify/estimator_suite_reference.py` runs the upstream on the
+  rows of the port. Two of the eighteen cases of the estimator suite are
+  decided by the draw: the inverse propensity score weighting estimator with
+  two common causes and the doubly robust estimator with two common causes and
+  a binary outcome are both outside the tolerance of the upstream on the rows
+  of the seed 42, and the upstream is outside it as well.
 
 ## Package layout
 

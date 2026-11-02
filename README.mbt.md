@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.29.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.30.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -118,6 +118,21 @@ statsmodels and scikit-learn are deliberate rather than accidental:
 - `average_rank` reproduces `pandas.Series.rank(ascending=True)`, so ties get
   the mean rank -- the propensity score stratification estimator depends on it.
 - `round_half_even` reproduces `numpy.round` and `pandas.Series.round(0)`.
+- The propensity score estimators trim the scores of the data only where the
+  upstream trims them: the inverse propensity score weighting estimator trims
+  them to `0.05` and `0.95` and the doubly robust estimator trims them to
+  `0.01` and `0.99`, while the matching estimator and the stratification
+  estimator use the raw scores. The trimming groups the scores of many rows
+  together, which moves the matches of the matching estimator and the strata
+  of the stratification estimator: on the hundred thousand rows of the upstream
+  estimator test suite the estimate of the stratification estimator is
+  `10.0001` with the raw scores and `10.308` with the trimmed ones, and the
+  upstream gives `10.0001`.
+- The number of strata of the propensity score stratification estimator is
+  either given or searched for, the way the upstream searches for it: the
+  search starts with `0.5 * rows / clipping_threshold` strata and halves the
+  number until at least half of the strata hold more than `clipping_threshold`
+  units of both arms. The upstream test file uses the search.
 - A rank deficient design is solved with the Moore-Penrose pseudo inverse,
   the minimum norm solution, like `statsmodels.OLS`, which uses `pinv`.
 - The residual variance uses `df_resid = n - rank`.
@@ -326,6 +341,32 @@ Four behaviours of the mediation differ on purpose:
   variable or no frontdoor variable. The port aborts with the message of the
   upstream, and `CausalEstimator::two_stage_error` reports that message
   before the fit, because MoonBit cannot catch an abort.
+
+The `estimators` package and the test suites of the port differ from upstream
+in the following ways:
+
+- The number of strata of the propensity score stratification estimator is an
+  enumeration, `NumStrata`, with a case for a given number of strata and a
+  case for the number of strata the upstream searches for. The upstream takes
+  the string `"auto"` and an integer.
+- The estimator test suite and the bootstrap refuter test suite of the port
+  draw their rows with the generator of the port, and the upstream draws its
+  rows with the global generator of numpy, which the fixture of the upstream
+  test suite seeds with zero. The rows of the port are therefore fixed, and
+  the seed of every suite is the one for which the **upstream** stays inside
+  the tolerances of its own test files on the very same rows.
+  `_verify/estimator_suite_reference.py` runs the upstream on the rows of the
+  port. Two of the eighteen cases of the estimator suite are decided by the
+  draw: the inverse propensity score weighting estimator with two common
+  causes and the doubly robust estimator with two common causes and a binary
+  outcome are outside the tolerance of the upstream on the rows of the seed
+  42, and the upstream is outside it as well.
+- The estimator test suite of the port asserts the estimates only. The upstream
+  test files also ask for the confidence intervals and for the significance of
+  the estimate, with ten bootstrap simulations for the stratification and the
+  doubly robust estimator; the upstream asserts none of those numbers, and ten
+  simulations of a bootstrap over a hundred thousand rows would multiply the
+  runtime of the suite by an order of magnitude.
 
 The `CausalModel` of the root package differs from upstream in the following
 ways:

@@ -1,18 +1,22 @@
 /// The propensity score based estimators and the doubly robust estimator.
 
 ///|
-/// The propensity scores of the data, clipped to the configured bounds.
+/// The propensity scores of the data.
 ///
 /// The scores are computed with the model and the encoder that were fitted
 /// when the estimator was fitted, which is what the `predict_proba` method of
 /// the upstream propensity score estimator does. The scores therefore follow
 /// the rows of the data they are computed for, and the estimate does not
 /// change when the rows of the data are permuted.
+///
+/// The scores are the raw ones. The upstream trims them only in the inverse
+/// propensity score weighting estimator and in the doubly robust estimator,
+/// and the two estimators trim them themselves.
 fn CausalEstimator::propensity_scores_of(
   self : CausalEstimator,
   data : @api.DataFrame,
 ) -> Array[Double] {
-  let scores = if data.has_column("propensity_score") {
+  if data.has_column("propensity_score") {
     data.numeric("propensity_score")
   } else if self.propensity_beta.length() > 0 {
     let design = self.build_common_cause_design(data)
@@ -20,28 +24,54 @@ fn CausalEstimator::propensity_scores_of(
   } else {
     self.propensities.copy()
   }
+}
+
+///|
+/// The propensity score, trimmed to the given bounds.
+///
+/// This is the `np.minimum` and the `np.maximum` of the upstream, which trim
+/// the scores of the inverse propensity score weighting estimator and of the
+/// doubly robust estimator.
+fn clip_propensity_score(score : Double, low : Double, high : Double) -> Double {
+  let mut value = score
+  if value > high {
+    value = high
+  }
+  if value < low {
+    value = low
+  }
+  value
+}
+
+///|
+/// The propensity scores, trimmed to the given bounds.
+fn clip_propensity_scores(
+  scores : Array[Double],
+  low : Double,
+  high : Double,
+) -> Array[Double] {
   let clipped : Array[Double] = []
   for score in scores {
-    let mut value = score
-    if value > self.max_ps_score {
-      value = self.max_ps_score
-    }
-    if value < self.min_ps_score {
-      value = self.min_ps_score
-    }
-    clipped.push(value)
+    clipped.push(clip_propensity_score(score, low, high))
   }
   clipped
 }
 
 ///|
 /// The effect of the inverse propensity score weighting estimator.
+///
+/// The scores are trimmed to the configured bounds before the weights are
+/// computed, the way the upstream trims the score column of the data.
 fn CausalEstimator::estimate_propensity_score_weighting(
   self : CausalEstimator,
   data : @api.DataFrame,
   target_units : String,
 ) -> @model.CausalEstimate {
-  let ps = self.propensity_scores_of(data)
+  let ps = clip_propensity_scores(
+    self.propensity_scores_of(data),
+    self.min_ps_score,
+    self.max_ps_score,
+  )
   let treatment = data.numeric(self.treatment_name)
   let outcome = data.numeric(self.outcome_name)
   let n = treatment.length()
@@ -291,6 +321,11 @@ fn nearest_score(
 ///
 /// The units are grouped into strata of the propensity score and the effect is
 /// computed inside every stratum before the strata are aggregated.
+///
+/// The number of strata is either given or searched for, the way the upstream
+/// searches for it: the search starts with `0.5 * rows / clipping_threshold`
+/// strata and halves the number until at least half of the strata hold more
+/// than `clipping_threshold` units of both arms.
 fn CausalEstimator::estimate_propensity_score_stratification(
   self : CausalEstimator,
   data : @api.DataFrame,
@@ -299,66 +334,34 @@ fn CausalEstimator::estimate_propensity_score_stratification(
   let ps = self.propensity_scores_of(data)
   let treatment = data.numeric(self.treatment_name)
   let outcome = data.numeric(self.outcome_name)
-  let n = treatment.length()
-  let num_strata = self.num_strata.to_double()
-  let ranks = @utils.average_rank(ps)
-  let strata : Array[Double] = []
-  for i = 0; i < n; i = i + 1 {
-    strata.push(@utils.round_half_even(ranks[i] / n.to_double() * num_strata))
+  let groups = match self.num_strata {
+    NumStrata::Fixed(count) =>
+      kept_strata(
+        strata_groups(ps, count.to_double()),
+        treatment,
+        self.clipping_threshold,
+      )
+    NumStrata::Auto =>
+      auto_strata_groups(ps, treatment, self.clipping_threshold)
   }
   // Aggregate every stratum.
-  let keys : Array[Double] = []
-  let groups : Array[Array[Int32]] = []
-  for i = 0; i < n; i = i + 1 {
-    let key = strata[i]
-    let mut found = false
-    for k in 0..<keys.length() {
-      if keys[k] == key {
-        groups[k].push(i)
-        found = true
-      }
-    }
-    if !found {
-      keys.push(key)
-      let group : Array[Int32] = []
-      group.push(i)
-      groups.push(group)
-    }
-  }
   let mut total_treatment = 0.0
   let mut total_control = 0.0
   let mut att_sum = 0.0
   let mut atc_sum = 0.0
   let mut ate_sum = 0.0
-  for k in 0..<groups.length() {
-    let group = groups[k]
+  for group in groups {
     let mut t_sum = 0.0
     let mut dbar_sum = 0.0
     let mut d_y_sum = 0.0
     let mut dbar_y_sum = 0.0
-    let mut treated_units = 0
-    let mut control_units = 0
     for row in group {
       let t = treatment[row]
       let y = outcome[row]
-      if t == 1.0 {
-        treated_units = treated_units + 1
-      } else {
-        control_units = control_units + 1
-      }
       t_sum = t_sum + t
       dbar_sum = dbar_sum + (1.0 - t)
       d_y_sum = d_y_sum + t * y
       dbar_y_sum = dbar_y_sum + (1.0 - t) * y
-    }
-    // Strata that are too small are dropped.
-    let smaller = if treated_units < control_units {
-      treated_units
-    } else {
-      control_units
-    }
-    if smaller <= self.clipping_threshold {
-      continue
     }
     let d_y_mean = d_y_sum / t_sum
     let dbar_y_mean = dbar_y_sum / dbar_sum
@@ -373,7 +376,7 @@ fn CausalEstimator::estimate_propensity_score_stratification(
     abort(
       "Method requires strata with number of data points per treatment > clipping_threshold (=" +
       self.clipping_threshold.to_string() +
-      "). No such strata exists. Consider decreasing 'num_strata' or 'clipping_threshold' parameters.",
+      "). No such strata exists. Consider decreasing \'num_strata\' or \'clipping_threshold\' parameters.",
     )
   }
   let value = match target_units {
@@ -392,6 +395,124 @@ fn CausalEstimator::estimate_propensity_score_stratification(
   )
   estimate.set_propensity_scores(ps)
   estimate
+}
+
+///|
+/// The rows of every stratum of the data, sorted by the stratum.
+///
+/// The stratum of a row is the rounded rank of its propensity score, scaled by
+/// the number of strata, the way the upstream computes it with the `rank`
+/// method of pandas and the `round` method of numpy.
+fn strata_groups(
+  ps : Array[Double],
+  num_strata : Double,
+) -> Array[Array[Int32]] {
+  let n = ps.length()
+  let ranks = @utils.average_rank(ps)
+  let keys : Array[Double] = []
+  for i = 0; i < n; i = i + 1 {
+    keys.push(@utils.round_half_even(ranks[i] / n.to_double() * num_strata))
+  }
+  let order : Array[Int32] = []
+  for i = 0; i < n; i = i + 1 {
+    order.push(i)
+  }
+  order.sort_by(fn(a, b) {
+    let c = @utils.compare_double(keys[a], keys[b])
+    if c != 0 {
+      c
+    } else if a < b {
+      -1
+    } else if a > b {
+      1
+    } else {
+      0
+    }
+  })
+  let groups : Array[Array[Int32]] = []
+  let mut i = 0
+  while i < n {
+    let mut j = i
+    while j + 1 < n && keys[order[j + 1]] == keys[order[i]] {
+      j = j + 1
+    }
+    let group : Array[Int32] = []
+    for k = i; k <= j; k = k + 1 {
+      group.push(order[k])
+    }
+    groups.push(group)
+    i = j + 1
+  }
+  groups
+}
+
+///|
+/// The strata that hold more than `clipping_threshold` units of both arms.
+///
+/// A stratum is dropped when one of its arms holds fewer units than the
+/// threshold, the way the upstream drops it with the `filter` of pandas.
+fn kept_strata(
+  groups : Array[Array[Int32]],
+  treatment : Array[Double],
+  clipping_threshold : Int32,
+) -> Array[Array[Int32]] {
+  let kept : Array[Array[Int32]] = []
+  for group in groups {
+    let mut treated_units = 0
+    let mut control_units = 0
+    for row in group {
+      if treatment[row] == 1.0 {
+        treated_units = treated_units + 1
+      } else {
+        control_units = control_units + 1
+      }
+    }
+    let smaller = if treated_units < control_units {
+      treated_units
+    } else {
+      control_units
+    }
+    if smaller > clipping_threshold {
+      kept.push(group)
+    }
+  }
+  kept
+}
+
+///|
+/// The strata of the data, with the number of strata the upstream searches
+/// for.
+///
+/// The search starts with `0.5 * rows / clipping_threshold` strata and halves
+/// the number until at least half of the strata are kept, which is the rule of
+/// the upstream.
+fn auto_strata_groups(
+  ps : Array[Double],
+  treatment : Array[Double],
+  clipping_threshold : Int32,
+) -> Array[Array[Int32]] {
+  let n = treatment.length()
+  let mut num_strata = 0.5 * n.to_double() / clipping_threshold.to_double()
+  let mut groups : Array[Array[Int32]] = []
+  let mut found = false
+  while !found {
+    groups = kept_strata(
+      strata_groups(ps, num_strata),
+      treatment,
+      clipping_threshold,
+    )
+    if groups.length().to_double() >= 0.5 * num_strata {
+      found = true
+    } else {
+      num_strata = (num_strata / 2.0).to_int().to_double()
+      if num_strata < 2.0 {
+        abort(
+          "Not enough data to generate at least two strata. This error may be due to a high value of \'clipping_threshold\'.",
+        )
+      }
+    }
+  }
+  groups
 }
 
 ///|
@@ -421,7 +542,32 @@ fn CausalEstimator::estimate_doubly_robust(
   let treatment = data.numeric(self.treatment_name)
   let outcome = data.numeric(self.outcome_name)
   let n = treatment.length()
-  let ps = self.propensity_scores_of(data)
+  // The upstream trims the scores of the arm the unit belongs to, and the two
+  // arms are trimmed separately: the score of the control arm is the
+  // probability of the control class, not the complement of the trimmed score
+  // of the treated arm.
+  let raw = self.propensity_scores_of(data)
+  let ps = clip_propensity_scores(raw, self.min_ps_score, self.max_ps_score)
+  let ps_control : Array[Double] = []
+  for score in raw {
+    ps_control.push(
+      clip_propensity_score(1.0 - score, self.min_ps_score, self.max_ps_score),
+    )
+  }
+  for score in ps {
+    if score <= 0.0 {
+      abort(
+        "Propensity scores must be strictly positive for doubly robust estimation.",
+      )
+    }
+  }
+  for score in ps_control {
+    if score <= 0.0 {
+      abort(
+        "Propensity scores must be strictly positive for doubly robust estimation.",
+      )
+    }
+  }
   let treated_outcomes = self.interventional_outcomes(
     data,
     self.treatment_value,
@@ -434,7 +580,7 @@ fn CausalEstimator::estimate_doubly_robust(
     let y = outcome[i]
     // The propensity score of the arm the unit actually received.
     let ps_treated = ps[i]
-    let ps_control = 1.0 - ps[i]
+    let ps_control = ps_control[i]
     let treated_value = treated_outcomes[i]
     let control_value = control_outcomes[i]
     // The treated arm.

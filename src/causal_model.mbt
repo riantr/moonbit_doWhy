@@ -453,7 +453,9 @@ fn CausalModel::build_estimator(
       @estimators.CausalEstimator::propensity_score_matching(estimand)
     "backdoor.propensity_score_stratification" =>
       @estimators.CausalEstimator::propensity_score_stratification(
-        estimand, 5, 10,
+        estimand,
+        @estimators.NumStrata::auto(),
+        10,
       )
     "backdoor.doubly_robust" =>
       @estimators.CausalEstimator::doubly_robust(estimand, 0.01, 0.99)

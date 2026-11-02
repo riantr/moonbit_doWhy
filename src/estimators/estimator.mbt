@@ -37,6 +37,31 @@ pub enum WeightingScheme {
 }
 
 ///|
+/// The number of strata of the propensity score stratification estimator.
+///
+/// The upstream takes the string `"auto"`, which searches for the number of
+/// strata, and an integer, which is the number of strata.
+pub enum NumStrata {
+  /// The given number of strata.
+  Fixed(Int32)
+  /// The number of strata is searched for, the way the upstream searches for
+  /// it.
+  Auto
+}
+
+///|
+/// The given number of strata.
+pub fn NumStrata::fixed(count : Int32) -> NumStrata {
+  Fixed(count)
+}
+
+///|
+/// The number of strata is searched for, the way the upstream searches for it.
+pub fn NumStrata::auto() -> NumStrata {
+  Auto
+}
+
+///|
 /// The inverse propensity score weighting scheme.
 pub fn WeightingScheme::ips_weight() -> WeightingScheme {
   IpsWeight
@@ -81,7 +106,7 @@ pub struct CausalEstimator {
   /// The upper bound of the propensity score.
   mut max_ps_score : Double
   /// The number of strata, used by the stratification estimator.
-  mut num_strata : Int32
+  mut num_strata : NumStrata
   /// Strata with fewer units than this are dropped.
   mut clipping_threshold : Int32
   /// The instrument, used by the instrumental variable estimator.
@@ -194,7 +219,7 @@ pub fn CausalEstimator::propensity_score_matching(
 /// A propensity score stratification estimator.
 pub fn CausalEstimator::propensity_score_stratification(
   estimand : @identifiers.IdentifiedEstimand,
-  num_strata : Int32,
+  num_strata : NumStrata,
   clipping_threshold : Int32,
 ) -> CausalEstimator {
   let estimator = CausalEstimator::new(
@@ -288,7 +313,7 @@ fn CausalEstimator::new(
     weighting_scheme: IpsWeight,
     min_ps_score: 0.05,
     max_ps_score: 0.95,
-    num_strata: 5,
+    num_strata: NumStrata::Fixed(5),
     clipping_threshold: 10,
     instrument_name: "",
     rd_variable_name: "",
