@@ -47,32 +47,6 @@ fn placebo_dataset(
 }
 
 ///|
-/// The estimand of the upstream test: the exhaustive search of the backdoor
-/// criterion, with the method of the backdoor criterion.
-fn placebo_estimand(
-  dataset : @datasets.Dataset,
-) -> @identifiers.IdentifiedEstimand {
-  let graph = @graph.build_graph(
-    dataset.treatments(),
-    [dataset.outcome()],
-    dataset.common_causes(),
-    dataset.instruments(),
-    dataset.effect_modifiers(),
-    dataset.frontdoor_variables(),
-  )
-  let estimand = @identifiers.identify_effect_auto(
-    graph,
-    dataset.treatments(),
-    [dataset.outcome()],
-    dataset.observed_nodes(),
-    "nonparametric-ate",
-    @identifiers.BACKDOOR_EXHAUSTIVE,
-  )
-  estimand.set_identifier_method("backdoor")
-  estimand
-}
-
-///|
 /// The estimator of the upstream test, fitted on the data set.
 ///
 /// The upstream uses a linear regression for a continuous and for a
@@ -81,7 +55,7 @@ fn placebo_estimator(
   dataset : @datasets.Dataset,
   binary_estimator : Bool,
 ) -> @estimators.CausalEstimator {
-  let estimand = placebo_estimand(dataset)
+  let estimand = exhaustive_estimand(dataset, "backdoor")
   let estimator = if binary_estimator {
     @estimators.CausalEstimator::propensity_score_matching(estimand)
   } else {
@@ -99,7 +73,7 @@ fn placebo_refutation(
   num_simulations : Int32,
   placebo_type : @refuters.PlaceboType,
 ) -> @refuters.CausalRefutation {
-  let estimand = placebo_estimand(dataset)
+  let estimand = exhaustive_estimand(dataset, "backdoor")
   let estimator = placebo_estimator(dataset, binary_estimator)
   @refuters.refute_placebo_treatment(
     estimator,
@@ -254,7 +228,7 @@ test "the permuted placebo of the instrumental variable method permutes the inst
     1000,
     @datasets.LinearConfig::instrumental_variable(),
   )
-  let estimand = placebo_estimand(dataset)
+  let estimand = exhaustive_estimand(dataset, "backdoor")
   estimand.set_identifier_method("iv")
   let estimator = @estimators.CausalEstimator::instrumental_variable(
     estimand, "Z0",

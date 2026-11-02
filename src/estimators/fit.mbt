@@ -188,9 +188,9 @@ pub fn CausalEstimator::fit(
   self.encoders.reset()
   self.treatment_name = treatment[0]
   self.outcome_name = outcome[0]
-  self.adjustment_names = self.target_estimand.get_adjustment_set(
-    self.target_estimand.identifier_method(),
-  )
+  self.adjustment_names = self.target_estimand
+    .get_adjustment_set(self.target_estimand.identifier_method())
+    .copy()
   self.effect_modifier_names = effect_modifier_names.copy()
   match self.kind {
     LinearRegression => self.fit_regression(data)

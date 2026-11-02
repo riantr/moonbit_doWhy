@@ -363,6 +363,16 @@ pub fn CausalEstimator::adjustment_set(self : CausalEstimator) -> Array[String] 
 }
 
 ///|
+/// The effect modifiers the estimator uses.
+///
+/// The bootstrap refuter perturbs them, the way the upstream does.
+pub fn CausalEstimator::effect_modifiers(
+  self : CausalEstimator,
+) -> Array[String] {
+  self.effect_modifier_names.copy()
+}
+
+///|
 /// The propensity scores the estimator computed.
 pub fn CausalEstimator::propensity_scores(
   self : CausalEstimator,

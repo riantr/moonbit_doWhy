@@ -84,3 +84,23 @@ pub fn Random::sample_with_replacement(
   }
   out
 }
+
+///|
+/// A sample of `size` values drawn without replacement.
+///
+/// The sample holds no value twice, so it is a subset of the given values. A
+/// size that is larger than the number of the values gives the values
+/// themselves.
+pub fn Random::sample_without_replacement(
+  self : Random,
+  values : Array[Double],
+  size : Int32,
+) -> Array[Double] {
+  let count = if size > values.length() { values.length() } else { size }
+  let pool = self.shuffle(values)
+  let out : Array[Double] = []
+  for i = 0; i < count; i = i + 1 {
+    out.push(pool[i])
+  }
+  out
+}

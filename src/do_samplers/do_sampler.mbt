@@ -170,7 +170,7 @@ fn DoSampler::new(
     treatment_names: action_nodes.copy(),
     outcome_names: outcome_nodes.copy(),
     variable_types: variable_types.copy(),
-    adjustment_names: adjustment,
+    adjustment_names: adjustment.copy(),
     frame: data.copy(),
     random,
     keep_original_treatment,

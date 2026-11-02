@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.28.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.29.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -101,7 +101,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
 | `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
-| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator and of the placebo treatment refuter |
+| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter and of the data subset refuter |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
 The root package `riantr/moonbit_dowhy` holds `CausalModel`, the entry point
@@ -253,6 +253,28 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   estimates that are above the estimate and the half of the ones that are equal
   to it, and the normal test takes the z-score of the estimate against the mean
   and the standard deviation of the simulations, with `ddof = 0`.
+- The bootstrap refuter resamples the rows of the data **with** replacement and
+  perturbs the variables of interest, the way the upstream does: a numeric
+  column gets a Gaussian noise whose standard deviation is the given fraction
+  of the standard deviation of the column, a column of zeros and ones is
+  flipped and a discrete column gets another category, both with the given
+  probability of the change. The probability of the change is the noise unless
+  it is given, the way the upstream derives it. The data subset refuter
+  samples its subset **without** replacement, the way the upstream does with
+  `data.sample(frac=subset_fraction)`.
+- The propensity score matching estimator matches every treated unit with the
+  control unit whose propensity score is the closest, and a tie is broken with
+  the index of the unit: the first unit with the smallest distance wins. The
+  search is a binary search over the sorted scores, which picks the same unit
+  as a scan over every unit of the other group.
+- The logistic regression of the `utils` package minimises
+  `sum_i log_loss(y_i, p_i) + 1/(2C) ||w||²`, the convention of
+  `sklearn.linear_model.LogisticRegression` with the default `penalty="l2"` and
+  `C=1.0`, and it is fitted with the iteratively reweighted least squares. The
+  weighted normal equations of a step are accumulated over the rows of the
+  design matrix, so the fit of a hundred thousand rows needs a matrix of the
+  size of the number of the columns and not one of the size of the square of
+  the number of the rows.
 
 ## Deliberate differences from upstream
 
@@ -352,6 +374,17 @@ The `refuters` package differs from upstream in the following ways:
   against, so its p-value is one. The upstream computes the mean of the
   simulations with numpy, which returns `nan` for an empty array, so its
   p-value is `nan`.
+- The variables the bootstrap refuter perturbs are named with an enumeration,
+  `RequiredVariables`, and not with the `bool | int | list` of the upstream.
+  The enumeration has a case for every variable of interest, for no variable
+  at all, for a number of them and for a list of names, and a list that names
+  the variables to leave out. The upstream raises an error when a list names
+  both the variables to keep and the variables to leave out; the enumeration
+  cannot express such a list.
+- The category branch of the bootstrap refuter of the upstream is broken: it
+  reads a variable that it never defines and it writes the integer zero into
+  the rows it does not change. The port perturbs a discrete column with
+  another category and leaves the rows it does not change alone.
 
 The `do_samplers`, `timeseries` and `gcm` packages differ from upstream in the
 following ways:

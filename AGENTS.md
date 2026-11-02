@@ -138,7 +138,7 @@ These are properties of the MoonBit toolchain this repository builds with
 
 MoonBit's containers are mutable and a struct copy copies the *references* to
 them, so a "copy" that only copies the struct shares its state with the
-original. Four of these cost real debugging time here:
+original. Five of these cost real debugging time here:
 
 - **`Map::set` mutates the map in place.** Copy the map (`map.copy()`) before
   setting into it, or the "new" frame mutates the old one.
@@ -156,6 +156,14 @@ original. Four of these cost real debugging time here:
   that needs the *fitted* mechanisms of a model -- the restricted model of the
   average causal effect, for instance -- has to **share** them instead of
   cloning them.
+- **`IdentifiedEstimand::get_adjustment_set` hands out the array the estimand
+  keeps.** Every caller that stores it or pushes onto it shares the state of
+  the estimand: the estimator keeps it as its adjustment names, and the
+  bootstrap refuter pushes the instruments onto it. The second one grew the
+  adjustment set of the estimator that had been fitted before the refutation
+  ran, so the design matrix of the estimate held more columns than the fitted
+  coefficients. The getter keeps its behaviour -- it is documented in the
+  upstream as well -- so the callers copy the array.
 
 ## Numerical conventions
 
@@ -483,6 +491,33 @@ statsmodels / scikit-learn conventions are deliberate:
   refutations that sever the causal relation -- the placebo and the dummy
   outcome -- test the **zero** estimate against the estimates they produced,
   the other ones test the estimate of the data.
+- The bootstrap refuter of the `refuters` package resamples the rows of the data
+  **with** replacement and perturbs the variables of interest, the way the
+  upstream does: a numeric column gets a Gaussian noise whose standard
+  deviation is the given fraction of the standard deviation of the column, a
+  column of zeros and ones is flipped and a discrete column gets another
+  category, both with the probability of the change. The probability of the
+  change is the noise unless it is given, the way the upstream derives it. The
+  data subset refuter samples its subset **without** replacement, the way the
+  upstream does with `data.sample(frac=subset_fraction)`.
+- The variables the bootstrap refuter perturbs are named with an enumeration,
+  `RequiredVariables`, and not with the `bool | int | list` of the upstream.
+  The enumeration holds a case for every variable of interest, for no variable
+  at all, for a number of them, for a list of names and for a list of the names
+  to leave out. The upstream raises an error for a list that names both the
+  variables to keep and the variables to leave out, and the enumeration cannot
+  express such a list.
+- The propensity score matching estimator of the `estimators` package matches
+  every treated unit with the control unit whose propensity score is the
+  closest, and a tie is broken with the index of the unit: the first unit with
+  the smallest distance wins, which is the rule of a scan over the units. The
+  search is a binary search over the sorted scores, so it costs `O(log n)` per
+  unit instead of the `O(n)` of the scan, and it picks the same unit.
+- The logistic regression of the `utils` package is fitted with the iteratively
+  reweighted least squares, and the weighted normal equations of a step are
+  accumulated over the rows of the design matrix. The diagonal weight matrix
+  would hold `n * n` doubles, which is eighty gigabytes for the hundred
+  thousand rows of the upstream test suite, so it is never built.
 
 ## Package layout
 
@@ -502,7 +537,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
-| `tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator and of the placebo treatment refuter |
+| `tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter and of the data subset refuter |
 | `examples` | the runnable quick start |
 
 ## Verification
@@ -843,3 +878,17 @@ README makes, so they are tracked in the repository:
   significance test of the refutations with the formulas of the upstream, so
   that the expectations of the tests of the port are written down and not
   transcribed.
+- The tests of the bootstrap refuter and of the data subset refuter assert the
+  **property** the upstream tests assert, that the effect of a resample and the
+  effect of a subset stay close to the effect of the data, and not the numbers
+  of the upstream: the resamples of the upstream are drawn with the global
+  generator of numpy and the ones of the port with the generator of the port,
+  so the two draw different subsets. The tolerances of the upstream tests are
+  the ones the port uses.
+- The test file of the data subset refuter runs on the **hundred thousand
+  rows** of the upstream test, so the port has to fit a propensity score model
+  and to match a hundred thousand units. Two things make that possible: the
+  logistic regression of the `utils` package accumulates the weighted normal
+  equations over the rows instead of building the diagonal weight matrix of
+  the IRLS step, and the propensity score matching estimator searches the
+  sorted scores instead of scanning every unit of the other group.
