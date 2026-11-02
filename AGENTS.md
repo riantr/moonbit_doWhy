@@ -133,6 +133,17 @@ These are properties of the MoonBit toolchain this repository builds with
 - **The bounds of a range need their parentheses** when they hold arithmetic:
   `for i in (start + 1)..<(end - 1)`. The bare form is a parse error, because
   the `+` and the `..<` are ambiguous.
+- **A native crash says nothing; run the same test on `wasm`.** A native
+  access violation surfaces as a bare `PanicError` with `at moonbit_panic` and
+  `???` frames, the exit code `0xc0000005`, and **no output of the tests that
+  ran before the crash**, because the standard output of the process is lost
+  with it. The `wasm` target reports the actual error instead: a
+  `RuntimeError: unreachable` under `tlsf/prepareSize` is the allocator that
+  cannot satisfy a request, and the stack of the wasm runtime names the
+  function that asked for it. The same is true of the index out of bounds,
+  which the wasm runtime reports with the frames of the access. A native
+  crash is therefore a *symptom*, and the wasm run of the same test is the
+  diagnosis.
 
 ## Aliasing hazards
 
