@@ -609,6 +609,29 @@ statsmodels / scikit-learn conventions are deliberate:
   they agree to `0.004` for the mean and to `0.05` for the variance. The
   re-weighting method, which does not use the regressor, agrees to `0.001`.
 
+- The program of the rules of the `overrule` package is solved in its
+  **aggregated** form: the rows of the program that cover the same covariates
+  are collapsed into one group with a weight, and the program is solved through
+  its dual, because the dual has a feasible basis. The aggregation keeps the
+  value of the program and the weights of the rules, and the shadow price of a
+  group is shared by its rows, so the residuals of the rows of a group are the
+  same number. The upstream solves the program with `cvxpy` and the solver
+  `CLARABEL`, and the reference script solves it with the `HiGHS` solver of
+  `scipy` instead.
+- The cross fitting of the propensity model of the `overrule` package fits the
+  model of a fold on the rows of the **other** fold and predicts the rows of
+  its own fold. The design matrix and the target of a fold therefore hold the
+  same rows, which is the convention of
+  `sklearn.model_selection.cross_val_predict`.
+- The rules of the `overrule` package are learned with the generator of the
+  port, and the reference samples of the upstream are drawn with the global
+  generator of numpy, so the rules of the port and the rules of the upstream are
+  not always the same rules. The upstream test file accepts a set of equivalent
+  rule sets for the same reason, and the port asserts that the rules are one of
+  them. The program of the **overlap** rules does not depend on the reference
+  samples, so its value is the same number in the port and in the upstream:
+  `0.00285` on the fixture of the upstream test file.
+
 ## Package layout
 
 | Package | Ports |
@@ -621,6 +644,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `model` | `dowhy.causal_estimator` (the estimate objects) |
 | `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones and the two stage regression of the frontdoor and of the mediation estimand |
 | `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations |
+| `overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
 | `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
@@ -975,6 +999,13 @@ README makes, so they are tracked in the repository:
   generator of numpy and the ones of the port with the generator of the port,
   so the two draw different subsets. The tolerances of the upstream tests are
   the ones the port uses.
+- `overrule_reference.py` runs the upstream of the refuter that assesses the
+  support and the overlap on the fixture of the upstream test file, with the
+  program of the rules solved with the `HiGHS` solver of `scipy` instead of
+  `cvxpy` and the solver `CLARABEL`, which are not installed here. It prints
+  the rules of the support and of the overlap, the weights of the program and
+  the value of the program, which are the numbers the tests of the port are
+  compared against.
 - The test file of the data subset refuter runs on the **hundred thousand
   rows** of the upstream test, so the port has to fit a propensity score model
   and to match a hundred thousand units. Two things make that possible: the

@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.32.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.33.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -18,7 +18,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators) |
 | Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
-| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome, random common cause, unobserved common cause, and the **significance test** of the refutations) |
+| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome, random common cause, unobserved common cause, the **significance test** of the refutations, and the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset` and the fixtures the upstream tests use) |
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
 | Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
@@ -95,6 +95,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `model` | `riantr/moonbit_dowhy/model` | `dowhy.causal_estimator` (the estimate objects) |
 | `estimators` | `riantr/moonbit_dowhy/estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones and the two stage regression of the frontdoor and of the mediation estimand |
 | `refuters` | `riantr/moonbit_dowhy/refuters` | `dowhy.causal_refuters` |
+| `overrule` | `riantr/moonbit_dowhy/overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `datasets` | `riantr/moonbit_dowhy/datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `riantr/moonbit_dowhy/data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -290,6 +291,28 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   design matrix, so the fit of a hundred thousand rows needs a matrix of the
   size of the number of the columns and not one of the size of the square of
   the number of the rows.
+- The program of the rules of the `overrule` package is solved in its
+  **aggregated** form: the rows of the program that cover the same covariates
+  are collapsed into one group with a weight, and the program is solved through
+  its dual, because the dual has a feasible basis. The aggregation keeps the
+  value of the program and the weights of the rules, and the shadow price of a
+  group is shared by its rows, so the residuals of the rows of a group are the
+  same number. The upstream solves the program with `cvxpy` and the solver
+  `CLARABEL`, and the reference script solves it with the `HiGHS` solver of
+  `scipy` instead.
+- The propensity model of the overlap region of the `overrule` package is a
+  logistic regression with a cross fitting of two folds, the way the upstream
+  crosses the folds of its random forest. The two models find the same overlap
+  region on the fixture of the upstream test file: the hundred rows of the cell
+  where the two features are zero.
+- The rules of the `overrule` package are learned with the generator of the
+  port, and the reference samples of the upstream are drawn with the global
+  generator of numpy, so the rules of the port and the rules of the upstream are
+  not always the same rules. The upstream test file accepts a set of equivalent
+  rule sets for the same reason, and the port asserts that the rules are one of
+  them. The program of the **overlap** rules does not depend on the reference
+  samples, so its value is the same number in the port and in the upstream:
+  `0.00285` on the fixture of the upstream test file.
 - The multiply-robust causal change attribution of the `gcm` package is the port
   of `dowhy.gcm.distribution_change_robust`, the estimator of the paper
   "Multiply-Robust Causal Change Attribution" of Quintas-Martinez, Bahadori,
@@ -447,6 +470,26 @@ The `refuters` package differs from upstream in the following ways:
   reads a variable that it never defines and it writes the integer zero into
   the rows it does not change. The port perturbs a discrete column with
   another category and leaves the rows it does not change alone.
+
+The `overrule` package differs from upstream in the following ways:
+
+- The propensity model of the overlap region is a logistic regression with a
+  cross fitting of two folds, where upstream fits a random forest with a grid
+  search over its depth, over the minimum size of its leaves and over its
+  number of trees. The two find the same overlap region on the fixture of the
+  upstream test file, and the port has neither a forest nor a grid search.
+- The program of the rules is solved by the simplex of the `utils` package,
+  through the aggregated form of the program, where upstream solves it with
+  `cvxpy` and the solver `CLARABEL`. The value of the program and the weights
+  of the rules are the same numbers.
+- The reference samples of the support rules are drawn with the generator of the
+  port, which is a hand written xorshift64, and not with the global generator
+  of numpy, so the rules of the support are not always the rules of the
+  upstream. The upstream test file accepts a set of equivalent rule sets for
+  the same reason.
+- The refuter of the overlap is a method of the model, `refute_assess_overlap`,
+  which returns the analyzer of the rules. Upstream returns the analyzer from
+  its `refute_estimate`, whose result is a refutation of the estimate.
 
 The `do_samplers`, `timeseries` and `gcm` packages differ from upstream in the
 following ways:

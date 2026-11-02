@@ -1631,3 +1631,50 @@ run with the numpy of today.
   least squares of `linearmodels`.
 
 [0.0.32]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.32
+
+## [0.0.33] - 2026-11-03
+
+The refuter that assesses the support and the overlap of the covariates with
+boolean rules, the port of the `assess_overlap` refuter of the upstream.
+
+### Added
+
+- `overrule` -- the `OverRule` algorithm of the upstream: the binariser of the
+  features, the sampler of the reference samples, the beam search of the pricing
+  problem, the program of the rules and its rounding, and the analyzer of the
+  support and of the overlap.
+- `utils.lp` -- a simplex for a linear program with the shadow prices of its
+  constraints, which is the dual of the program of the rules.
+- `CausalModel::refute_assess_overlap` -- the refuter that learns the rules of
+  the support and of the overlap with respect to the backdoor variables of the
+  estimand. Upstream returns the analyzer of the rules from its
+  `refute_estimate`, whose result is a refutation of the estimate, so the port
+  returns it from a method of its own.
+- the tests of the upstream file `tests/causal_refuters/test_assess_overlap.py`:
+  the rules of the support and of the overlap of the fixture of the upstream,
+  and the rows that the rules cover.
+- `_verify/overrule_reference.py` -- the upstream runs on the fixture of its own
+  test file, with the program of the rules solved with the `HiGHS` solver of
+  `scipy` instead of `cvxpy` and the solver `CLARABEL`, which are not installed
+  here.
+
+### Notes
+
+- The upstream draws the reference samples of the support rules with the global
+  generator of numpy and the port draws them with its own generator, so the
+  rules of the support are not always the rules of the upstream. The upstream
+  test file accepts a set of equivalent rule sets for the same reason, and the
+  port asserts that the rules are one of them.
+- The program of the overlap rules does not depend on the reference samples, so
+  its value is the same number in the port and in the upstream: `0.00285` on the
+  fixture of the upstream test file.
+- The port solves the program of the rules in its aggregated form, through its
+  dual, and the upstream solves it with `cvxpy` and the solver `CLARABEL`. The
+  value of the program and the weights of the rules are the same numbers.
+- The propensity model of the overlap region is a logistic regression with a
+  cross fitting of two folds, where the upstream fits a random forest with a
+  grid search. The two find the same overlap region on the fixture of the
+  upstream test file: the hundred rows of the cell where the two features are
+  zero.
+
+[0.0.33]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.33

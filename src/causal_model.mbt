@@ -661,6 +661,45 @@ pub fn CausalModel::refute_estimate(
 }
 
 ///|
+/// Assess the support and the overlap of the covariates with boolean rules.
+///
+/// This is the port of the `assess_overlap` refuter of the upstream. The
+/// upstream returns the analyzer of the rules from its `refute_estimate`, and
+/// the port returns it from a method of its own, because the rules are not a
+/// refutation of the estimate.
+///
+/// The rules are learned with respect to the backdoor variables of the estimand,
+/// the way the upstream takes them.
+pub fn CausalModel::refute_assess_overlap(
+  self : CausalModel,
+  support_config~ : @overrule.SupportConfig = @overrule.SupportConfig::new(),
+  overlap_config~ : @overrule.OverlapConfig = @overrule.OverlapConfig::new(),
+  overlap_eps~ : Double = 0.1,
+  support_only~ : Bool = false,
+  overlap_only~ : Bool = false,
+) -> @overrule.OverlapAnalyzer {
+  let backdoor = self.estimand.get_backdoor_variables(
+    self.estimand.default_backdoor_id(),
+  )
+  let names = self.data.numeric_column_names()
+  let columns : Array[Array[Double]] = []
+  for name in names {
+    columns.push(self.data.numeric(name))
+  }
+  @overrule.refute_assess_overlap(
+    columns,
+    names,
+    backdoor,
+    self.treatment[0],
+    support_config,
+    overlap_config,
+    overlap_eps,
+    support_only,
+    overlap_only,
+  )
+}
+
+///|
 /// The first segment of a dotted name.
 fn first_segment(name : String) -> String {
   let parts = name.split(".")
