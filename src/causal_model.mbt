@@ -384,6 +384,10 @@ pub fn CausalModel::get_estimator(
 ///
 /// `method_name` selects the identifier: `"backdoor"` (the default),
 /// `"frontdoor"`, `"mediation"`, `"iv"` or `"general_adjustment"`.
+///
+/// The kind of the estimand is the one of the model, the way the upstream uses
+/// the kind it was built with. The mediation of the effect is the natural
+/// indirect effect, which the upstream identifies with its own function.
 pub fn CausalModel::identify_effect(
   self : CausalModel,
   method_name : String,
@@ -393,11 +397,24 @@ pub fn CausalModel::identify_effect(
     self.treatment,
     self.outcome,
     self.observed_nodes,
-    "nonparametric-ate",
+    estimand_type_of(self.estimand_type, method_name),
     backdoor_strategy_of(method_name),
   )
   self.estimand = estimand
   estimand
+}
+
+///|
+/// The kind of the estimand the method name asks for.
+///
+/// The mediation of the effect is the natural indirect effect, the one the
+/// upstream identifies with `identify_nie_effect`.
+fn estimand_type_of(estimand_type : String, method_name : String) -> String {
+  if first_segment(method_name) == "mediation" {
+    "nonparametric-nie"
+  } else {
+    estimand_type
+  }
 }
 
 ///|
@@ -443,6 +460,8 @@ fn CausalModel::build_estimator(
     "iv.instrumental_variable" =>
       @estimators.CausalEstimator::instrumental_variable(estimand, "")
     "frontdoor.two_stage_regression" =>
+      @estimators.CausalEstimator::two_stage_regression(estimand)
+    "mediation.two_stage_regression" =>
       @estimators.CausalEstimator::two_stage_regression(estimand)
     "backdoor.generalized_linear_model" =>
       @estimators.CausalEstimator::generalized_linear_model(
@@ -551,6 +570,9 @@ pub fn CausalModel::refute_estimate(
   let estimator = self.build_estimator(method_name)
   estimator.fit(self.data, [])
   let estimand = self.estimand
+  // The identifier of the estimator is the first segment of its name, the way
+  // the estimate sets it.
+  estimand.set_identifier_method(first_segment(method_name))
   match refuter_name {
     "bootstrap" =>
       @refuters.refute_bootstrap(

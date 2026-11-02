@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.25.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.26.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -16,8 +16,8 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | --- | --- | --- |
 | Causal graph, d-separation | `dowhy.graph`, `dowhy.causal_graph` | ported (the graph, the d-separation, the backdoor and the frontdoor paths, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site) |
 | Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators) |
-| Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation, and the **ID algorithm** of Shpitser-Pearl) |
-| Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage, regression discontinuity) |
+| Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
+| Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
 | Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome, random common cause, unobserved common cause) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset` and the fixtures the upstream tests use) |
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
@@ -91,9 +91,9 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `api` | `riantr/moonbit_dowhy/api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder |
 | `utils` | `riantr/moonbit_dowhy/utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, a deterministic generator |
 | `graph` | `riantr/moonbit_dowhy/graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
-| `identifiers` | `riantr/moonbit_dowhy/identifiers` | `dowhy.causal_identifier` |
+| `identifiers` | `riantr/moonbit_dowhy/identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `riantr/moonbit_dowhy/model` | `dowhy.causal_estimator` (the estimate objects) |
-| `estimators` | `riantr/moonbit_dowhy/estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones |
+| `estimators` | `riantr/moonbit_dowhy/estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones and the two stage regression of the frontdoor and of the mediation estimand |
 | `refuters` | `riantr/moonbit_dowhy/refuters` | `dowhy.causal_refuters` |
 | `datasets` | `riantr/moonbit_dowhy/datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `riantr/moonbit_dowhy/data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
@@ -152,6 +152,16 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   `dowhy.graph.get_ordered_predecessors`. The order of the edges of a graph is
   no convention of the upstream, and a design matrix whose columns are in the
   order of the edges fits a different model.
+- The two stage regression estimator fits two ordinary least squares models and
+  multiplies their effects: the effect of the treatment on the mediator and the
+  effect of the mediator on the outcome. The upstream reports no confidence
+  interval for it, and so does the port. On the data set of the upstream test
+  `test_dowhy_chapter_7` the estimate of the port and the estimate of the
+  upstream agree to `5e-14`.
+- The default adjustment set of the backdoor search is the set with the fewest
+  instruments, and the set with the fewest variables among those. An instrument
+  of the adjustment set lowers the variance of the treatment variable, which is
+  the reason the upstream prefers it.
 - The generalised covariance measure of the `gcm` package regresses X and Y on
   Z with the ordinary least squares fit **with an intercept**, which is the
   `sklearn.linear_model.LinearRegression` of the upstream, and it takes the
@@ -255,6 +265,17 @@ the upstream code is order-dependent rather than wrong in an absolute sense:
   from the covariance of the coefficients. Upstream leaves the interval to
   the bootstrap, because a link function other than the identity makes the
   effect a function of the coefficients rather than one of them.
+
+Three behaviours of the mediation differ on purpose:
+
+- The mediator search enumerates its candidates in sorted order. Upstream
+  iterates over a Python `set`, so its order depends on the hash seed.
+- The two stage regression estimator always fits the two linear regressions
+  the upstream falls back to. Upstream takes its two stage models as
+  arguments, so that a caller can replace them.
+- The **natural direct effect** is **not ported**. Upstream computes it with a
+  third model, the total effect, and subtracts the natural indirect effect
+  from it.
 
 The `CausalModel` of the root package differs from upstream in the following
 ways:

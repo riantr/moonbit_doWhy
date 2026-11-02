@@ -20,9 +20,9 @@ pub struct IdentifiedEstimand {
   general_adjustment_variables : Map[String, Array[String]]
   mut instrumental_variables : Array[String]
   mut frontdoor_variables : Array[String]
-  mediator_variables : Array[String]
-  mediation_first_stage_confounders : Map[String, Array[String]]
-  mediation_second_stage_confounders : Map[String, Array[String]]
+  mut mediator_variables : Array[String]
+  mut mediation_first_stage_confounders : Map[String, Array[String]]
+  mut mediation_second_stage_confounders : Map[String, Array[String]]
   mut default_backdoor_id : String
   mut default_adjustment_set_id : String
   mut identifier_method : String
@@ -170,6 +170,57 @@ pub fn IdentifiedEstimand::get_mediator_variables(
   self : IdentifiedEstimand,
 ) -> Array[String] {
   self.mediator_variables.copy()
+}
+
+///|
+/// Set the mediator variables of the estimand.
+pub fn IdentifiedEstimand::set_mediator_variables(
+  self : IdentifiedEstimand,
+  variables : Array[String],
+) -> Unit {
+  self.mediator_variables = variables
+}
+
+///|
+/// The confounders of the first stage of a mediation.
+///
+/// The registry holds every backdoor adjustment set of the treatment and the
+/// mediator, keyed by its name, and the default set of them under the plain
+/// `backdoor` name.
+pub fn IdentifiedEstimand::get_mediation_first_stage_confounders(
+  self : IdentifiedEstimand,
+) -> Map[String, Array[String]] {
+  self.mediation_first_stage_confounders.copy()
+}
+
+///|
+/// Set the confounders of the first stage of a mediation.
+pub fn IdentifiedEstimand::set_mediation_first_stage_confounders(
+  self : IdentifiedEstimand,
+  confounders : Map[String, Array[String]],
+) -> Unit {
+  self.mediation_first_stage_confounders = confounders
+}
+
+///|
+/// The confounders of the second stage of a mediation.
+///
+/// The registry holds every backdoor adjustment set of the mediator and the
+/// outcome, keyed by its name, and the default set of them under the plain
+/// `backdoor` name.
+pub fn IdentifiedEstimand::get_mediation_second_stage_confounders(
+  self : IdentifiedEstimand,
+) -> Map[String, Array[String]] {
+  self.mediation_second_stage_confounders.copy()
+}
+
+///|
+/// Set the confounders of the second stage of a mediation.
+pub fn IdentifiedEstimand::set_mediation_second_stage_confounders(
+  self : IdentifiedEstimand,
+  confounders : Map[String, Array[String]],
+) -> Unit {
+  self.mediation_second_stage_confounders = confounders
 }
 
 ///|

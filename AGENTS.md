@@ -417,6 +417,29 @@ statsmodels / scikit-learn conventions are deliberate:
   - **the effect of a group is estimated with the model that was fitted on the
     whole data**, the way the upstream does it: the upstream applies its
     do-operator to the rows of the group and does not fit the model again.
+- The two stage regression estimator of the `estimators` package is the port of
+  the `TwoStageRegressionEstimator` of the upstream, and four details of it
+  decide whether the estimate is the one of the upstream:
+  - **the estimate is the product of the two stage effects.** The first stage
+    regresses the mediator on the treatment and on the confounders of the first
+    stage, the second stage regresses the outcome on the mediator and on the
+    confounders of the second stage, and the estimate is the product of the two
+    effects. A single stage regression is a different estimator.
+  - **the outcome of the first stage is the mediator and the treatment of the
+    second stage is the mediator**, the way the upstream replaces them in the
+    estimands of its two stage models.
+  - **the confounders of the two stages come from the mediation**, the way the
+    upstream computes them in `identify_mediation_first_stage_confounders` and
+    `identify_mediation_second_stage_confounders`. The default set of each
+    stage is the one under the plain `backdoor` name of its registry.
+  - **the upstream reports no confidence interval for the two stage
+    regression**, and so does the port.
+- The default adjustment set of the backdoor search of the `identifiers`
+  package is the set with the fewest instruments, and the set with the fewest
+  variables among those, the way `get_default_adjustment_set_id` of the upstream
+  picks it. An instrument of the adjustment set lowers the variance of the
+  treatment variable, which is the reason the upstream prefers it. The two
+  rules agree on every graph whose adjustment sets hold no instrument.
 
 ## Package layout
 
@@ -426,9 +449,9 @@ statsmodels / scikit-learn conventions are deliberate:
 | `api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder |
 | `utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics |
 | `graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
-| `identifiers` | `dowhy.causal_identifier` |
+| `identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `dowhy.causal_estimator` (the estimate objects) |
-| `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones |
+| `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones and the two stage regression of the frontdoor and of the mediation estimand |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
 | `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
@@ -725,3 +748,20 @@ README makes, so they are tracked in the repository:
   compare with. The graphs have to be built with the nodes in the order of the
   graph string of the upstream, because the order of the nodes of the graph
   decides the order of the factors of the estimand.
+- `two_stage_reference.py` runs the upstream identification and the upstream
+  `TwoStageRegressionEstimator` on the rows of the upstream test
+  `test_dowhy_chapter_7` and prints the frontdoor variables, the confounders of
+  the two stages of the mediation, the estimate and the coefficients of the two
+  stages, which is where the expectations of the tests of the two stage
+  regression estimator come from. The upstream `CausalModel` cannot be read
+  here, because it pulls in the graph learners, which need the package
+  `causallearn`, so the script reads the graph with `networkx.parse_gml`, the
+  way the upstream reads it, and calls the identification and the estimator
+  directly. The module of the interpreters of the upstream is stubbed out for
+  the same reason.
+- `book_scm.py` holds the structural causal model of the upstream test
+  `test_dowhy_chapter_7` and the rows it draws, and `gen_two_stage_testdata.py`
+  generates `src/tests/book_testdata.mbt` from them. The rows are the rows of
+  the upstream, because the fixture `fixed_seed` of the upstream test class
+  seeds the generator of numpy with zero, so the reference script and the
+  MoonBit test see the very same rows.

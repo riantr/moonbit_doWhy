@@ -654,6 +654,83 @@ fn ball_passes(
 }
 
 ///|
+/// The adjustment sets of a search, keyed by their name.
+///
+/// The sets that hold an unobserved variable cannot be estimated, so they are
+/// dropped, the way the upstream drops them when no set of them is fully
+/// observed. The sets that are left get a name of their own, `backdoor1`,
+/// `backdoor2`, ..., in the order the search found them.
+///
+/// This is the port of `build_adjustment_set_estimands_dict` of the upstream.
+fn adjustment_registry(
+  sets : Array[AdjustmentSet],
+  observed_nodes : Array[String],
+) -> Array[(String, Array[String])] {
+  let observed : Set[String] = Set::Set([])
+  for node in observed_nodes {
+    observed.add(node)
+  }
+  let usable : Array[AdjustmentSet] = []
+  for set in sets {
+    let is_observed = set.adjustment_variables.all(fn(node) {
+      observed.contains(node)
+    })
+    if is_observed {
+      usable.push(set)
+    }
+  }
+  let registry : Array[(String, Array[String])] = []
+  for index = 0; index < usable.length(); index = index + 1 {
+    let set = usable[index]
+    let key = set.adjustment_type() + (index + 1).to_string()
+    registry.push((key, set.adjustment_variables.copy()))
+  }
+  registry
+}
+
+///|
+/// The identifier of the default adjustment set.
+///
+/// This is the port of `get_default_adjustment_set_id` of the upstream: the set
+/// with the fewest instruments wins, because an instrument of the adjustment
+/// set lowers the variance of the treatment variable, and the set with the
+/// fewest variables wins among those.
+///
+/// The identifier is empty when the registry holds no set at all.
+fn default_adjustment_set_id(
+  graph : @graph.DirectedGraph,
+  action_nodes : Array[String],
+  outcome_nodes : Array[String],
+  registry : Array[(String, Array[String])],
+) -> String {
+  if registry.length() == 0 {
+    return ""
+  }
+  let instruments = @graph.get_instruments(graph, action_nodes, outcome_nodes)
+  let mut default_id = ""
+  let mut default_instruments = 0
+  let mut default_size = 0
+  for entry in registry {
+    let (key, variables) = entry
+    let mut instrument_count = 0
+    for variable in variables {
+      if instruments.contains(variable) {
+        instrument_count = instrument_count + 1
+      }
+    }
+    let size = variables.length()
+    if default_id == "" ||
+      instrument_count < default_instruments ||
+      (instrument_count == default_instruments && size < default_size) {
+      default_id = key
+      default_instruments = instrument_count
+      default_size = size
+    }
+  }
+  default_id
+}
+
+///|
 /// The identified estimand of the causal effect of the treatment.
 ///
 /// The estimand carries the adjustment sets of the backdoor criterion, the
@@ -681,12 +758,19 @@ pub fn identify_effect_auto(
     let estimand = IdentifiedEstimand::new(action_nodes, outcome_nodes)
     return estimand.with_no_directed_path(true)
   }
+  if estimand_type == "nonparametric-nie" {
+    // The natural indirect effect has an identification of its own, the one of
+    // the mediation.
+    return identify_nie_effect(
+      graph, action_nodes, outcome_nodes, observed_nodes, backdoor_adjustment,
+    )
+  }
   if estimand_type != "nonparametric-ate" &&
     estimand_type != "nonparametric-cde" {
     abort(
       "Estimand type " +
       estimand_type +
-      " is not supported. Use either nonparametric-ate or nonparametric-cde.",
+      " is not supported. Use either nonparametric-ate, nonparametric-cde or nonparametric-nie.",
     )
   }
   let direct_effect = estimand_type == "nonparametric-cde"
@@ -706,39 +790,20 @@ pub fn identify_effect_auto(
   }
   let estimand = IdentifiedEstimand::new(action_nodes, outcome_nodes)
   estimand.set_estimand_type(estimand_type)
-  // The adjustment sets that use an unobserved variable cannot be estimated.
-  let observed : Set[String] = Set::Set([])
-  for node in observed_nodes {
-    observed.add(node)
-  }
-  let usable : Array[AdjustmentSet] = []
-  for set in backdoor_sets {
-    let is_observed = set.adjustment_variables.all(fn(node) {
-      observed.contains(node)
-    })
-    if is_observed {
-      usable.push(set)
-    }
-  }
   // Every adjustment set gets a name of its own, `backdoor1`, `backdoor2`, ...
-  let mut default_id = ""
-  let mut default_size = 0
-  for index = 0; index < usable.length(); index = index + 1 {
-    let set = usable[index]
-    let key = "backdoor" + (index + 1).to_string()
+  // The sets that hold an unobserved variable cannot be estimated, so they are
+  // dropped, the way the upstream drops them.
+  let registry = adjustment_registry(backdoor_sets, observed_nodes)
+  let default_id = default_adjustment_set_id(
+    graph, action_nodes, outcome_nodes, registry,
+  )
+  for entry in registry {
+    let (key, variables) = entry
     estimand.set_estimand(
       key,
-      backdoor_assumptions(
-        action_nodes,
-        outcome_nodes,
-        set.adjustment_variables,
-      ),
+      backdoor_assumptions(action_nodes, outcome_nodes, variables),
     )
-    estimand.set_adjustment_set(set.adjustment_variables.copy(), key)
-    if default_id == "" || set.adjustment_variables.length() < default_size {
-      default_id = key
-      default_size = set.adjustment_variables.length()
-    }
+    estimand.set_adjustment_set(variables.copy(), key)
   }
   if default_id != "" {
     // The default backdoor set is also registered under the plain
@@ -774,39 +839,43 @@ pub fn identify_effect_auto(
       "frontdoor",
       frontdoor_assumptions(action_nodes, outcome_nodes, frontdoor),
     )
+    // The confounders of the two stages of the frontdoor; the two stage
+    // regression estimator needs them.
+    let first_stage = identify_mediation_first_stage_confounders(
+      graph, action_nodes, outcome_nodes, frontdoor, observed_nodes, backdoor_adjustment,
+    )
+    let second_stage = identify_mediation_second_stage_confounders(
+      graph, action_nodes, frontdoor, outcome_nodes, observed_nodes, backdoor_adjustment,
+    )
+    estimand.set_mediation_first_stage_confounders(first_stage)
+    estimand.set_mediation_second_stage_confounders(second_stage)
   }
   // The adjustment set of the complete adjustment criterion.
   let general_sets = identify_generalized_adjustment_set(
     graph, action_nodes, outcome_nodes, observed_nodes,
   )
-  for index = 0; index < general_sets.length(); index = index + 1 {
-    let set = general_sets[index]
-    let key = "general" + (index + 1).to_string()
+  let general_registry = adjustment_registry(general_sets, observed_nodes)
+  let general_default = default_adjustment_set_id(
+    graph, action_nodes, outcome_nodes, general_registry,
+  )
+  for entry in general_registry {
+    let (key, variables) = entry
     estimand.set_estimand(
       key,
-      backdoor_assumptions(
-        action_nodes,
-        outcome_nodes,
-        set.adjustment_variables,
-      ),
+      backdoor_assumptions(action_nodes, outcome_nodes, variables),
     )
-    estimand.set_general_adjustment_variables(
-      set.adjustment_variables.copy(),
-      key,
-    )
+    estimand.set_general_adjustment_variables(variables.copy(), key)
+  }
+  if general_default != "" {
+    // The default general adjustment set is also registered under the plain
+    // "general_adjustment" name, like the Python code does.
+    let variables = estimand.get_general_adjustment_variables(general_default)
     estimand.set_estimand(
       "general_adjustment",
-      backdoor_assumptions(
-        action_nodes,
-        outcome_nodes,
-        set.adjustment_variables,
-      ),
+      backdoor_assumptions(action_nodes, outcome_nodes, variables),
     )
-    estimand.set_general_adjustment_variables(
-      set.adjustment_variables.copy(),
-      "general_adjustment",
-    )
-    estimand.set_default_adjustment_set_id(key)
+    estimand.set_general_adjustment_variables(variables, "general_adjustment")
+    estimand.set_default_adjustment_set_id(general_default)
   }
   estimand
 }

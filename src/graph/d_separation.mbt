@@ -224,6 +224,32 @@ pub fn is_blocked(
 }
 
 ///|
+/// Whether the candidate set mediates the effect.
+///
+/// This is the port of `dowhy.graph.check_valid_mediation_set`: the candidate
+/// set mediates the effect when it blocks one of the directed paths from the
+/// treatment to the outcome.
+pub fn check_valid_mediation_set(
+  graph : DirectedGraph,
+  nodes1 : Array[String],
+  nodes2 : Array[String],
+  candidate_nodes : Array[String],
+  mediation_paths : Array[Array[String]],
+) -> Bool {
+  let paths = if mediation_paths.length() == 0 {
+    get_all_directed_paths(graph, nodes1, nodes2)
+  } else {
+    mediation_paths
+  }
+  for path in paths {
+    if is_blocked(graph, path, candidate_nodes) {
+      return true
+    }
+  }
+  false
+}
+
+///|
 /// Whether every treatment has a directed path to an outcome and vice versa.
 pub fn has_directed_path(
   graph : DirectedGraph,

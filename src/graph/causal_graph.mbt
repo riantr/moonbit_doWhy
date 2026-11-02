@@ -373,17 +373,13 @@ pub fn CausalGraph::check_valid_mediation_set(
   candidate_nodes : Array[String],
   mediation_paths : Array[Array[String]],
 ) -> Bool {
-  let paths = if mediation_paths.length() == 0 {
-    self.get_all_directed_paths(nodes1, nodes2)
-  } else {
-    mediation_paths
-  }
-  for path in paths {
-    if is_blocked(self.graph, path, candidate_nodes) {
-      return true
-    }
-  }
-  false
+  check_valid_mediation_set(
+    self.graph,
+    nodes1,
+    nodes2,
+    candidate_nodes,
+    mediation_paths,
+  )
 }
 
 ///|

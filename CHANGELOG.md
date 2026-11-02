@@ -1129,6 +1129,79 @@ graphs it accepts.
   and logs the columns of the data that are not in the graph. The port has no
   warning system, so it reports them instead.
 
+[0.0.25]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.25
+
+## [0.0.26] - 2026-11-02
+
+The mediation identification of the upstream and its two stage regression
+estimator, with the integration test of the book "Causal Inference and
+Discovery in Python".
+
+### Added
+
+- `identifiers` -- the mediation identification, the port of the mediation part
+  of `dowhy.causal_identifier.auto_identifier`:
+  - `identify_mediation`, which finds the mediator of the effect;
+  - `identify_mediation_first_stage_confounders` and
+    `identify_mediation_second_stage_confounders`, which find the confounders
+    of the two stages of a mediation;
+  - `identify_nie_effect`, which identifies the natural indirect effect.
+- `estimators` -- the two stage regression estimator of the upstream, the port
+  of `dowhy.causal_estimators.two_stage_regression_estimator`: the first stage
+  regresses the mediator on the treatment, the second stage regresses the
+  outcome on the mediator, and the estimate is the product of the two effects.
+  `CausalEstimator::two_stage_features` hands the columns of the design
+  matrices of the two stages over.
+- `graph` -- `check_valid_mediation_set`, the port of
+  `dowhy.graph.check_valid_mediation_set`, on a directed graph.
+- the integration test of the upstream file
+  `tests/causal-inference-discovery-book/test_causal_inference_discovery_book.py`:
+  the case of the chapter 7 of the book "Causal Inference and Discovery in
+  Python", with the frontdoor identification, the two stage regression and the
+  data subset refutation.
+- `_verify/two_stage_reference.py` -- the upstream reference of the two stage
+  regression estimator. It runs the upstream identification and the upstream
+  two stage regression estimator on the rows of the upstream test and prints
+  the frontdoor variables, the confounders of the two stages and the estimate,
+  which is where the expectations of the tests of the port come from.
+- `_verify/gen_two_stage_testdata.py` and `_verify/book_scm.py` -- the
+  generator of the data set of the integration test. The rows are the rows of
+  the upstream test, which the fixture `fixed_seed` of the upstream makes
+  reproducible.
+
+### Changed
+
+- The default adjustment set of the backdoor search is now the one the
+  upstream picks: the set with the fewest instruments wins, because an
+  instrument of the adjustment set lowers the variance of the treatment
+  variable, and the set with the fewest variables wins among those. The
+  previous releases picked the set with the fewest variables only. The two
+  rules agree on every graph whose adjustment sets hold no instrument.
+- The identification of the average effect now carries the confounders of the
+  two stages of the frontdoor, the way the upstream does it, so that the two
+  stage regression estimator has them.
+- The identification of the mediation is the identification of the natural
+  indirect effect, so the method name `mediation.two_stage_regression` of the
+  upstream works.
+
+### Notes
+
+- The upstream takes the two stage models of the two stage regression
+  estimator as arguments, so that a caller can replace them. The port always
+  fits the two linear regressions the upstream falls back to.
+- The **natural direct effect** is **not ported**. The upstream computes it
+  with a third model, the total effect, and subtracts the natural indirect
+  effect from it.
+- The mediator search enumerates its candidates in sorted order. The upstream
+  iterates over a `set`, so its order depends on the hash seed.
+- The refutation of the upstream test draws its subsets from the global
+  generator of numpy, and the port draws its subsets from the generator it is
+  given, so the number of the refutation is not one the two implementations
+  share. The estimate of the two stage regression is the same number in both:
+  the two agree to `5e-14`.
+
+[0.0.26]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.26
+
 ## [0.0.24] - 2026-11-01
 
 ### Added

@@ -66,6 +66,19 @@ _ORDER: list[tuple[str, str]] = [
     ("dowhy.utils.plotting", "utils/plotting.py"),
     ("dowhy.causal_graph", "causal_graph.py"),
     ("dowhy.datasets", "datasets.py"),
+    ("dowhy.utils.encoding", "utils/encoding.py"),
+    ("dowhy.causal_identifier.adjustment_set", "causal_identifier/adjustment_set.py"),
+    ("dowhy.causal_identifier.identified_estimand", "causal_identifier/identified_estimand.py"),
+    ("dowhy.causal_identifier.efficient_backdoor", "causal_identifier/efficient_backdoor.py"),
+    ("dowhy.causal_identifier.auto_identifier", "causal_identifier/auto_identifier.py"),
+    ("dowhy.causal_identifier", "causal_identifier/__init__.py"),
+    ("dowhy.causal_estimator", "causal_estimator.py"),
+    ("dowhy.causal_estimators.regression_estimator", "causal_estimators/regression_estimator.py"),
+    ("dowhy.causal_estimators.linear_regression_estimator", "causal_estimators/linear_regression_estimator.py"),
+    (
+        "dowhy.causal_estimators.two_stage_regression_estimator",
+        "causal_estimators/two_stage_regression_estimator.py",
+    ),
 ]
 
 _PATHS = dict(_ORDER)
@@ -94,6 +107,7 @@ def _stub_packages() -> None:
         "dowhy.gcm.ml",
         "dowhy.gcm.independence_test",
         "dowhy.utils",
+        "dowhy.interpreters",
     ):
         if name not in sys.modules:
             module = types.ModuleType(name)

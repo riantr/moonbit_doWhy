@@ -94,6 +94,10 @@ pub struct CausalEstimator {
   mut rd_local_data : @api.DataFrame?
   /// The fitted model of the regression based estimators.
   mut model : @utils.OlsFit
+  /// The first stage of the two stage regression estimator.
+  mut first_stage : TwoStageModel?
+  /// The second stage of the two stage regression estimator.
+  mut second_stage : TwoStageModel?
   /// The fitted model of the generalised linear model estimator.
   mut glm_model : @utils.GlmFit
   /// The family of the generalised linear model estimator.
@@ -292,6 +296,8 @@ fn CausalEstimator::new(
     rd_bandwidth: 0.0,
     rd_local_data: None,
     model: @utils.OlsFit::empty(),
+    first_stage: None,
+    second_stage: None,
     glm_model: @utils.GlmFit::empty(),
     glm_family: @utils.GlmFamily::gaussian(),
     encoders: @api.Encoders::new(true),

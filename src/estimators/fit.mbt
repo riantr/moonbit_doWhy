@@ -14,11 +14,33 @@ fn CausalEstimator::build_design(
   self : CausalEstimator,
   data : @api.DataFrame,
 ) -> (@utils.Matrix, Array[String]) {
+  build_design_matrix(
+    self.encoders,
+    data,
+    self.treatment_name,
+    self.adjustment_names,
+    self.effect_modifier_names,
+  )
+}
+
+///|
+/// Build the design matrix of a regression based estimator.
+///
+/// The encoders, the treatment column, the adjustment variables and the effect
+/// modifiers are the arguments, so that the two stages of the two stage
+/// regression estimator can build a design matrix of their own.
+fn build_design_matrix(
+  encoders : @api.Encoders,
+  data : @api.DataFrame,
+  treatment_name : String,
+  adjustment_names : Array[String],
+  effect_modifier_names : Array[String],
+) -> (@utils.Matrix, Array[String]) {
   let n = data.nrows()
   let names : Array[String] = ["const"]
   let columns : Array[Array[Double]] = [const_column(n)]
-  let treatment_frame = self.encoders.encode(
-    data.select([self.treatment_name]),
+  let treatment_frame = encoders.encode(
+    data.select([treatment_name]),
     "treatment",
   )
   let treatment_names = treatment_frame.numeric_column_names()
@@ -26,9 +48,9 @@ fn CausalEstimator::build_design(
     names.push(name)
     columns.push(treatment_frame.numeric(name))
   }
-  if self.adjustment_names.length() > 0 {
-    let common_frame = self.encoders.encode(
-      data.select(self.adjustment_names),
+  if adjustment_names.length() > 0 {
+    let common_frame = encoders.encode(
+      data.select(adjustment_names),
       "observed_common_causes",
     )
     for name in common_frame.numeric_column_names() {
@@ -36,21 +58,21 @@ fn CausalEstimator::build_design(
       columns.push(common_frame.numeric(name))
     }
   }
-  if self.effect_modifier_names.length() > 0 {
-    let modifier_frame = self.encoders.encode(
-      data.select(self.effect_modifier_names),
+  if effect_modifier_names.length() > 0 {
+    let modifier_frame = encoders.encode(
+      data.select(effect_modifier_names),
       "effect_modifiers",
     )
     let modifier_names = modifier_frame.numeric_column_names()
-    for treatment_name in treatment_names {
-      let treatment_values = treatment_frame.numeric(treatment_name)
+    for stage_treatment_name in treatment_names {
+      let treatment_values = treatment_frame.numeric(stage_treatment_name)
       for modifier_name in modifier_names {
         let values = modifier_frame.numeric(modifier_name)
         let interaction : Array[Double] = []
         for i = 0; i < n; i = i + 1 {
           interaction.push(treatment_values[i] * values[i])
         }
-        names.push(treatment_name + ":" + modifier_name)
+        names.push(stage_treatment_name + ":" + modifier_name)
         columns.push(interaction)
       }
     }
@@ -98,20 +120,33 @@ fn CausalEstimator::with_treatment(
   data : @api.DataFrame,
   value : Double,
 ) -> @api.DataFrame {
+  with_column_value(data, self.treatment_name, value)
+}
+
+///|
+/// Replace a column of a data frame with a constant.
+///
+/// A discrete column keeps its type, so that the encoder of the estimator can
+/// encode the new value the same way it encoded the old ones.
+fn with_column_value(
+  data : @api.DataFrame,
+  name : String,
+  value : Double,
+) -> @api.DataFrame {
   let n = data.nrows()
-  if data.is_discrete(self.treatment_name) {
+  if data.is_discrete(name) {
     let column : Array[String] = []
     let text = value.to_string()
     for i = 0; i < n; i = i + 1 {
       column.push(text)
     }
-    data.with_discrete(self.treatment_name, column)
+    data.with_discrete(name, column)
   } else {
     let column : Array[Double] = []
     for i = 0; i < n; i = i + 1 {
       column.push(value)
     }
-    data.with_numeric(self.treatment_name, column)
+    data.with_numeric(name, column)
   }
 }
 
@@ -167,7 +202,7 @@ pub fn CausalEstimator::fit(
       self.fit_regression(data)
     }
     InstrumentalVariable => self.fit_instrumental_variable(data)
-    TwoStageRegression => self.fit_regression(data)
+    TwoStageRegression => self.fit_two_stage_regression(data)
     RegressionDiscontinuity => self.fit_regression_discontinuity(data)
     GeneralizedLinearModel => self.fit_generalized_linear_model(data)
   }
@@ -283,7 +318,7 @@ pub fn CausalEstimator::estimate_effect(
       self.estimate_propensity_score_stratification(data, target_units)
     DoublyRobust => self.estimate_doubly_robust(data, target_units)
     InstrumentalVariable => self.estimate_instrumental_variable(data)
-    TwoStageRegression => self.estimate_regression(data, target_units)
+    TwoStageRegression => self.estimate_two_stage_regression(data, target_units)
     RegressionDiscontinuity =>
       self.estimate_regression_discontinuity(data, target_units)
     GeneralizedLinearModel =>
