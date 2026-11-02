@@ -1095,6 +1095,16 @@ graphs it accepts.
   and the unobserved variables of them, which is where the expectations of the
   tests of the port come from.
 
+### Changed
+
+- The effect modifiers of `CausalModel::estimate_effect` are a labelled
+  optional argument now, and they are the effect modifiers of the graph when
+  the caller names none, the way the upstream does it. The argument of the
+  previous releases was a positional one, so a caller of those releases has
+  to write `effect_modifier_names=[]` or to leave the argument out. A model
+  whose graph holds effect modifiers therefore gets the interactions of the
+  upstream, which the previous releases left out.
+
 ### Fixed
 
 - The format of a graph string is recognised the way the upstream recognises

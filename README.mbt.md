@@ -278,9 +278,11 @@ ways:
 - The summary of the model is **returned** by `summary` instead of being
   printed. The upstream prints it and logs it.
 - The effect modifiers of an estimate are the effect modifiers of the graph
-  when the caller names none, the way the upstream does it. The key of a
-  conditional estimate is the index of the quantile group of the effect
-  modifier, while the upstream labels a group with the interval of its values.
+  when the caller names none, the way the upstream does it. The argument is a
+  labelled optional one, so it is written `effect_modifier_names=[...]` or
+  left out. The key of a conditional estimate is the index of the quantile
+  group of the effect modifier, while the upstream labels a group with the
+  interval of its values.
 
 The `do_samplers`, `timeseries` and `gcm` packages differ from upstream in the
 following ways:
