@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.31.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.32.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -758,6 +758,24 @@ following ways:
   change attribution. The upstream can calibrate the probabilities of its
   classifier on a calibration set and can weigh the samples; the models of the
   upstream mostly do not support the weights either, and the port has neither.
+- The upstream cannot build a data set with a binary treatment with the numpy
+  of today. Its `dowhy.datasets.linear_dataset` converts the treatment with
+  `numpy.vectorize(convert_to_binary)`, and `convert_to_binary` returns an
+  array of one element, which numpy 2 refuses with `ValueError: setting an
+  array element with a sequence`. The upstream 0.14 predates numpy 2. Every
+  upstream test file that uses a binary treatment therefore fails in the
+  upstream itself: the test file of the instrumental variable estimator for
+  its eight binary configurations, and the test file of the regression
+  discontinuity estimator for its only configuration. The port draws its rows
+  with its own generator, so the port runs the cases; the reference scripts
+  hand the upstream the rows of the port, so the upstream runs on them as
+  well.
+- The upstream test file of the regression discontinuity estimator is broken a
+  second time. The estimator of the upstream keeps the name of the running
+  variable, the threshold and the bandwidth at `None` when the caller does not
+  give them, and its fit reads `data[None]`, which is a column of the data
+  frame that does not exist. The estimator of the port takes the three values
+  as arguments.
 - `gcm` splits the rows of the cross-fitting of the multiply-robust change
   attribution with its own shuffle, and the upstream splits them with the
   `StratifiedKFold` of scikit-learn. The two splits differ, so the attribution

@@ -204,6 +204,7 @@ def binary_treatment_dataset(
     beta: float = 10.0,
     num_instruments: int = 0,
     outcome_is_binary: bool = False,
+    treatment_is_binary: bool = True,
 ) -> dict:
     """The data set of the port with common causes and a binary treatment.
 
@@ -217,6 +218,11 @@ def binary_treatment_dataset(
     coefficients of the instruments, the rows of the treatment, the outcome and
     finally the two counterfactual outcomes the true average treatment effect
     is the mean of.
+
+    The upstream test file of the instrumental variable estimator also holds
+    configurations with a continuous treatment.  A continuous treatment is the
+    linear predictor itself and the draw of the Bernoulli is not made at all,
+    so every draw after the treatment moves.
     """
     rng = Rng(seed)
     rows = num_rows if num_rows > 0 else 0
@@ -267,7 +273,12 @@ def binary_treatment_dataset(
             value += w[i][j] * c1[j][0]
         for k in range(num_instruments):
             value += z[i][k] * cz[k][0]
-        treatment.append([bernoulli(rng, sigmoid(value))])
+        if treatment_is_binary:
+            treatment.append([bernoulli(rng, sigmoid(value))])
+        else:
+            # A continuous treatment is the linear predictor itself, and the
+            # draw of the Bernoulli is not made at all.
+            treatment.append([value])
 
     # ---- the outcome ------------------------------------------------------
     def discretise(value: float) -> float:

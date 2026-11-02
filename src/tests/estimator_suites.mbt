@@ -7,6 +7,12 @@
 /// the upstream uses for them: the backdoor criterion and the complete
 /// adjustment criterion.
 ///
+/// The cases of the instrumental variable estimator are the four of them that
+/// the estimators of the port can reach.  The upstream file holds sixteen
+/// configurations: eight of them need two treatments, which the estimators of
+/// the port do not have, and four of them need two instruments, which the
+/// upstream estimates with the two stage least squares of `linearmodels`.
+///
 /// The upstream identifies the effect with the default backdoor criterion and
 /// names the identifier of the case afterwards, so the complete adjustment
 /// criterion is asked for by name and its own adjustment set is used.
@@ -48,6 +54,7 @@ fn suite_dataset(
   num_common_causes : Int32,
   num_instruments : Int32,
   outcome_is_binary : Bool,
+  treatment_is_binary~ : Bool = true,
 ) -> @datasets.Dataset {
   @datasets.linear_dataset(
     SUITE_SEED,
@@ -59,7 +66,7 @@ fn suite_dataset(
       num_effect_modifiers=0,
       num_frontdoor_variables=0,
       num_treatments=1,
-      treatment_is_binary=true,
+      treatment_is_binary~,
       treatment_is_category=false,
       outcome_is_binary~,
     ),
@@ -376,5 +383,66 @@ test "the doubly robust estimator recovers the true effect with the complete adj
   let estimate = suite_ate(estimator, dataset)
   assert_true(
     within_tolerance(estimate, dataset.average_treatment_effect(), 0.2),
+  )
+}
+
+///|
+test "the instrumental variable estimator recovers the true effect without a common cause" {
+  let dataset = suite_dataset(0, 1, false, treatment_is_binary=false)
+  let estimand = suite_estimand(dataset, "iv")
+  let estimator = @estimators.CausalEstimator::instrumental_variable(
+    estimand,
+    dataset.instruments()[0],
+  )
+  estimator.fit(dataset.frame(), [])
+  let estimate = suite_ate(estimator, dataset)
+  // The tolerance of the upstream test file.
+  assert_true(
+    within_tolerance(estimate, dataset.average_treatment_effect(), 0.4),
+  )
+}
+
+///|
+test "the instrumental variable estimator recovers the true effect with a common cause" {
+  let dataset = suite_dataset(1, 1, false, treatment_is_binary=false)
+  let estimand = suite_estimand(dataset, "iv")
+  let estimator = @estimators.CausalEstimator::instrumental_variable(
+    estimand,
+    dataset.instruments()[0],
+  )
+  estimator.fit(dataset.frame(), [])
+  let estimate = suite_ate(estimator, dataset)
+  assert_true(
+    within_tolerance(estimate, dataset.average_treatment_effect(), 0.4),
+  )
+}
+
+///|
+test "the instrumental variable estimator recovers the true effect with a binary treatment" {
+  let dataset = suite_dataset(0, 1, false)
+  let estimand = suite_estimand(dataset, "iv")
+  let estimator = @estimators.CausalEstimator::instrumental_variable(
+    estimand,
+    dataset.instruments()[0],
+  )
+  estimator.fit(dataset.frame(), [])
+  let estimate = suite_ate(estimator, dataset)
+  assert_true(
+    within_tolerance(estimate, dataset.average_treatment_effect(), 0.4),
+  )
+}
+
+///|
+test "the instrumental variable estimator recovers the true effect with a binary treatment and a common cause" {
+  let dataset = suite_dataset(1, 1, false)
+  let estimand = suite_estimand(dataset, "iv")
+  let estimator = @estimators.CausalEstimator::instrumental_variable(
+    estimand,
+    dataset.instruments()[0],
+  )
+  estimator.fit(dataset.frame(), [])
+  let estimate = suite_ate(estimator, dataset)
+  assert_true(
+    within_tolerance(estimate, dataset.average_treatment_effect(), 0.4),
   )
 }

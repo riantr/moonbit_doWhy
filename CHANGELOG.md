@@ -1586,3 +1586,48 @@ file of the upstream and the two bugs the test file found.
   needed a Shapley configuration with a single job.
 
 [0.0.31]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.31
+
+## [0.0.32] - 2026-11-02
+
+The cases of the upstream test file of the automatic identification and of the
+instrumental variable estimator, and the two upstream test files that cannot
+run with the numpy of today.
+
+### Added
+
+- the tests of the upstream file
+  `tests/causal_identifiers/test_auto_identifier.py`: its case with two action
+  nodes, in both orders.
+- the tests of the upstream file
+  `tests/causal_estimators/test_instrumental_variable_estimator.py`: the four
+  of its sixteen configurations that the estimators of the port can reach --
+  one treatment, one instrument, no or one common cause, a continuous or a
+  binary treatment -- with the tolerance of the upstream test file.
+- `_verify/estimator_iv_reference.py` -- the upstream runs on the very rows the
+  port works on. The port and the upstream agree to `2e-13` on the four
+  configurations.
+
+### Notes
+
+- The upstream cannot run its own test file of the instrumental variable
+  estimator with the numpy of today. Its generator of the data sets converts
+  the treatment with `numpy.vectorize(convert_to_binary)`, and
+  `convert_to_binary` returns an array of one element, which numpy 2 refuses
+  with `ValueError: setting an array element with a sequence`. The upstream
+  0.14 predates numpy 2. The port draws its rows with its own generator, so
+  the port runs the cases, and the reference script hands the upstream the rows
+  of the port, so the upstream runs on them as well.
+- The upstream test file of the regression discontinuity estimator cannot run
+  either, for two reasons. Its data set has a binary treatment, so the
+  generator of the upstream fails the way it fails above, and the estimator
+  keeps the name of the running variable, the threshold and the bandwidth at
+  `None` when the caller does not give them, so its fit reads the column
+  `None` of the data frame, which does not exist. The estimator of the port
+  takes the three values as arguments.
+- The eight configurations of the upstream test file of the instrumental
+  variable estimator with two treatments are out of reach, because the
+  estimators of the port are univariate, and the four with two instruments are
+  out of reach as well, because the upstream estimates them with the two stage
+  least squares of `linearmodels`.
+
+[0.0.32]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.32

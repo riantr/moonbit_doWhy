@@ -583,6 +583,24 @@ statsmodels / scikit-learn conventions are deliberate:
   walk stops as soon as the rows that are left are further away than the
   neighbours that were found already, which is the exact rule of a scan over
   every row, and it costs `O(n log n)` instead of the `O(n^2)` of the scan.
+- **The upstream cannot build a data set with a binary treatment with the
+  numpy of today.** Its `dowhy.datasets.linear_dataset` converts the treatment
+  with `numpy.vectorize(convert_to_binary)`, and `convert_to_binary` returns
+  an array of one element, which numpy 2 refuses with `ValueError: setting an
+  array element with a sequence`. The upstream 0.14 predates numpy 2. Every
+  upstream test file that uses a binary treatment therefore fails in the
+  upstream itself: the test file of the instrumental variable estimator for
+  its eight binary configurations, and the test file of the regression
+  discontinuity estimator for its only configuration. The port draws its rows
+  with its own generator, so the port runs the cases, and the reference
+  scripts hand the upstream the rows of the port, so the upstream runs on them
+  as well.
+- **The upstream test file of the regression discontinuity estimator is broken
+  a second time.** The estimator of the upstream keeps the name of the running
+  variable, the threshold and the bandwidth at `None` when the caller does not
+  give them, and its fit reads `data[None]`, which is a column of the data
+  frame that does not exist. The estimator of the port takes the three values
+  as arguments.
 - The rows of the cross-fitting of the multiply-robust change attribution are
   split by the port with its own shuffle and by the upstream with the
   `StratifiedKFold` of scikit-learn. The two splits differ, so the attribution
