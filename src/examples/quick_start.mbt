@@ -36,7 +36,7 @@ fn main {
     1.0,
     0.0,
     "ate",
-    [],
+    effect_modifier_names=[],
   )
   println("ATE: " + estimate.estimate().to_string())
   println(
@@ -77,7 +77,7 @@ fn main {
     1.0,
     0.0,
     "ate",
-    [],
+    effect_modifier_names=[],
   )
   println("binomial ATE: " + binomial.estimate().to_string())
   println("true ATE: " + binary.average_treatment_effect().to_string())

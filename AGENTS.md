@@ -388,17 +388,47 @@ statsmodels / scikit-learn conventions are deliberate:
     upstream breaks it with the iteration order of a Python dictionary of
     strings, and that order changes between the runs of the interpreter, so the
     upstream's own result is not reproducible. The port's is.
+- The graph of the `CausalModel` of the root package is read from a string the
+  way the upstream reads it, and three details of it decide whether the graph
+  is the one of the upstream:
+  - **the format is recognised with the regular expressions of the upstream.**
+    A string that starts with `dag` is the graph of the daggity web site and
+    is turned into a DOT graph first, a string that holds `graph` followed by
+    a bracket is a GML graph and a string that holds `graph` followed by a
+    brace is a DOT graph. The whitespace between the keyword and the bracket
+    is optional, so `graph[` is a GML graph and `graph {` is a DOT graph.
+  - **the GML graph resolves the identifiers of the edges to the labels of the
+    nodes**, the way `networkx.parse_gml` does it. The edges of a GML graph
+    name the `id` of their nodes while the node is labelled with its `label`,
+    and the two are not the same in general.
+  - **the GML graph of a data set is written character for character like the
+    upstream writes it.** The upstream joins the nodes of a group with a space
+    and writes the groups one after the other without a separator, and it
+    writes the edge of the treatment to the outcome without the space that
+    the other edges have.
+- The conditional estimates of the `estimators` package are the port of the
+  `_estimate_conditional_effects` of the upstream, and two details of them
+  decide whether they are the ones of the upstream:
+  - **a continuous effect modifier is split into five quantile groups**, the
+    number of `CausalEstimator.NUM_QUANTILES_TO_DISCRETIZE_CONT_COLS` of the
+    upstream. The bins of the port run from `0` to `q - 1`, the way the bins
+    of `pandas.qcut` do, so the bin of a row is
+    `floor((rank - 1) * q / n)`.
+  - **the effect of a group is estimated with the model that was fitted on the
+    whole data**, the way the upstream does it: the upstream applies its
+    do-operator to the rows of the group and does not fit the model again.
 
 ## Package layout
 
 | Package | Ports |
 | --- | --- |
+| the root package (`src/`) | `dowhy.causal_model`: the `CausalModel` entry point |
 | `api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder |
 | `utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics |
-| `graph` | `dowhy.graph`, `dowhy.causal_graph` |
+| `graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
 | `identifiers` | `dowhy.causal_identifier` |
-| `model` | `dowhy.causal_model`, `dowhy.causal_estimator` (estimate objects) |
-| `estimators` | `dowhy.causal_estimators` |
+| `model` | `dowhy.causal_estimator` (the estimate objects) |
+| `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones |
 | `refuters` | `dowhy.causal_refuters` |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
 | `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
@@ -429,6 +459,24 @@ README makes, so they are tracked in the repository:
 - `identifier_reference.py` computes the upstream identification results with
   the upstream Python code, which is where the expected adjustment sets of
   `src/identifiers/test_graphs.mbt` come from.
+- `check_networkx_gml.py` and `check_networkx_gml_labels.py` show how
+  `networkx.parse_gml` reads a GML graph: the edges of the graph name the
+  `id` of their nodes while the name of a node is its `label`, so a reader has
+  to resolve the ids of the edges with the labels of the nodes. They are the
+  evidence for the reader of the `graph` package.
+- `causal_model_reference.py` computes the facts of the causal model -- the
+  columns of the data set, the GML graph of the data set, the nodes and the
+  edges of the graph of the upstream test `test_graph_input`, its common
+  causes, its instruments, its observed and its unobserved variables, the DOT
+  graph the upstream turns the graph of the daggity web site into and the
+  observed and the unobserved variables of the fixture of the upstream test
+  `test_unobserved_graph_variables_log_warning` -- with the upstream
+  `dowhy.causal_graph.CausalGraph` and the upstream `dowhy.datasets`, which
+  is where the expectations of the tests of the causal model come from. The
+  upstream `linear_dataset` cannot run under NumPy 2, because `np.vectorize`
+  cannot store the one element array that its `convert_to_binary` returns in
+  the output of a scalar, so the script restores the behaviour of NumPy 1 for
+  it.
 - `gcm_scm_reference.py` computes the numbers of the causal mechanisms, of the
   fitting of a causal model and of the sampling from it with the upstream
   `dowhy.gcm` code, which is where the expectations of the tests of the

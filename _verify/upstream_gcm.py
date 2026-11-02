@@ -1,4 +1,4 @@
-"""Loads the upstream `dowhy.gcm` modules without installing the package.
+"""Loads the upstream `dowhy` modules without installing the package.
 
 The upstream `dowhy` distribution cannot be imported as it is: its
 `dowhy/__init__.py` pulls in `causallearn`, which is a heavy dependency that
@@ -8,6 +8,10 @@ they are loaded straight from their files with the package chain stubbed out.
 
 Loading a module also makes it reachable under its dotted name, so that the
 `from dowhy.gcm import config` of the upstream code finds it.
+
+The modules of the causal model are loaded the same way: `dowhy.causal_graph`,
+`dowhy.datasets` and `dowhy.utils.plotting` are the three that the reference
+script of the causal model needs on top of the ones of the list below.
 
 The path of the upstream checkout is taken from the `DOWHY_SRC` environment
 variable and falls back to the checkout that sits next to this repository.
@@ -59,6 +63,9 @@ _ORDER: list[tuple[str, str]] = [
     ("dowhy.gcm.shapley", "gcm/shapley.py"),
     ("dowhy.gcm.independence_test.regression", "gcm/independence_test/regression.py"),
     ("dowhy.gcm.independence_test.generalised_cov_measure", "gcm/independence_test/generalised_cov_measure.py"),
+    ("dowhy.utils.plotting", "utils/plotting.py"),
+    ("dowhy.causal_graph", "causal_graph.py"),
+    ("dowhy.datasets", "datasets.py"),
 ]
 
 _PATHS = dict(_ORDER)

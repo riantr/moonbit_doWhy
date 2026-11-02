@@ -185,6 +185,125 @@ pub fn Dataset::observed_nodes(self : Dataset) -> Array[String] {
 }
 
 ///|
+/// The graph of the data set, in the GML format.
+///
+/// This is the port of `dowhy.datasets.create_gml_graph`, which writes the
+/// graph of the data set as a GML string. The upstream hands the string to
+/// `networkx.parse_gml`, which names a node after its `label` attribute, so
+/// the graph of the port has the same nodes and the same edges as the graph of
+/// the upstream.
+pub fn Dataset::gml_graph(self : Dataset) -> String {
+  create_gml_graph(
+    self.treatment_names,
+    self.outcome_name,
+    self.common_cause_names,
+    self.instrument_names,
+    self.effect_modifier_names,
+    self.frontdoor_names,
+  )
+}
+
+///|
+/// The graph of the data set, in the GML format.
+///
+/// This is the port of `dowhy.datasets.create_gml_graph`.
+fn create_gml_graph(
+  treatments : Array[String],
+  outcome : String,
+  common_causes : Array[String],
+  instruments : Array[String],
+  effect_modifiers : Array[String],
+  frontdoor_variables : Array[String],
+) -> String {
+  let mut out = "graph[directed 1" + gml_node(outcome)
+  // The upstream joins the nodes of a group with a space and writes the
+  // groups one after the other, without a separator.
+  out = out + gml_node_group(common_causes)
+  out = out + gml_node_group(instruments)
+  out = out + gml_node_group(frontdoor_variables)
+  for treatment in treatments {
+    out = out + gml_node(treatment)
+    if frontdoor_variables.length() == 0 {
+      out = out + gml_edge_of_the_treatment(treatment, outcome)
+    }
+    out = out + gml_edge_group_to(common_causes, treatment)
+    out = out + gml_edge_group_to(instruments, treatment)
+    out = out + gml_edge_group_from(frontdoor_variables, treatment)
+  }
+  out = out + gml_edge_group_to(common_causes, outcome)
+  out = out + gml_effect_modifier_group(effect_modifiers, outcome)
+  out = out + gml_edge_group_to(frontdoor_variables, outcome)
+  for cause in common_causes {
+    out = out + gml_edge_group_from(frontdoor_variables, cause)
+  }
+  out + "]"
+}
+
+///|
+/// The GML declaration of a node.
+fn gml_node(name : String) -> String {
+  "node[ id \"" + name + "\" label \"" + name + "\"]"
+}
+
+///|
+/// The GML declaration of the nodes of a group, joined with a space.
+fn gml_node_group(names : Array[String]) -> String {
+  let parts : Array[String] = []
+  for name in names {
+    parts.push(gml_node(name))
+  }
+  parts.join(" ")
+}
+
+///|
+/// The GML declaration of an edge.
+fn gml_edge(source : String, target : String) -> String {
+  "edge[ source \"" + source + "\" target \"" + target + "\"]"
+}
+
+///|
+/// The GML declaration of the edge of the treatment to the outcome.
+///
+/// The upstream writes this one edge without the space that the other edges
+/// have.
+fn gml_edge_of_the_treatment(source : String, target : String) -> String {
+  "edge[source \"" + source + "\" target \"" + target + "\"]"
+}
+
+///|
+/// The GML declaration of the edges of the given nodes to the target, joined
+/// with a space.
+fn gml_edge_group_to(names : Array[String], target : String) -> String {
+  let parts : Array[String] = []
+  for name in names {
+    parts.push(gml_edge(name, target))
+  }
+  parts.join(" ")
+}
+
+///|
+/// The GML declaration of the edges of the source to the given nodes, joined
+/// with a space.
+fn gml_edge_group_from(names : Array[String], source : String) -> String {
+  let parts : Array[String] = []
+  for name in names {
+    parts.push(gml_edge(source, name))
+  }
+  parts.join(" ")
+}
+
+///|
+/// The GML declaration of the effect modifiers and of their edges to the
+/// outcome, joined with a space.
+fn gml_effect_modifier_group(names : Array[String], outcome : String) -> String {
+  let parts : Array[String] = []
+  for name in names {
+    parts.push(gml_node(name) + " " + gml_edge(name, outcome))
+  }
+  parts.join(" ")
+}
+
+///|
 /// The parameters of `dowhy.datasets.linear_dataset`.
 ///
 /// The defaults follow the fixture that DoWhy's estimator tests use:
@@ -212,6 +331,45 @@ pub struct LinearConfig {
   treatment_is_category : Bool
   /// Whether the outcome is binary.
   outcome_is_binary : Bool
+}
+
+///|
+/// A configuration of the generator, built from the parameters of the
+/// upstream.
+///
+/// This is the port of the keyword arguments of `dowhy.datasets.linear_dataset`,
+/// which the upstream takes one by one. The named constructors of the package
+/// are the configurations of the fixtures of the upstream test suite; this
+/// constructor is for the fixtures that are not among them.
+///
+/// The defaults follow the fixture that DoWhy's estimator tests use: a
+/// treatment effect of ten, a binary treatment and a continuous outcome.
+pub fn LinearConfig::new(
+  beta~ : Double = 10.0,
+  num_common_causes~ : Int32 = 0,
+  num_instruments~ : Int32 = 0,
+  num_effect_modifiers~ : Int32 = 0,
+  num_frontdoor_variables~ : Int32 = 0,
+  num_treatments~ : Int32 = 1,
+  num_discrete_common_causes~ : Int32 = 0,
+  num_discrete_effect_modifiers~ : Int32 = 0,
+  treatment_is_binary~ : Bool = true,
+  treatment_is_category~ : Bool = false,
+  outcome_is_binary~ : Bool = false,
+) -> LinearConfig {
+  {
+    beta,
+    num_common_causes,
+    num_instruments,
+    num_effect_modifiers,
+    num_frontdoor_variables,
+    num_treatments,
+    num_discrete_common_causes,
+    num_discrete_effect_modifiers,
+    treatment_is_binary,
+    treatment_is_category,
+    outcome_is_binary,
+  }
 }
 
 ///|
@@ -331,6 +489,50 @@ pub fn LinearConfig::instrumental_variable() -> LinearConfig {
     beta: 10.0,
     num_common_causes: 1,
     num_instruments: 1,
+    num_effect_modifiers: 0,
+    num_frontdoor_variables: 0,
+    num_treatments: 1,
+    num_discrete_common_causes: 0,
+    num_discrete_effect_modifiers: 0,
+    treatment_is_binary: true,
+    treatment_is_category: false,
+    outcome_is_binary: false,
+  }
+}
+
+///|
+/// Five common causes and one instrument.
+///
+/// This is the configuration of the fixture of the upstream tests of the
+/// causal model, `dowhy.datasets.linear_dataset` with five common causes, one
+/// instrument and one binary treatment.
+pub fn LinearConfig::five_common_causes_one_instrument() -> LinearConfig {
+  {
+    beta: 10.0,
+    num_common_causes: 5,
+    num_instruments: 1,
+    num_effect_modifiers: 0,
+    num_frontdoor_variables: 0,
+    num_treatments: 1,
+    num_discrete_common_causes: 0,
+    num_discrete_effect_modifiers: 0,
+    treatment_is_binary: true,
+    treatment_is_category: false,
+    outcome_is_binary: false,
+  }
+}
+
+///|
+/// Five common causes and no instrument.
+///
+/// This is the configuration of the fixture of the upstream tests of the
+/// causal model, `dowhy.datasets.linear_dataset` with five common causes and
+/// one binary treatment.
+pub fn LinearConfig::five_common_causes_no_instrument() -> LinearConfig {
+  {
+    beta: 10.0,
+    num_common_causes: 5,
+    num_instruments: 0,
     num_effect_modifiers: 0,
     num_frontdoor_variables: 0,
     num_treatments: 1,

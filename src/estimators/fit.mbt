@@ -352,6 +352,7 @@ fn CausalEstimator::estimate_regression(
   estimate.set_confidence_interval(ci_lower, ci_upper)
   estimate.set_standard_error(standard_error)
   estimate.set_p_value(p_value)
+  self.add_conditional_estimates(estimate, data)
   estimate
 }
 
@@ -398,6 +399,7 @@ fn CausalEstimator::estimate_generalized_linear_model(
   estimate.set_confidence_interval(ci_lower, ci_upper)
   estimate.set_standard_error(standard_error)
   estimate.set_p_value(p_value)
+  self.add_conditional_estimates(estimate, data)
   estimate
 }
 

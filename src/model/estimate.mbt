@@ -104,6 +104,18 @@ pub fn CausalEstimate::propensity_scores(
 }
 
 ///|
+/// The conditional estimates of the estimate, keyed by the value of the effect
+/// modifier.
+///
+/// The list is empty when the estimate was computed without an effect
+/// modifier, which is what the upstream reports as a `None`.
+pub fn CausalEstimate::conditional_estimates(
+  self : CausalEstimate,
+) -> Array[(String, Double)] {
+  self.conditional_estimates.copy()
+}
+
+///|
 /// The estimand the estimate was computed for.
 pub fn CausalEstimate::target_estimand(self : CausalEstimate) -> String {
   self.target_estimand

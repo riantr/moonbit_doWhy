@@ -30,7 +30,7 @@ test "the model estimates the effect of a confounded data set" {
     1.0,
     0.0,
     "ate",
-    [],
+    effect_modifier_names=[],
   )
   assert_true(close_enough(estimate.value, dataset.average_treatment_effect()))
 }
@@ -46,7 +46,7 @@ test "the model identifies the effect when the estimate is asked for" {
     1.0,
     0.0,
     "ate",
-    [],
+    effect_modifier_names=[],
   )
   assert_true(close_enough(estimate.value, dataset.average_treatment_effect()))
   let adjustment = model
@@ -65,7 +65,7 @@ test "the model estimates the effect with the generalised linear model" {
     1.0,
     0.0,
     "ate",
-    [],
+    effect_modifier_names=[],
   )
   assert_true(close_enough(estimate.value, dataset.average_treatment_effect()))
 }

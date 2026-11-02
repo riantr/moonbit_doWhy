@@ -400,8 +400,9 @@ pub fn DataFrame::design_matrix(
 /// Discretise a numeric column into quantile bins, like `pandas.qcut`.
 ///
 /// The returned column holds the bin index of every row; the bins are the
-/// `q` quantile groups of the values. Rows whose value cannot be assigned
-/// (because of too few distinct values) get the bin of their own value.
+/// `q` quantile groups of the values, so the indices run from `0` to `q - 1`.
+/// Rows whose value cannot be assigned (because of too few distinct values)
+/// get the bin of their own value.
 pub fn DataFrame::qcut(
   self : DataFrame,
   name : String,
@@ -412,8 +413,10 @@ pub fn DataFrame::qcut(
   let ranks = @utils.average_rank(values)
   let bins : Array[Double] = []
   for i = 0; i < n; i = i + 1 {
+    // The rank of a row is counted from one, so the bin of the first row is
+    // the first one and the bin of the last row is the last one.
     let bin = (ranks[i] - 1.0) * q.to_double() / n.to_double()
-    bins.push(@utils.round_half_even(bin))
+    bins.push(bin.floor())
   }
   bins
 }

@@ -8,6 +8,11 @@
 /// let estimand = model.identify_effect("backdoor")
 /// let estimate = model.estimate_effect("backdoor.linear_regression", 1.0, 0.0, "ate")
 /// ```
+///
+/// The upstream accepts a graph as a networkx graph, as a GML string, as a DOT
+/// string, as the graph of the daggity web site and as the graph of a
+/// probabilistic causal model. The port accepts a graph as a directed graph
+/// and as a GML string, a DOT string or a daggity string.
 
 ///|
 /// A causal model.
@@ -18,12 +23,24 @@ pub struct CausalModel {
   treatment : Array[String]
   /// The outcome variables.
   outcome : Array[String]
-  /// The causal graph.
-  graph : @graph.DirectedGraph
-  /// The observed nodes of the graph.
+  /// The causal graph, with the semantic role of every node.
+  graph : @graph.CausalGraph
+  /// The observed nodes of the graph, which are the columns of the data.
   observed_nodes : Array[String]
   /// The estimand the identification produced.
   mut estimand : @identifiers.IdentifiedEstimand
+  /// The estimators the model has built, keyed by the name of the method.
+  ///
+  /// The estimators are stored by reference, so the estimator the cache hands
+  /// out is the estimator that the estimate was computed with.
+  estimator_cache : Map[String, @estimators.CausalEstimator]
+  /// Whether the identification may proceed when the effect is not
+  /// identifiable.
+  proceed_when_unidentifiable : Bool
+  /// Whether the common causes and the instruments are read from the graph.
+  identify_vars : Bool
+  /// The kind of the estimand the model asks for.
+  estimand_type : String
 }
 
 ///|
@@ -31,6 +48,10 @@ pub struct CausalModel {
 ///
 /// When `graph` is `None` the graph is built from the semantic roles of the
 /// variables.
+///
+/// The `missing_nodes_as_confounders` flag adds the columns of the data that
+/// are not part of the graph as common causes of the treatment and of the
+/// outcome, the way the upstream does it.
 pub fn CausalModel::new(
   data : @api.DataFrame,
   treatment : Array[String],
@@ -40,27 +61,188 @@ pub fn CausalModel::new(
   instruments : Array[String],
   effect_modifiers : Array[String],
   mediators : Array[String],
+  missing_nodes_as_confounders~ : Bool = false,
+  identify_vars~ : Bool = false,
+  proceed_when_unidentifiable~ : Bool = false,
+  estimand_type~ : String = "nonparametric-ate",
 ) -> CausalModel {
-  let built = match graph {
-    Some(g) => g.copy()
+  let observed = data.column_names()
+  let causal = @graph.CausalGraph::new(
+    treatment, outcome, graph, common_causes, instruments, effect_modifiers, mediators,
+    observed,
+  )
+  build_model(
+    data, treatment, outcome, causal, observed, missing_nodes_as_confounders, identify_vars,
+    proceed_when_unidentifiable, estimand_type,
+  )
+}
+
+///|
+/// Build a causal model whose graph is given as a string.
+///
+/// The string is a GML graph, a DOT graph or the graph of the daggity web
+/// site. The upstream reads a graph file as well; the port has no access to
+/// the file system, so the caller reads the file and hands its content to the
+/// model.
+///
+/// The model aborts when the string is not a graph the port can read; the
+/// function `is_supported_graph_format` tells whether a string is one.
+pub fn CausalModel::new_with_graph_string(
+  data : @api.DataFrame,
+  treatment : Array[String],
+  outcome : Array[String],
+  graph : String,
+  common_causes : Array[String],
+  instruments : Array[String],
+  effect_modifiers : Array[String],
+  missing_nodes_as_confounders~ : Bool = false,
+  identify_vars~ : Bool = false,
+  proceed_when_unidentifiable~ : Bool = false,
+  estimand_type~ : String = "nonparametric-ate",
+) -> CausalModel {
+  let parsed = match parse_graph_string(graph) {
+    Some(directed) => directed
     None =>
-      @graph.build_graph(
-        treatment, outcome, common_causes, instruments, effect_modifiers, mediators,
+      abort(
+        "Incorrect format: Please provide graph as a GML string, a DOT string or the graph of the daggity web site.",
       )
   }
-  let observed : Array[String] = []
-  for name in data.column_names() {
-    observed.push(name)
+  let observed = data.column_names()
+  let causal = @graph.CausalGraph::new(
+    treatment,
+    outcome,
+    Some(parsed),
+    common_causes,
+    instruments,
+    effect_modifiers,
+    [],
+    observed,
+  )
+  build_model(
+    data, treatment, outcome, causal, observed, missing_nodes_as_confounders, identify_vars,
+    proceed_when_unidentifiable, estimand_type,
+  )
+}
+
+///|
+/// The common model of the two constructors.
+fn build_model(
+  data : @api.DataFrame,
+  treatment : Array[String],
+  outcome : Array[String],
+  causal : @graph.CausalGraph,
+  observed : Array[String],
+  missing_nodes_as_confounders : Bool,
+  identify_vars : Bool,
+  proceed_when_unidentifiable : Bool,
+  estimand_type : String,
+) -> CausalModel {
+  if missing_nodes_as_confounders {
+    let _ = causal.add_missing_nodes_as_common_causes(observed)
   }
   let estimand = @identifiers.IdentifiedEstimand::new(treatment, outcome)
+  estimand.set_estimand_type(estimand_type)
   {
     data,
     treatment,
     outcome,
-    graph: built,
+    graph: causal,
     observed_nodes: observed,
     estimand,
+    estimator_cache: Map([]),
+    proceed_when_unidentifiable,
+    identify_vars,
+    estimand_type,
   }
+}
+
+///|
+/// Whether the identification may proceed when the effect is not identifiable.
+///
+/// This is the port of the `proceed_when_unidentifiable` flag of the upstream.
+pub fn CausalModel::proceeds_when_unidentifiable(self : CausalModel) -> Bool {
+  self.proceed_when_unidentifiable
+}
+
+///|
+/// Whether the common causes and the instruments are read from the graph.
+///
+/// This is the port of the `identify_vars` flag of the upstream.
+pub fn CausalModel::identifies_variables(self : CausalModel) -> Bool {
+  self.identify_vars
+}
+
+///|
+/// The kind of the estimand the model asks for.
+pub fn CausalModel::estimand_type(self : CausalModel) -> String {
+  self.estimand_type
+}
+
+///|
+/// Whether the given string is a graph the port can read.
+///
+/// The strings are the GML graphs, the DOT graphs and the graphs of the
+/// daggity web site, which are the formats the upstream reads as well.
+pub fn is_supported_graph_format(graph : String) -> Bool {
+  match parse_graph_string(graph) {
+    Some(_) => true
+    None => false
+  }
+}
+
+///|
+/// The graph of a string, when the string holds a graph the port can read.
+///
+/// The graph of the daggity web site is turned into a DOT graph first, the
+/// way the upstream does it.
+fn parse_graph_string(graph : String) -> @graph.DirectedGraph? {
+  let text = graph.trim().to_owned()
+  // The upstream looks for the `dag` prefix with the regular expression
+  // `^dag`.
+  if text.has_prefix("dag") {
+    return Some(@graph.parse_dot(@graph.daggity_to_dot(text)))
+  }
+  // The upstream replaces the newlines of the string before it looks at it.
+  let flat = text.replace_all(old="\n", new=" ")
+  // The upstream looks for the DOT graph with the regular expression
+  // `.*graph\s*\{.*\}\s*` and for the GML graph with the regular
+  // expression `.*graph\s*\[.*\]\s*`, so the whitespace between the
+  // keyword and the bracket is optional.
+  if holds_graph_bracket(flat, '{') && flat.contains("}") {
+    return Some(@graph.parse_dot(flat))
+  }
+  if holds_graph_bracket(flat, '[') && flat.contains("]") {
+    return Some(@graph.parse_gml(flat))
+  }
+  None
+}
+
+///|
+/// Whether the string holds a `graph` keyword that is followed by the given
+/// bracket, with any amount of whitespace in between.
+///
+/// This is the port of the two regular expressions `graph\s*\{` and
+/// `graph\s*\[` of the upstream.
+fn holds_graph_bracket(text : String, bracket : Char) -> Bool {
+  let chars = text.to_array()
+  let mut i = 0
+  while i + 5 <= chars.length() {
+    if chars[i] == 'g' &&
+      chars[i + 1] == 'r' &&
+      chars[i + 2] == 'a' &&
+      chars[i + 3] == 'p' &&
+      chars[i + 4] == 'h' {
+      let mut j = i + 5
+      while j < chars.length() && chars[j].is_whitespace() {
+        j = j + 1
+      }
+      if j < chars.length() && chars[j] == bracket {
+        return true
+      }
+    }
+    i = i + 1
+  }
+  false
 }
 
 ///|
@@ -72,6 +254,12 @@ pub fn CausalModel::data(self : CausalModel) -> @api.DataFrame {
 ///|
 /// The causal graph of the model.
 pub fn CausalModel::causal_graph(self : CausalModel) -> @graph.DirectedGraph {
+  self.graph.directed_graph()
+}
+
+///|
+/// The causal graph of the model, with the semantic role of every node.
+pub fn CausalModel::graph_with_roles(self : CausalModel) -> @graph.CausalGraph {
   self.graph
 }
 
@@ -84,6 +272,114 @@ pub fn CausalModel::identified_estimand(
 }
 
 ///|
+/// The common causes of the treatment and of the outcome.
+///
+/// This is the port of `dowhy.causal_model.CausalModel.get_common_causes`,
+/// which asks the graph for the common causes of the two variables.
+pub fn CausalModel::get_common_causes(self : CausalModel) -> Array[String] {
+  self.graph.get_common_causes(self.treatment, self.outcome)
+}
+
+///|
+/// The instruments of the treatment.
+///
+/// This is the port of `dowhy.causal_model.CausalModel.get_instruments`.
+pub fn CausalModel::get_instruments(self : CausalModel) -> Array[String] {
+  self.graph.get_instruments(self.treatment, self.outcome)
+}
+
+///|
+/// The effect modifiers of the treatment.
+///
+/// This is the port of `dowhy.causal_model.CausalModel.get_effect_modifiers`.
+pub fn CausalModel::get_effect_modifiers(self : CausalModel) -> Array[String] {
+  self.graph.get_effect_modifiers(self.treatment, self.outcome)
+}
+
+///|
+/// The summary of the model.
+///
+/// This is the port of `dowhy.causal_model.CausalModel.summary`. The upstream
+/// prints the summary and logs it; the port returns it.
+pub fn CausalModel::summary(self : CausalModel) -> String {
+  "Model to find the causal effect of treatment " +
+  render_names(self.treatment) +
+  " on outcome " +
+  render_names(self.outcome)
+}
+
+///|
+/// The names of the variables, the way the upstream renders a list of names.
+fn render_names(names : Array[String]) -> String {
+  let mut out = "["
+  for i = 0; i < names.length(); i = i + 1 {
+    if i > 0 {
+      out = out + ", "
+    }
+    out = out + "'" + names[i] + "'"
+  }
+  out + "]"
+}
+
+///|
+/// The variables of the graph that are not columns of the data.
+///
+/// The upstream warns about them when the model is built. The port has no
+/// warning system, so it reports them instead.
+pub fn CausalModel::unobserved_graph_variables(
+  self : CausalModel,
+) -> Array[String] {
+  let out : Array[String] = []
+  for node in self.graph.get_all_nodes(true) {
+    if !self.observed_nodes.contains(node) {
+      out.push(node)
+    }
+  }
+  out.sort_by(fn(a, b) { compare_names(a, b) })
+  out
+}
+
+///|
+/// The columns of the data that are not variables of the graph.
+///
+/// The upstream logs them when the model is built. The port reports them
+/// instead.
+pub fn CausalModel::unused_data_variables(self : CausalModel) -> Array[String] {
+  let out : Array[String] = []
+  for node in self.observed_nodes {
+    if !self.graph.get_all_nodes(true).contains(node) {
+      out.push(node)
+    }
+  }
+  out.sort_by(fn(a, b) { compare_names(a, b) })
+  out
+}
+
+///|
+/// The comparison of two names, the way the upstream sorts a list of names.
+fn compare_names(a : String, b : String) -> Int32 {
+  if a < b {
+    -1
+  } else if a > b {
+    1
+  } else {
+    0
+  }
+}
+
+///|
+/// The estimator the model has built for the given method, when it has one.
+///
+/// This is the port of `dowhy.causal_model.CausalModel.get_estimator`. The
+/// upstream keys the cache by the whole name of the method.
+pub fn CausalModel::get_estimator(
+  self : CausalModel,
+  method_name : String,
+) -> @estimators.CausalEstimator? {
+  self.estimator_cache.get(method_name)
+}
+
+///|
 /// Identify the causal effect.
 ///
 /// `method_name` selects the identifier: `"backdoor"` (the default),
@@ -93,7 +389,7 @@ pub fn CausalModel::identify_effect(
   method_name : String,
 ) -> @identifiers.IdentifiedEstimand {
   let estimand = @identifiers.identify_effect_auto(
-    self.graph,
+    self.graph.directed_graph(),
     self.treatment,
     self.outcome,
     self.observed_nodes,
@@ -185,13 +481,25 @@ fn CausalModel::build_estimator(
 /// When the effect has not been identified yet, it is identified with the
 /// identifier of the method name, so that a model that is used for a single
 /// estimate does not need an explicit `identify_effect` call.
+///
+/// The effect modifiers of the estimate are the effect modifiers of the graph
+/// when the caller names none, the way the upstream does it. The regression
+/// based estimators then report a conditional estimate for every group of the
+/// effect modifier.
+///
+/// The estimator the estimate is computed with is kept in the cache of the
+/// model, keyed by the name of the method, the way the upstream keeps it. When
+/// `fit_estimator` is false the cached estimator is used as it is, without a
+/// new fit, which is what the upstream does when the estimator is asked for
+/// on new data.
 pub fn CausalModel::estimate_effect(
   self : CausalModel,
   method_name : String,
   treatment_value : Double,
   control_value : Double,
   target_units : String,
-  effect_modifier_names : Array[String],
+  effect_modifier_names~ : Array[String] = [],
+  fit_estimator~ : Bool = true,
 ) -> @model.CausalEstimate {
   // The identifier of the estimator is the first segment of its name.
   let identifier = first_segment(method_name)
@@ -199,8 +507,25 @@ pub fn CausalModel::estimate_effect(
     let _ = self.identify_effect(identifier)
   }
   self.estimand.set_identifier_method(identifier)
-  let estimator = self.build_estimator(method_name)
-  estimator.fit(self.data, effect_modifier_names)
+  let cached = self.estimator_cache.get(method_name)
+  let estimator = match cached {
+    Some(existing) => existing
+    None => {
+      let built = self.build_estimator(method_name)
+      self.estimator_cache.set(method_name, built)
+      built
+    }
+  }
+  // The upstream takes the effect modifiers of the graph when the caller does
+  // not name any.
+  let modifiers = if effect_modifier_names.length() == 0 {
+    self.graph.get_effect_modifiers(self.treatment, self.outcome)
+  } else {
+    effect_modifier_names
+  }
+  if fit_estimator {
+    estimator.fit(self.data, modifiers)
+  }
   estimator.estimate_effect(
     self.data,
     treatment_value,

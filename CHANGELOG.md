@@ -1047,6 +1047,78 @@ graph, identification, estimation, refutation.
 
 [0.0.23]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.23
 
+## [0.0.25] - 2026-11-02
+
+The entry point of the upstream, `dowhy.causal_model`, and the readers of the
+graphs it accepts.
+
+### Added
+
+- `graph` -- the readers of the graphs the upstream reads:
+  - `parse_gml`, which reads a GML graph and resolves the identifiers of its
+    edges to the labels of its nodes, the way `networkx.parse_gml` does it;
+  - `parse_dot`, which reads a DOT graph;
+  - `daggity_to_dot`, the port of `dowhy.utils.graph_operations.daggity_to_dot`,
+    which turns the graph of the daggity web site into a DOT graph.
+- the root package -- the `CausalModel` of `dowhy.causal_model`:
+  - `CausalModel::new_with_graph_string` reads a graph that is given as a GML
+    string, as a DOT string or as the graph of the daggity web site, and
+    `is_supported_graph_format` tells whether a string is one of them;
+  - the model holds a `CausalGraph`, reports the common causes, the
+    instruments and the effect modifiers of the graph, reports the variables
+    of the graph that are not in the data and the columns of the data that are
+    not in the graph, returns its summary and keeps the estimator of every
+    method it has used.
+- `datasets` -- `Dataset::gml_graph` writes the graph of the data set in the
+  GML format, the way `dowhy.datasets.create_gml_graph` writes it, and
+  `LinearConfig::new` builds a configuration from the parameters of the
+  upstream.
+- `estimators` -- the conditional estimates of the regression based
+  estimators: a continuous effect modifier is split into five quantile groups
+  and the effect is estimated on every one of them, the way the upstream does
+  it.
+- `model` -- `CausalEstimate::conditional_estimates` hands the conditional
+  estimates of an estimate over.
+- the tests of the upstream file `tests/test_causal_model.py` that the port can
+  run: the GML graph of `test_graph_input` and of `test_graph_input2`, the
+  graph of the daggity web site of `test_graph_input3` and of
+  `test_graph_input4`, the graph object of `test_graph_input_nx`, the
+  observed and the unobserved variables of
+  `test_unobserved_graph_variables_log_warning`, the format check of
+  `test_incorrect_graph_format`, the cache of the estimators of
+  `test_causal_estimator_cache` and the conditional estimates of
+  `test_cate_estimates_regression`.
+- `_verify/causal_model_reference.py` -- the upstream reference of the causal
+  model. It runs the upstream `dowhy.causal_graph.CausalGraph` and the
+  upstream `dowhy.datasets` on the fixtures of the upstream tests and prints
+  the nodes, the edges, the common causes, the instruments and the observed
+  and the unobserved variables of them, which is where the expectations of the
+  tests of the port come from.
+
+### Fixed
+
+- The format of a graph string is recognised the way the upstream recognises
+  it. The whitespace between the keyword `graph` and the bracket of a GML
+  graph is optional, so the GML graph of the upstream -- which starts with
+  `graph[` -- is read, and a string that starts with `dag` is the graph of the
+  daggity web site.
+- The GML graph of a data set is now the graph of the upstream character for
+  character: the upstream joins the nodes of a group with a space and writes
+  the groups one after the other without a separator, and it writes the edge
+  of the treatment to the outcome without the space that the other edges have.
+- The quantile bins of a column run from `0` to `q - 1`, the way the bins of
+  `pandas.qcut` do.
+
+### Notes
+
+- The upstream `linear_dataset` cannot run under NumPy 2, because `np.vectorize`
+  cannot store the one element array that its `convert_to_binary` returns in
+  the output of a scalar. The reference script restores the behaviour of NumPy
+  1 for it, which is the behaviour the upstream was written against.
+- The upstream warns about the variables of the graph that are not in the data
+  and logs the columns of the data that are not in the graph. The port has no
+  warning system, so it reports them instead.
+
 ## [0.0.24] - 2026-11-01
 
 ### Added
