@@ -444,3 +444,25 @@ pub fn CausalEstimator::with_estimand(
   copy.test_significance = self.test_significance
   copy
 }
+
+///|
+/// The name of the instrument of an instrumental variable estimator.
+///
+/// It is empty for every other estimator.
+pub fn CausalEstimator::instrument_name(self : CausalEstimator) -> String {
+  self.instrument_name
+}
+
+///|
+/// A copy of the estimator that uses a different instrument.
+///
+/// The placebo treatment refuter uses this for the instrumental variable
+/// method, whose instrument the placebo replaces.
+pub fn CausalEstimator::with_instrument_name(
+  self : CausalEstimator,
+  name : String,
+) -> CausalEstimator {
+  let copy = self.with_estimand(self.estimand())
+  copy.instrument_name = name
+  copy
+}

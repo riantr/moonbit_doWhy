@@ -50,42 +50,14 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from upstream_gcm import linear_dataset as upstream_linear_dataset  # noqa: E402
 from upstream_gcm import load  # noqa: E402
-
-_real_vectorize = np.vectorize
-
-
-def _vectorize_of_numpy_one(func=None, *args, **kwargs):
-    """The `np.vectorize` of NumPy 1.x, which the upstream was written against.
-
-    NumPy 1.x called the function on every element and collected the results
-    into one array, so a function that returns a one element array produced an
-    array of the shape `(n, 1)`. NumPy 2.x calls the function through a ufunc,
-    which cannot store a one element array in the output of a scalar.
-    """
-    if func is None or kwargs.get("otypes") is not None:
-        return _real_vectorize(func, *args, **kwargs)
-
-    def vectorized(*call_args):
-        inputs = [np.asanyarray(arg) for arg in call_args]
-        results = [
-            func(*values) for values in zip(*(i.ravel() for i in inputs))
-        ]
-        if not results:
-            return np.empty(inputs[0].shape)
-        first = np.asanyarray(results[0])
-        return np.asanyarray(results, dtype=first.dtype)
-
-    return vectorized
 
 
 def linear_dataset(**kwargs):
     """The upstream `linear_dataset`, with the `np.vectorize` of NumPy 1.x."""
-    np.vectorize = _vectorize_of_numpy_one
-    try:
-        return datasets.linear_dataset(**kwargs)
-    finally:
-        np.vectorize = _real_vectorize
+    return upstream_linear_dataset(datasets, **kwargs)
+
 
 # The modules are loaded in the order of their dependencies, because the loader
 # of the upstream reads a module straight from its file.

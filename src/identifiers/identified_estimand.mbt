@@ -8,7 +8,7 @@
 /// the frontdoor variables and the mediators. The estimators consume it and
 /// the refuters replace it, so it has to be cheap to copy.
 pub struct IdentifiedEstimand {
-  treatment_variable : Array[String]
+  mut treatment_variable : Array[String]
   outcome_variable : Array[String]
   mut estimand_type : String
   /// The registry of estimands, keyed by identifier (`"backdoor"`, `"iv"`,
@@ -380,5 +380,33 @@ pub fn IdentifiedEstimand::with_adjustment_variables(
 ) -> IdentifiedEstimand {
   let copy = self.copy()
   copy.set_adjustment_set(variables, copy.identifier_method)
+  copy
+}
+
+///|
+/// A copy of the estimand with a different treatment.
+///
+/// The placebo treatment refuter uses this to point the estimand at the
+/// placebo column it builds.
+pub fn IdentifiedEstimand::with_treatment(
+  self : IdentifiedEstimand,
+  variables : Array[String],
+) -> IdentifiedEstimand {
+  let copy = self.copy()
+  copy.treatment_variable = variables.copy()
+  copy
+}
+
+///|
+/// A copy of the estimand with different instrumental variables.
+///
+/// The placebo treatment refuter uses this for the instrumental variable
+/// method, whose instrument the placebo replaces.
+pub fn IdentifiedEstimand::with_instrumental_variables(
+  self : IdentifiedEstimand,
+  variables : Array[String],
+) -> IdentifiedEstimand {
+  let copy = self.copy()
+  copy.instrumental_variables = variables.copy()
   copy
 }

@@ -79,6 +79,10 @@ _ORDER: list[tuple[str, str]] = [
         "dowhy.causal_estimators.two_stage_regression_estimator",
         "causal_estimators/two_stage_regression_estimator.py",
     ),
+    ("dowhy.causal_estimators.instrumental_variable_estimator", "causal_estimators/instrumental_variable_estimator.py"),
+    ("dowhy.causal_refuter", "causal_refuter.py"),
+    ("dowhy.causal_estimators.econml", "causal_estimators/econml.py"),
+    ("dowhy.causal_refuters.placebo_treatment_refuter", "causal_refuters/placebo_treatment_refuter.py"),
 ]
 
 _PATHS = dict(_ORDER)
@@ -108,6 +112,8 @@ def _stub_packages() -> None:
         "dowhy.gcm.independence_test",
         "dowhy.utils",
         "dowhy.interpreters",
+        "dowhy.causal_estimators",
+        "dowhy.causal_refuters",
     ):
         if name not in sys.modules:
             module = types.ModuleType(name)
@@ -159,3 +165,53 @@ def load(name: str) -> types.ModuleType:
     if name not in _PATHS:
         raise KeyError(f"{name} is not one of the upstream modules this loader knows")
     return _load_file(name, upstream_root() / "dowhy" / _PATHS[name])
+
+
+def _vectorize_of_numpy_one(func=None, *args, **kwargs):
+    """The `np.vectorize` of NumPy 1.x, which the upstream was written against.
+
+    NumPy 1.x called the function on every element and collected the results
+    into one array, so a function that returns a one element array produced an
+    array of the shape `(n, 1)`. NumPy 2.x calls the function through a ufunc,
+    which cannot store a one element array in the output of a scalar.
+    """
+    import numpy as np
+
+    real_vectorize = np.vectorize
+    if func is None or kwargs.get("otypes") is not None:
+        return real_vectorize(func, *args, **kwargs)
+
+    def vectorized(*call_args):
+        inputs = [np.asanyarray(arg) for arg in call_args]
+        results = [
+            func(*values) for values in zip(*(i.ravel() for i in inputs))
+        ]
+        if not results:
+            return np.empty(inputs[0].shape)
+        first = np.asanyarray(results[0])
+        return np.asanyarray(results, dtype=first.dtype)
+
+    return vectorized
+
+
+def linear_dataset(datasets_module, **kwargs):
+    """The upstream `dowhy.datasets.linear_dataset`, with the `np.vectorize` of NumPy 1.x.
+
+    The upstream turns a binary treatment into a variable with
+    `np.vectorize(convert_to_binary)`, and `convert_to_binary` returns a one
+    element array. NumPy 1.x collected the results of such a function into an
+    array of the shape `(n, 1)`; NumPy 2.x calls the function through a ufunc,
+    which cannot store a one element array in the output of a scalar, so the
+    upstream raises a `ValueError` here. The helper restores the behaviour of
+    NumPy 1.x, which is what the upstream was written against. The numbers the
+    upstream draws are not affected by it: the same values are drawn from the
+    generator of NumPy in the same order.
+    """
+    import numpy as np
+
+    real_vectorize = np.vectorize
+    np.vectorize = _vectorize_of_numpy_one
+    try:
+        return datasets_module.linear_dataset(**kwargs)
+    finally:
+        np.vectorize = real_vectorize

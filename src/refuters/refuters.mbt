@@ -18,9 +18,9 @@ pub struct CausalRefutation {
   /// The name of the refutation.
   refutation_type : String
   /// The p-value of the significance test, when the refuter computes one.
-  p_value : Double
+  mut p_value : Double
   /// Whether the refutation is statistically significant.
-  is_significant : Bool
+  mut is_significant : Bool
 }
 
 ///|
@@ -118,6 +118,115 @@ fn reestimate(
 }
 
 ///|
+/// The kind of test the significance test of a refutation uses.
+pub enum SignificanceTestType {
+  /// The bootstrap test for a hundred simulations and more, the test of the
+  /// normal distribution below that.
+  Auto
+  /// The two sided percentile test of the bootstrap.
+  Bootstrap
+  /// The test of the normal distribution.
+  Normal
+}
+
+///|
+/// The automatic kind of test.
+pub fn SignificanceTestType::auto() -> SignificanceTestType {
+  SignificanceTestType::Auto
+}
+
+///|
+/// The two sided percentile test of the bootstrap.
+pub fn SignificanceTestType::bootstrap() -> SignificanceTestType {
+  SignificanceTestType::Bootstrap
+}
+
+///|
+/// The test of the normal distribution.
+pub fn SignificanceTestType::normal() -> SignificanceTestType {
+  SignificanceTestType::Normal
+}
+
+///|
+/// The p-value of the significance test of a refutation and whether the
+/// estimate is significant at the given level.
+///
+/// This is the port of `test_significance` of `dowhy.causal_refuter`: the
+/// estimate is tested against the distribution of the estimates the refuter
+/// produced. The refutations that sever the causal relation test the zero
+/// estimate against it, the ones that leave the relation alone test the
+/// estimate of the data against it.
+pub fn test_significance(
+  estimate : Double,
+  simulations : Array[Double],
+  test_type~ : SignificanceTestType = SignificanceTestType::auto(),
+  significance_level~ : Double = 0.05,
+) -> (Double, Bool) {
+  let p_value = match test_type {
+    SignificanceTestType::Auto =>
+      if simulations.length() >= 100 {
+        bootstrap_significance(estimate, simulations)
+      } else {
+        normal_significance(estimate, simulations)
+      }
+    SignificanceTestType::Bootstrap =>
+      bootstrap_significance(estimate, simulations)
+    SignificanceTestType::Normal => normal_significance(estimate, simulations)
+  }
+  (p_value, p_value <= significance_level)
+}
+
+///|
+/// The two sided percentile p-value of the bootstrap test.
+///
+/// A refuter that ran no simulation has no distribution to test the estimate
+/// against, so the p-value is one.  The upstream computes the mean and the
+/// standard deviation of the simulations with numpy, which returns `nan` for an
+/// empty array, so its p-value is `nan` in that case.
+fn bootstrap_significance(
+  estimate : Double,
+  simulations : Array[Double],
+) -> Double {
+  if simulations.length() == 0 {
+    return 1.0
+  }
+  let mut half = 0.0
+  for value in simulations {
+    if value > estimate {
+      half = half + 1.0
+    } else if value == estimate {
+      half = half + 0.5
+    }
+  }
+  half = half / simulations.length().to_double()
+  let other = 1.0 - half
+  if half < other {
+    2.0 * half
+  } else {
+    2.0 * other
+  }
+}
+
+///|
+/// The p-value of the test of the normal distribution.
+fn normal_significance(
+  estimate : Double,
+  simulations : Array[Double],
+) -> Double {
+  if simulations.length() == 0 {
+    return 1.0
+  }
+  let mean = @utils.mean(simulations)
+  let deviation = @utils.variance(simulations, 0).sqrt()
+  let z_score = (estimate - mean) / deviation
+  if z_score > 0.0 {
+    1.0 - @utils.normal_cdf(z_score)
+  } else {
+    @utils.normal_cdf(z_score)
+  }
+}
+
+///|
 /// The bootstrap refuter.
 ///
 /// The data is resampled with replacement and the effect is re-estimated on
@@ -161,14 +270,54 @@ pub fn refute_bootstrap(
   }
   refutation.new_effect_lower = lower
   refutation.new_effect_upper = upper
+  let (p_value, significant) = test_significance(
+    estimator
+    .estimate_effect(data, treatment_value, control_value, target_units)
+    .estimate(),
+    estimates,
+  )
+  refutation.p_value = p_value
+  refutation.is_significant = significant
   refutation
+}
+
+///|
+/// The kind of placebo the placebo treatment refuter builds.
+pub enum PlaceboType {
+  /// A random variable of the kind the treatment column asks for.
+  RandomData
+  /// The rows of the treatment, permuted.
+  Permute
+}
+
+///|
+/// The random data placebo: the treatment is replaced by a random variable.
+pub fn PlaceboType::random_data() -> PlaceboType {
+  PlaceboType::RandomData
+}
+
+///|
+/// The permuted placebo: the rows of the treatment are permuted.
+pub fn PlaceboType::permute() -> PlaceboType {
+  PlaceboType::Permute
 }
 
 ///|
 /// The placebo treatment refuter.
 ///
-/// The treatment is replaced by a random permutation of itself; a causal
-/// estimate that survives the refutation is not credible.
+/// The treatment is replaced by a placebo variable and the effect is estimated
+/// again on every simulation; a causal estimate that survives the refutation is
+/// not credible.
+///
+/// The random data placebo builds the placebo the way the upstream does: a
+/// continuous treatment becomes a constant zero, a binary treatment becomes a
+/// random draw of a Bernoulli variable with the probability of a half, and a
+/// categorical treatment becomes a random draw of one of its categories. The
+/// permuted placebo takes the rows of the treatment and permutes them.
+///
+/// The upstream reports the error it raises for the instrumental variable
+/// method with the random data placebo; MoonBit cannot catch an error, so the
+/// port aborts with the message of the upstream.
 pub fn refute_placebo_treatment(
   estimator : @estimators.CausalEstimator,
   estimand : @identifiers.IdentifiedEstimand,
@@ -179,14 +328,83 @@ pub fn refute_placebo_treatment(
   control_value : Double,
   target_units : String,
   random : @utils.Random,
+  placebo_type~ : PlaceboType = PlaceboType::random_data(),
 ) -> CausalRefutation {
-  let treatment = data.numeric(treatment_name)
+  let identifier = estimand.identifier_method()
+  if identifier == "iv" && !is_permute(placebo_type) {
+    abort(
+      "Only placebo_type='permute' is supported for creating placebo for instrumental variable estimation methods.",
+    )
+  }
+  let n = data.nrows()
+  let kind = treatment_kind(data, treatment_name)
+  let instrument = if identifier == "iv" {
+    Some(estimator.instrument_name())
+  } else {
+    None
+  }
   let estimates : Array[Double] = []
   for i = 0; i < num_simulations; i = i + 1 {
-    let placebo = random.shuffle(treatment)
-    let placebo_data = data.with_numeric(treatment_name, placebo)
+    // The permuted placebo permutes the rows of the treatment; the random
+    // data placebo draws a new value for every row.
+    let permutation = if is_permute(placebo_type) {
+      random.shuffle(index_column(n))
+    } else {
+      index_column(n)
+    }
+    let mut placebo_data = data
+    match kind {
+      TreatmentKind::Categorical => {
+        // The permuted placebo takes the rows of the treatment and permutes
+        // them; the random data placebo draws one of the categories of the
+        // treatment for every row.
+        let values = if is_permute(placebo_type) {
+          permute_categories(data.discrete(treatment_name), permutation)
+        } else {
+          placebo_categories(
+            distinct_categories(data.discrete(treatment_name)),
+            random,
+            n,
+          )
+        }
+        placebo_data = placebo_data.with_discrete("placebo", values)
+      }
+      TreatmentKind::Binary => {
+        let values = if is_permute(placebo_type) {
+          permute_values(data.numeric(treatment_name), permutation)
+        } else {
+          placebo_binary(random, n)
+        }
+        placebo_data = placebo_data.with_numeric("placebo", values)
+      }
+      TreatmentKind::Continuous => {
+        let values = if is_permute(placebo_type) {
+          permute_values(data.numeric(treatment_name), permutation)
+        } else {
+          placebo_constant(random, n)
+        }
+        placebo_data = placebo_data.with_numeric("placebo", values)
+      }
+    }
+    // The instrumental variable method replaces its instrument as well; the
+    // upstream renames it after the placebo and permutes it with the same
+    // permutation.
+    let mut placebo_estimand = estimand.with_treatment(["placebo"])
+    let mut placebo_estimator = estimator
+    match instrument {
+      Some(name) => {
+        let values = permute_values(data.numeric(name), permutation)
+        placebo_data = placebo_data.with_numeric("placebo_" + name, values)
+        placebo_estimand = placebo_estimand.with_instrumental_variables([
+          "placebo_" + name,
+        ])
+        placebo_estimator = estimator.with_instrument_name("placebo_" + name)
+      }
+      None => ()
+    }
     let effect = reestimate(
-      estimator, estimand, placebo_data, treatment_value, control_value, target_units,
+      placebo_estimator, placebo_estimand, placebo_data, treatment_value, control_value,
+      target_units,
     )
     estimates.push(effect)
   }
@@ -200,7 +418,154 @@ pub fn refute_placebo_treatment(
   )
   refutation.new_effect_lower = @utils.percentile(estimates, 2.5)
   refutation.new_effect_upper = @utils.percentile(estimates, 97.5)
+  // The upstream tests the zero estimate against the estimates of the
+  // refutation, because the placebo severs the causal relation.
+  let (p_value, significant) = test_significance(0.0, estimates)
+  refutation.p_value = p_value
+  refutation.is_significant = significant
   refutation
+}
+
+///|
+/// Whether the placebo is the permuted one.
+///
+/// The enumeration of the placebo type carries no `Eq` implementation, so the
+/// comparison is a match.
+fn is_permute(placebo_type : PlaceboType) -> Bool {
+  match placebo_type {
+    PlaceboType::Permute => true
+    PlaceboType::RandomData => false
+  }
+}
+
+///|
+/// The kind of the treatment column of the placebo refuter.
+///
+/// The upstream keys the placebo on the dtype of the column: a float becomes a
+/// constant zero, a bool becomes a random Bernoulli variable, an int becomes a
+/// random integer and a category becomes a random draw of one of its
+/// categories. The frame of the port holds no dtype, so the port recognises
+/// the binary treatment by its two values, which is what the data set of the
+/// upstream holds for one.
+priv enum TreatmentKind {
+  Continuous
+  Binary
+  Categorical
+}
+
+///|
+/// The kind of the treatment column of the placebo refuter.
+fn treatment_kind(
+  data : @api.DataFrame,
+  treatment_name : String,
+) -> TreatmentKind {
+  if data.is_discrete(treatment_name) {
+    return TreatmentKind::Categorical
+  }
+  let values = data.numeric(treatment_name)
+  let mut binary = true
+  for value in values {
+    if value != 0.0 && value != 1.0 {
+      binary = false
+    }
+  }
+  if binary && values.length() > 0 {
+    TreatmentKind::Binary
+  } else {
+    TreatmentKind::Continuous
+  }
+}
+
+///|
+/// The placebo of a binary treatment: a Bernoulli variable with the
+/// probability of a half, the way the upstream draws it.
+fn placebo_binary(random : @utils.Random, n : Int32) -> Array[Double] {
+  let values : Array[Double] = []
+  for _ in 0..<n {
+    values.push(if random.next_double() < 0.5 { 0.0 } else { 1.0 })
+  }
+  values
+}
+
+///|
+/// The placebo of a continuous treatment: the constant zero, the way the
+/// upstream draws it with a normal distribution of a mean of zero and a
+/// standard deviation of zero.
+fn placebo_constant(random : @utils.Random, n : Int32) -> Array[Double] {
+  let values : Array[Double] = []
+  for _ in 0..<n {
+    values.push(random.next_double() * 0.0)
+  }
+  values
+}
+
+///|
+/// The placebo of a categorical treatment: a random draw of one of its
+/// categories, the way the upstream draws it.
+fn placebo_categories(
+  categories : Array[String],
+  random : @utils.Random,
+  n : Int32,
+) -> Array[String] {
+  let values : Array[String] = []
+  for _ in 0..<n {
+    if categories.length() == 0 {
+      values.push("")
+    } else {
+      values.push(categories[random.next_int(categories.length())])
+    }
+  }
+  values
+}
+
+///|
+/// The distinct values of a discrete column, in the order of their first
+/// appearance.
+///
+/// The upstream draws the random placebo of a categorical treatment from the
+/// distinct categories of its column, and not from its rows, so a category
+/// that holds more rows is not drawn more often.
+fn distinct_categories(values : Array[String]) -> Array[String] {
+  let categories : Array[String] = []
+  for value in values {
+    let mut found = false
+    for category in categories {
+      if category == value {
+        found = true
+      }
+    }
+    if !found {
+      categories.push(value)
+    }
+  }
+  categories
+}
+
+///|
+/// The values of a discrete column in the order of the given permutation of
+/// the rows.
+fn permute_categories(
+  values : Array[String],
+  permutation : Array[Double],
+) -> Array[String] {
+  let out : Array[String] = []
+  for row in permutation {
+    out.push(values[row.to_int()])
+  }
+  out
+}
+
+///|
+/// The values of a column in the order of the given permutation of the rows.
+fn permute_values(
+  values : Array[Double],
+  permutation : Array[Double],
+) -> Array[Double] {
+  let out : Array[Double] = []
+  for row in permutation {
+    out.push(values[row.to_int()])
+  }
+  out
 }
 
 ///|
@@ -240,6 +605,14 @@ pub fn refute_data_subset(
   )
   refutation.new_effect_lower = @utils.percentile(estimates, 2.5)
   refutation.new_effect_upper = @utils.percentile(estimates, 97.5)
+  let (p_value, significant) = test_significance(
+    estimator
+    .estimate_effect(data, treatment_value, control_value, target_units)
+    .estimate(),
+    estimates,
+  )
+  refutation.p_value = p_value
+  refutation.is_significant = significant
   refutation
 }
 
@@ -278,6 +651,11 @@ pub fn refute_dummy_outcome(
   )
   refutation.new_effect_lower = @utils.percentile(estimates, 2.5)
   refutation.new_effect_upper = @utils.percentile(estimates, 97.5)
+  // The dummy outcome severs the causal relation, so the zero estimate is the
+  // one the refutation tests against the estimates it produced.
+  let (p_value, significant) = test_significance(0.0, estimates)
+  refutation.p_value = p_value
+  refutation.is_significant = significant
   refutation
 }
 
@@ -327,6 +705,14 @@ pub fn refute_random_common_cause(
   )
   refutation.new_effect_lower = @utils.percentile(estimates, 2.5)
   refutation.new_effect_upper = @utils.percentile(estimates, 97.5)
+  let (p_value, significant) = test_significance(
+    estimator
+    .estimate_effect(data, treatment_value, control_value, target_units)
+    .estimate(),
+    estimates,
+  )
+  refutation.p_value = p_value
+  refutation.is_significant = significant
   refutation
 }
 

@@ -559,6 +559,11 @@ pub fn CausalModel::estimate_effect(
 /// `refuter_name` is one of `"bootstrap"`, `"placebo"`, `"subset"`,
 /// `"dummy_outcome"`, `"random_common_cause"` or
 /// `"add_unobserved_common_cause"`.
+///
+/// `placebo_type` chooses the kind of the placebo the placebo treatment
+/// refuter builds: a random variable of the kind of the treatment, or the rows
+/// of the treatment, permuted.  The upstream forwards it as a keyword argument
+/// of its own method.
 pub fn CausalModel::refute_estimate(
   self : CausalModel,
   method_name : String,
@@ -566,6 +571,7 @@ pub fn CausalModel::refute_estimate(
   refuter_name : String,
   num_simulations : Int32,
   random : @utils.Random,
+  placebo_type~ : @refuters.PlaceboType = @refuters.PlaceboType::random_data(),
 ) -> @refuters.CausalRefutation {
   let estimator = self.build_estimator(method_name)
   estimator.fit(self.data, [])
@@ -597,6 +603,7 @@ pub fn CausalModel::refute_estimate(
         estimate.control_value,
         "ate",
         random,
+        placebo_type~,
       )
     "subset" =>
       @refuters.refute_data_subset(

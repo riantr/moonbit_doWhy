@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.27.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.28.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -18,7 +18,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators) |
 | Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
-| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome, random common cause, unobserved common cause) |
+| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome, random common cause, unobserved common cause, and the **significance test** of the refutations) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset` and the fixtures the upstream tests use) |
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
 | Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
@@ -101,7 +101,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
 | `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
-| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators and of the two stage regression estimator |
+| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator and of the placebo treatment refuter |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
 The root package `riantr/moonbit_dowhy` holds `CausalModel`, the entry point
@@ -240,6 +240,19 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   the `k`-th nearest neighbour that is not the row itself. The port computes
   the same distances: for one column it sorts the values and walks the two
   sides of every value, and for more columns it compares every pair of rows.
+- The placebo of the placebo treatment refuter is built the way the upstream
+  builds it: a continuous treatment becomes the constant zero, a binary
+  treatment becomes a random Bernoulli variable with the probability of a half,
+  and a categorical treatment becomes a random draw of one of the distinct
+  categories of the column. The permuted placebo takes the rows of the
+  treatment and permutes them.
+- The significance test of a refutation is the port of
+  `dowhy.causal_refuter.test_significance`: the automatic test uses the two
+  sided percentile test of the bootstrap for a hundred simulations and more and
+  the test of the normal distribution below that. The bootstrap test counts the
+  estimates that are above the estimate and the half of the ones that are equal
+  to it, and the normal test takes the z-score of the estimate against the mean
+  and the standard deviation of the simulations, with `ddof = 0`.
 
 ## Deliberate differences from upstream
 
@@ -319,6 +332,26 @@ ways:
   left out. The key of a conditional estimate is the index of the quantile
   group of the effect modifier, while the upstream labels a group with the
   interval of its values.
+
+The `refuters` package differs from upstream in the following ways:
+
+- The placebo of the placebo treatment refuter is drawn with the generator of
+  the port, which is a hand written xorshift64, and not with the global
+  generator of numpy, so the refuted estimates of the port are not the
+  estimates of the upstream. The behaviour the upstream test asserts is the
+  same: the effect of the placebo is close to zero.
+- The kind of the treatment is taken from the column itself, because the frame
+  of the port holds no dtype. A discrete column is a categorical treatment, a
+  numeric column whose values are all zero and one is a binary treatment, and
+  every other numeric column is a continuous one. The upstream takes the kind
+  from the dtype of the column.
+- The upstream raises an error when the placebo of an instrumental variable
+  method is not the permuted one. The port aborts with the message of the
+  upstream, because MoonBit cannot catch an error.
+- A refuter that ran no simulation has no distribution to test the estimate
+  against, so its p-value is one. The upstream computes the mean of the
+  simulations with numpy, which returns `nan` for an empty array, so its
+  p-value is `nan`.
 
 The `do_samplers`, `timeseries` and `gcm` packages differ from upstream in the
 following ways:

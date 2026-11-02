@@ -463,6 +463,26 @@ statsmodels / scikit-learn conventions are deliberate:
   picks it. An instrument of the adjustment set lowers the variance of the
   treatment variable, which is the reason the upstream prefers it. The two
   rules agree on every graph whose adjustment sets hold no instrument.
+- The placebo of the placebo treatment refuter of the `refuters` package is
+  built the way the upstream builds it: a continuous treatment becomes the
+  constant zero, a binary treatment becomes a random Bernoulli variable with
+  the probability of a half, and a categorical treatment becomes a random draw
+  of one of the **distinct** categories of the column. The permuted placebo
+  takes the rows of the treatment and permutes them. The kind of the treatment
+  follows the column and not a dtype, because the frame of the port holds no
+  dtype: a discrete column is a categorical treatment, a numeric column whose
+  values are all zero and one is a binary treatment and every other numeric
+  column is a continuous one.
+- The significance test of a refutation is the port of
+  `dowhy.causal_refuter.test_significance`: the automatic test uses the two
+  sided percentile test of the bootstrap for a hundred simulations and more and
+  the test of the normal distribution below that. The bootstrap test counts the
+  estimates that are above the estimate and the half of the ones that are equal
+  to it, and the normal test takes the z-score of the estimate against the mean
+  and the standard deviation of the simulations, with `ddof = 0`. The
+  refutations that sever the causal relation -- the placebo and the dummy
+  outcome -- test the **zero** estimate against the estimates they produced,
+  the other ones test the estimate of the data.
 
 ## Package layout
 
@@ -475,14 +495,14 @@ statsmodels / scikit-learn conventions are deliberate:
 | `identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `dowhy.causal_estimator` (the estimate objects) |
 | `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones and the two stage regression of the frontdoor and of the mediation estimand |
-| `refuters` | `dowhy.causal_refuters` |
+| `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
 | `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
-| `tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators and of the two stage regression estimator |
+| `tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator and of the placebo treatment refuter |
 | `examples` | the runnable quick start |
 
 ## Verification
@@ -810,4 +830,16 @@ README makes, so they are tracked in the repository:
 - `print_frontdoor_graph.py` prints the graph string of the upstream test as a
   MoonBit literal. The upstream removes the newlines of the string, so the
   graph it reads is one long line, and the literal is generated rather than
+  transcribed.
+- `placebo_reference.py` runs the upstream placebo treatment refuter on the cases
+  of the upstream test file `tests/causal_refuters/test_placebo_refuter.py` and
+  prints the estimate, the refuted estimate, the p-value and the decision of the
+  significance test, which is where the expectations of the tests of the port
+  come from. The placebo of the upstream is drawn with the global generator of
+  numpy and the port draws it with its own generator, so the numbers of the two
+  are not the same numbers; what the two share is the behaviour the upstream
+  test asserts, that the effect of the placebo is close to zero.
+- `significance_reference.py` computes the p-values of the two kinds of the
+  significance test of the refutations with the formulas of the upstream, so
+  that the expectations of the tests of the port are written down and not
   transcribed.
