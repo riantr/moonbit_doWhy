@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.30.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.31.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -26,7 +26,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the stochastic models, the noise of a causal model, the **feature relevance**, the **intrinsic causal influence**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution), the **unit change** layer, the **uncertainty** estimates, the **distribution change** layer and the **arrow strength** layer are ported; the **robust** variant of the distribution change layer is **not ported** |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure and the **kernel based** one), the prediction models, the causal mechanisms, the stochastic models, the noise of a causal model, the **feature relevance**, the **intrinsic causal influence**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution), the **unit change** layer, the **uncertainty** estimates, the **distribution change** layer -- the plain one and the **multiply-robust** one -- and the **arrow strength** layer are ported |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
@@ -100,7 +100,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
-| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
+| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
 | `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter and of the data subset refuter |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
@@ -290,6 +290,27 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   design matrix, so the fit of a hundred thousand rows needs a matrix of the
   size of the number of the columns and not one of the size of the square of
   the number of the rows.
+- The multiply-robust causal change attribution of the `gcm` package is the port
+  of `dowhy.gcm.distribution_change_robust`, the estimator of the paper
+  "Multiply-Robust Causal Change Attribution" of Quintas-Martinez, Bahadori,
+  Santiago, Mu, Janzing and Heckerman (ICML 2024). Three details of it decide
+  whether the attribution is the one of the upstream:
+  - **the functional of the variance is the second moment of the target minus
+    the square of the first moment of the target.** The upstream writes it as
+    `(theta(y²) - theta(y)) ** 2`, but the exponent of Python binds tighter
+    than the subtraction, so the upstream computes `theta(y²) - theta(y) ** 2`.
+    The port computes the functional of the upstream: the attribution of the
+    variance is about twenty times smaller than the square of the difference
+    would give.
+  - **only the weights of the last group of the estimator are standardised.**
+    The upstream standardises the weights outside its loop over the groups, so
+    the weights of the other groups keep their scale. The port standardises the
+    last weight alone, the way the upstream does.
+  - **the estimate of the change is the mean of the scores of the estimator,
+    and its standard error is the one of
+    `statsmodels.stats.weightstats.DescrStatsW` with the weights of one.** The
+    standard error is therefore the standard deviation of the scores with
+    `ddof = 0` divided by the square root of the number of the scores less one.
 
 ## Deliberate differences from upstream
 
@@ -733,6 +754,16 @@ following ways:
 - `gcm` runs the estimate of the strength of an edge for one edge at a time,
   while the upstream runs it for every edge in a process pool. The estimate of
   one edge does not depend on the others, so the strengths are the same numbers.
+- `gcm` has neither a calibrator nor sample weights for the multiply-robust
+  change attribution. The upstream can calibrate the probabilities of its
+  classifier on a calibration set and can weigh the samples; the models of the
+  upstream mostly do not support the weights either, and the port has neither.
+- `gcm` splits the rows of the cross-fitting of the multiply-robust change
+  attribution with its own shuffle, and the upstream splits them with the
+  `StratifiedKFold` of scikit-learn. The two splits differ, so the attribution
+  of the port and the attribution of the upstream are close to each other and
+  not equal to each other: on the ten thousand rows of the upstream test file
+  they agree to `0.004` for the mean and to `0.05` for the variance.
 
 ## Development
 

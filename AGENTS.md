@@ -559,6 +559,37 @@ statsmodels / scikit-learn conventions are deliberate:
   two common causes and the doubly robust estimator with two common causes and
   a binary outcome are both outside the tolerance of the upstream on the rows
   of the seed 42, and the upstream is outside it as well.
+- The multiply-robust causal change attribution of the `gcm` package is the port
+  of `dowhy.gcm.distribution_change_robust`, and three details of it decide
+  whether the attribution is the one of the upstream:
+  - **the functional of the variance is the second moment of the target minus
+    the square of the first moment of the target.** The upstream writes it as
+    `(theta(y²) - theta(y)) ** 2`, but the exponent of Python binds tighter
+    than the subtraction, so the upstream computes `theta(y²) - theta(y) ** 2`.
+    The port computes the functional of the upstream, and the attribution of the
+    variance is about twenty times smaller than the square of the difference
+    would give.
+  - **only the weights of the last group of the estimator are standardised.**
+    The upstream standardises the weights outside its loop over the groups, so
+    the weights of the other groups keep their scale. The port standardises the
+    last weight alone, the way the upstream does.
+  - **the estimate of the change is the mean of the scores of the estimator,
+    and its standard error is the one of
+    `statsmodels.stats.weightstats.DescrStatsW` with the weights of one**, so
+    the standard error is the standard deviation of the scores with `ddof = 0`
+    divided by the square root of the number of the scores less one.
+- The nearest neighbour regression of the `gcm` package finds the neighbours of
+  a row with a walk over the rows that are sorted by their first column. The
+  walk stops as soon as the rows that are left are further away than the
+  neighbours that were found already, which is the exact rule of a scan over
+  every row, and it costs `O(n log n)` instead of the `O(n^2)` of the scan.
+- The rows of the cross-fitting of the multiply-robust change attribution are
+  split by the port with its own shuffle and by the upstream with the
+  `StratifiedKFold` of scikit-learn. The two splits differ, so the attribution
+  of the port and the attribution of the upstream are close to each other and
+  not equal to each other: on the ten thousand rows of the upstream test file
+  they agree to `0.004` for the mean and to `0.05` for the variance. The
+  re-weighting method, which does not use the regressor, agrees to `0.001`.
 
 ## Package layout
 
@@ -573,7 +604,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones and the two stage regression of the frontdoor and of the mediation estimand |
 | `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |

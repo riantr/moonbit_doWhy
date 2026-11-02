@@ -1515,3 +1515,74 @@ test files.
   the effect of a bootstrap sample stay close to the effect of the data.
 
 [0.0.29]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.29
+
+## [0.0.31] - 2026-11-02
+
+The multiply-robust causal change attribution of the upstream, with the test
+file of the upstream and the two bugs the test file found.
+
+### Added
+
+- `gcm` -- the port of `dowhy.gcm.distribution_change_robust`, the estimator of
+  the paper "Multiply-Robust Causal Change Attribution" of Quintas-Martinez,
+  Bahadori, Santiago, Mu, Janzing and Heckerman (ICML 2024): the attribution of
+  the change of the mean or of the variance of a target node to the variables
+  upstream of it, with the regression method, the re-weighting method and the
+  multiply-robust method, and with the cross-fitting of the nuisance
+  parameters.
+- `gcm` -- the nearest neighbour regression of `dowhy.gcm.ml.regression`, which
+  is the `KNeighborsRegressor` of scikit-learn with its default parameters:
+  five neighbours and the uniform weights. The neighbours of a row are found
+  with a walk over the rows that are sorted by their first column, which finds
+  the same neighbours as a scan over every row and costs `O(n log n)` instead
+  of the `O(n^2)` of the scan.
+- the tests of the upstream file
+  `tests/gcm/test_distribution_change_robust.py`: the two cases it holds, on
+  the ten thousand rows of the upstream test, with the nearest neighbour
+  regressor and with ten folds of the cross-fitting, and the four cases of the
+  regression method and of the re-weighting method, so that every branch of
+  the estimator of the upstream is compared against the upstream.
+- `_verify/gcm_distribution_change_robust_reference.py` -- the upstream runs on
+  the very rows the port works on, for the three methods of the estimator and
+  for the two functionals of the target. The port and the upstream agree to
+  `0.004` on the attribution of the mean and to `0.05` on the attribution of
+  the variance; the re-weighting method, which does not use the regressor,
+  agrees to `0.001`. The difference is the split of the rows of the
+  cross-fitting: the port splits them with its own shuffle and the upstream
+  with the `StratifiedKFold` of scikit-learn.
+
+### Fixed
+
+- **The functional of the variance of the port was the square of the difference
+  of the two moments, and the functional of the upstream is the second moment
+  of the target minus the square of the first moment of the target.** The
+  upstream writes the functional as `(theta(y²) - theta(y)) ** 2`, but the
+  exponent of Python binds tighter than the subtraction, so the upstream
+  computes `theta(y²) - theta(y) ** 2`. The attribution of the port was about
+  twenty times the attribution of the upstream: `17.66`, `-40.72` and `-54.71`
+  for the three variables of the test, where the upstream gives `0.91`, `-1.38`
+  and `-1.35`.
+- **The port standardised the weights of every group of the multiply-robust
+  estimator, and the upstream standardises the weights of the last group
+  alone.** The statement that standardises the weights is outside the loop over
+  the groups in the upstream, so the weights of the other groups keep their
+  scale and are used with that scale.
+
+### Notes
+
+- The rows of the test of the upstream are drawn with the global generator of
+  numpy, which is not seeded, so the numbers of the upstream move from one run
+  to the other; the upstream marks its test file as flaky for that reason. The
+  rows of the port are drawn with the generator of the `utils` package, so the
+  numbers of the port are the same on every run, and they are the numbers the
+  reference script measures on the upstream.
+- The port has neither a calibrator nor sample weights for the multiply-robust
+  change attribution. The upstream can calibrate the probabilities of its
+  classifier on a calibration set and can weigh the samples; the models of the
+  upstream mostly do not support the weights either, and the port has neither.
+- The upstream evaluates the set function of its Shapley estimator in a
+  process pool, so the values it computes are invisible to an instrumentation of
+  the process of the caller. The diagnosis of the functional of the variance
+  needed a Shapley configuration with a single job.
+
+[0.0.31]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.31
