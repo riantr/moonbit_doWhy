@@ -49,6 +49,36 @@ fn TwoStageModel::new(
 }
 
 ///|
+/// The message of the error the upstream raises when the estimand holds more
+/// than one treatment variable.
+const TWO_STAGE_TREATMENT_ERROR : String = "The estimator cannot handle more than one treatment variable"
+
+///|
+/// The message of the error the upstream raises when the estimand holds more
+/// than one outcome variable.
+const TWO_STAGE_OUTCOME_ERROR : String = "The estimator cannot handle more than one outcome variable"
+
+///|
+/// The message of the error the upstream raises when the estimand of the
+/// mediation holds no mediator variable.
+const TWO_STAGE_NO_MEDIATOR_ERROR : String = "No mediator variable present. Two stage regression is not applicable"
+
+///|
+/// The message of the error the upstream raises when the estimand of the
+/// mediation holds more than one mediator variable.
+const TWO_STAGE_MEDIATOR_ERROR : String = "Only singleton mediator variables are supported for estimation using TwoStageRegression."
+
+///|
+/// The message of the error the upstream raises when the estimand holds no
+/// frontdoor variable.
+const TWO_STAGE_NO_FRONTDOOR_ERROR : String = "No front-door variable present. Two stage regression is not applicable"
+
+///|
+/// The message of the error the upstream raises when the estimand holds more
+/// than one frontdoor variable.
+const TWO_STAGE_FRONTDOOR_ERROR : String = "Only singleton frontdoor variables are supported for estimation using TwoStageRegression."
+
+///|
 /// Fit the two stages of the two stage regression estimator.
 ///
 /// The first stage regresses the mediator on the treatment, the second stage
@@ -58,15 +88,13 @@ fn CausalEstimator::fit_two_stage_regression(
   self : CausalEstimator,
   data : @api.DataFrame,
 ) -> Unit {
+  let error = self.two_stage_error()
+  if error != "" {
+    abort(error)
+  }
   let mediator = self.mediator_of_the_estimand()
   let treatment = self.target_estimand.treatment()
   let outcome = self.target_estimand.outcome()
-  if treatment.length() != 1 {
-    abort("The estimator cannot handle more than one treatment variable")
-  }
-  if outcome.length() != 1 {
-    abort("The estimator cannot handle more than one outcome variable")
-  }
   let first = TwoStageModel::new(
     treatment[0],
     mediator,
@@ -172,6 +200,43 @@ pub fn CausalEstimator::two_stage_features(
 }
 
 ///|
+/// The error the two stage regression estimator reports for the estimand of
+/// the estimator, or an empty string when it can estimate the effect.
+///
+/// The upstream raises a `ValueError` when the estimand holds no mediator
+/// variable or more than one, and it raises an `Exception` when the estimand
+/// holds more than one treatment variable or more than one outcome variable.
+/// MoonBit cannot catch an error, so the port aborts with the message of the
+/// upstream; this function reports the message of the error the upstream
+/// raises, so that a caller can check for it before it fits the estimator.
+pub fn CausalEstimator::two_stage_error(self : CausalEstimator) -> String {
+  if self.target_estimand.treatment().length() != 1 {
+    return TWO_STAGE_TREATMENT_ERROR
+  }
+  if self.target_estimand.outcome().length() != 1 {
+    return TWO_STAGE_OUTCOME_ERROR
+  }
+  if self.target_estimand.identifier_method() == "mediation" {
+    let mediators = self.target_estimand.get_mediator_variables()
+    if mediators.length() == 0 {
+      return TWO_STAGE_NO_MEDIATOR_ERROR
+    }
+    if mediators.length() > 1 {
+      return TWO_STAGE_MEDIATOR_ERROR
+    }
+    return ""
+  }
+  let frontdoor = self.target_estimand.get_frontdoor_variables()
+  if frontdoor.length() == 0 {
+    return TWO_STAGE_NO_FRONTDOOR_ERROR
+  }
+  if frontdoor.length() > 1 {
+    return TWO_STAGE_FRONTDOOR_ERROR
+  }
+  ""
+}
+
+///|
 /// The mediator the two stage regression estimates through.
 ///
 /// The frontdoor variable is the mediator of the frontdoor estimand, the
@@ -181,27 +246,19 @@ fn CausalEstimator::mediator_of_the_estimand(self : CausalEstimator) -> String {
   if identifier == "mediation" {
     let mediators = self.target_estimand.get_mediator_variables()
     if mediators.length() == 0 {
-      abort(
-        "No mediator variable present. Two stage regression is not applicable",
-      )
+      abort(TWO_STAGE_NO_MEDIATOR_ERROR)
     }
     if mediators.length() > 1 {
-      abort(
-        "Only singleton mediator variables are supported for estimation using TwoStageRegression.",
-      )
+      abort(TWO_STAGE_MEDIATOR_ERROR)
     }
     return mediators[0]
   }
   let frontdoor = self.target_estimand.get_frontdoor_variables()
   if frontdoor.length() == 0 {
-    abort(
-      "No front-door variable present. Two stage regression is not applicable",
-    )
+    abort(TWO_STAGE_NO_FRONTDOOR_ERROR)
   }
   if frontdoor.length() > 1 {
-    abort(
-      "Only singleton frontdoor variables are supported for estimation using TwoStageRegression.",
-    )
+    abort(TWO_STAGE_FRONTDOOR_ERROR)
   }
   frontdoor[0]
 }

@@ -1202,6 +1202,68 @@ Discovery in Python".
 
 [0.0.26]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.26
 
+## [0.0.27] - 2026-11-02
+
+The test file of the two stage regression estimator of the upstream, with the
+two cases it holds.
+
+### Added
+
+- the tests of the upstream file
+  `tests/causal_estimators/test_two_stage_regression_estimator.py`:
+  - the average treatment effect test suite case: the data set of the upstream
+    `linear_dataset` with one frontdoor mediator and no common cause, the
+    estimate of the two stage regression estimator and the tolerance of ten
+    percent the upstream test allows;
+  - the frontdoor estimator case: the data set of the upstream test, the
+    estimate of the two stage regression estimator and the value of 0.45 the
+    upstream test asserts.
+
+  Both cases check the frontdoor variables, the confounders of the two stages
+  and the columns of the design matrices of the two stages as well.
+- `estimators` -- `CausalEstimator::two_stage_error`, which reports the
+  message of the error the upstream raises when the estimand cannot be
+  estimated by the two stage regression, so that a caller can check for it
+  before it fits the estimator.
+- `src/tests/two_stage_testdata.mbt` -- the rows of the upstream test
+  `test_frontdoor_estimator`. They are the rows of the upstream, because the
+  fixture `fixed_seed` of the upstream seeds the generator of numpy with zero.
+- `_verify/two_stage_estimator_reference.py` -- the upstream reference of the
+  two stage regression estimator. It runs the upstream identification and the
+  upstream two stage regression estimator and prints the frontdoor variables,
+  the confounders of the two stages and the estimate, which is where the
+  expectations of the tests of the port come from.
+- `_verify/port_linear_dataset.py` -- the generator of the port
+  (`src/datasets/datasets.mbt`) replicated in Python, so that the upstream can
+  run on the very rows the port works on.
+- `_verify/gen_two_stage_estimator_testdata.py` -- the generator of the rows
+  of the upstream test.
+- `_verify/print_frontdoor_graph.py` -- a helper that prints the graph string
+  of the upstream test as a MoonBit literal, so that the test holds the very
+  same string.
+
+### Notes
+
+- The data of the port is drawn with its own generator, so its rows are not the
+  rows of the upstream, which draws them with the generator of numpy. The
+  first case therefore runs the upstream on the replicated rows of the port,
+  and the two implementations agree on the estimate to `1e-13`. The second case
+  runs on the rows of the upstream test, and the two agree to `8e-14`.
+- The third case of the upstream, the one that asks for an error, is ported as
+  a reported error: MoonBit cannot catch the error the estimator raises, so
+  the port aborts with the message of the upstream and
+  `CausalEstimator::two_stage_error` reports that message before the fit. The
+  upstream raises the error of the more than one treatment variable for one of
+  its two configurations, and the error of the missing frontdoor variable for
+  the other one -- its identification finds no frontdoor variable for that
+  graph, because the mediators and the treatment share a common cause.
+- The upstream computes the confidence interval and the standard error of the
+  two stage estimate with the generic bootstrap of `CausalEstimator`, and the
+  port reports none for it. The upstream test asks for them without asserting
+  anything about their values.
+
+[0.0.27]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.27
+
 ## [0.0.24] - 2026-11-01
 
 ### Added

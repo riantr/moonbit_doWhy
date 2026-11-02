@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.26.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.27.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -101,7 +101,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
 | `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer and the arrow strength layer |
-| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests |
+| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators and of the two stage regression estimator |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
 The root package `riantr/moonbit_dowhy` holds `CausalModel`, the entry point
@@ -154,10 +154,20 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   order of the edges fits a different model.
 - The two stage regression estimator fits two ordinary least squares models and
   multiplies their effects: the effect of the treatment on the mediator and the
-  effect of the mediator on the outcome. The upstream reports no confidence
-  interval for it, and so does the port. On the data set of the upstream test
+  effect of the mediator on the outcome. The upstream computes the confidence
+  interval and the standard error of such an estimate with the generic
+  bootstrap of `CausalEstimator`; the port reports none for it, because it has
+  no bootstrap for this estimator. On the data set of the upstream test
   `test_dowhy_chapter_7` the estimate of the port and the estimate of the
-  upstream agree to `5e-14`.
+  upstream agree to `5e-14`, and on the rows of the upstream test
+  `test_frontdoor_estimator` they agree to `8e-14`.
+- The synthetic data of the port is drawn with a hand written xorshift64
+  generator, so that the rows do not depend on the random number implementation
+  of the toolchain. The rows are therefore not the rows of the upstream, which
+  draws them with the generator of numpy. The tests that compare the two
+  implementations run the upstream on the rows of the port: the rows are
+  replicated in Python by `_verify/port_linear_dataset.py`, and the two
+  implementations agree on the estimate of the two stage regression to `1e-13`.
 - The default adjustment set of the backdoor search is the set with the fewest
   instruments, and the set with the fewest variables among those. An instrument
   of the adjustment set lowers the variance of the treatment variable, which is
@@ -266,7 +276,7 @@ the upstream code is order-dependent rather than wrong in an absolute sense:
   the bootstrap, because a link function other than the identity makes the
   effect a function of the coefficients rather than one of them.
 
-Three behaviours of the mediation differ on purpose:
+Four behaviours of the mediation differ on purpose:
 
 - The mediator search enumerates its candidates in sorted order. Upstream
   iterates over a Python `set`, so its order depends on the hash seed.
@@ -276,6 +286,11 @@ Three behaviours of the mediation differ on purpose:
 - The **natural direct effect** is **not ported**. Upstream computes it with a
   third model, the total effect, and subtracts the natural indirect effect
   from it.
+- The upstream raises an error when the estimand holds more than one treatment
+  variable or more than one outcome variable, and when it holds no mediator
+  variable or no frontdoor variable. The port aborts with the message of the
+  upstream, and `CausalEstimator::two_stage_error` reports that message
+  before the fit, because MoonBit cannot catch an abort.
 
 The `CausalModel` of the root package differs from upstream in the following
 ways:

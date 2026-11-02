@@ -432,8 +432,31 @@ statsmodels / scikit-learn conventions are deliberate:
     upstream computes them in `identify_mediation_first_stage_confounders` and
     `identify_mediation_second_stage_confounders`. The default set of each
     stage is the one under the plain `backdoor` name of its registry.
-  - **the upstream reports no confidence interval for the two stage
-    regression**, and so does the port.
+  - **the upstream computes the confidence interval and the standard error of the
+    two stage estimate with the generic bootstrap of `CausalEstimator`, and the
+    port reports none for it**, because it has no bootstrap for this estimator.
+    The upstream test asks for them without asserting anything about their
+    values.
+  - **the errors of the upstream are reported, not raised.** The upstream
+    raises a `ValueError` when the estimand holds no mediator variable or more
+    than one, and it raises an `Exception` when the estimand holds more than
+    one treatment variable or more than one outcome variable. MoonBit cannot
+    catch an error, so the port aborts with the message of the upstream, and
+    `CausalEstimator::two_stage_error` reports that message before the fit.
+    The messages live in the constants of `src/estimators/two_stage.mbt`, so
+    that the fit and the accessor cannot drift apart.
+- The synthetic data of the `datasets` package is drawn with a hand written
+  xorshift64 generator, so that the rows do not depend on the random number
+  implementation of the toolchain. The rows are therefore **not** the rows of
+  the upstream, which draws them with the generator of numpy. A test that
+  compares the port with the upstream on synthetic data therefore has to run
+  the upstream on the rows of the port: the rows are replicated in Python by
+  `_verify/port_linear_dataset.py`, which mirrors the generator of the port
+  down to the last bit of every column. The rows of the port and the rows of
+  the replication are the same numbers, but their **sums** are not: the native
+  backend of the toolchain reassociates the reduction of a loop, so a sum of
+  the port and the sum of the replication differ in the last bits. The
+  estimate of the two stage regression is the same number in both, to `1e-13`.
 - The default adjustment set of the backdoor search of the `identifiers`
   package is the set with the fewest instruments, and the set with the fewest
   variables among those, the way `get_default_adjustment_set_id` of the upstream
@@ -459,7 +482,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
-| `tests` | the cross-package integration tests |
+| `tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators and of the two stage regression estimator |
 | `examples` | the runnable quick start |
 
 ## Verification
@@ -765,3 +788,26 @@ README makes, so they are tracked in the repository:
   the upstream, because the fixture `fixed_seed` of the upstream test class
   seeds the generator of numpy with zero, so the reference script and the
   MoonBit test see the very same rows.
+- `two_stage_estimator_reference.py` runs the upstream identification and the
+  upstream `TwoStageRegressionEstimator` on the two cases of the upstream test
+  file `tests/causal_estimators/test_two_stage_regression_estimator.py` and
+  prints the frontdoor variables, the confounders of the two stages and the
+  estimate, which is where the expectations of the tests of the port come from.
+  The first case runs on the rows of the port, so that the two implementations
+  work on the very same rows.
+- `port_linear_dataset.py` replicates the generator of the `datasets` package
+  in Python -- the xorshift64 generator, the draw order of the
+  `linear_dataset` and its GML graph -- so that the upstream can be run on the
+  rows of the port. The replication has to be checked against the port
+  itself: the values of the columns have to be the same numbers, down to the
+  last bit, while the sums of the columns are allowed to differ, because the
+  native backend of the toolchain reassociates the reduction of a loop.
+- `gen_two_stage_estimator_testdata.py` generates
+  `src/tests/two_stage_testdata.mbt`, the rows of the upstream test
+  `test_frontdoor_estimator`. The rows are the rows of the upstream, because
+  the fixture `fixed_seed` of the upstream test class seeds the generator of
+  numpy with zero.
+- `print_frontdoor_graph.py` prints the graph string of the upstream test as a
+  MoonBit literal. The upstream removes the newlines of the string, so the
+  graph it reads is one long line, and the literal is generated rather than
+  transcribed.
