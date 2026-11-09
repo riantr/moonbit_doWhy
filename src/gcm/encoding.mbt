@@ -9,6 +9,44 @@
 /// as well.
 
 ///|
+/// Whether every column of the frame is categorical.
+///
+/// This is the port of `dowhy.gcm.util.general.is_categorical`. The upstream
+/// decides from the numpy dtype of the columns, which is a string or a boolean
+/// for a categorical column; the frame of the port holds no dtype, so a column
+/// is categorical exactly when it is a discrete one.
+///
+/// The upstream refuses a categorical input that holds missing values, because
+/// only the missing values of a numerical variable are supported. The frame of
+/// the port holds no missing value, so there is no such check here.
+pub fn is_categorical(data : @api.DataFrame) -> Bool {
+  let names = data.column_names()
+  if names.length() == 0 {
+    return false
+  }
+  for name in names {
+    if !data.is_discrete(name) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+/// Whether any column of the frame is categorical.
+///
+/// This is the port of `dowhy.gcm.util.general.has_categorical`, which asks
+/// `is_categorical` of every column.
+pub fn has_categorical(data : @api.DataFrame) -> Bool {
+  for name in data.column_names() {
+    if data.is_discrete(name) {
+      return true
+    }
+  }
+  false
+}
+
+///|
 /// The one-hot encoding of the discrete parents of a node.
 pub struct ParentEncoder {
   /// The names of the discrete parent columns, in the order of the parents.

@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.34.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.35.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -634,6 +634,14 @@ following ways:
 - `gcm` has one causal model type. The upstream distinguishes the
   probabilistic causal model from the structural one, but every mechanism of
   the port is a functional causal model, so the two are the same here.
+- `gcm` decides whether a column is categorical from the kind of the column
+  of the frame and not from a numpy dtype, because the frame of the port holds
+  no dtype: a discrete column is categorical and a numeric one is not.
+  `is_categorical` asks whether every column is categorical and
+  `has_categorical` whether any one of them is. The upstream refuses a
+  categorical input that holds missing values, because only the missing values
+  of a numerical variable are supported; the frame of the port holds no missing
+  value, so there is no such check.
 - `gcm` encodes the discrete parents of a node with the categories the
   encoder was fitted on and encodes a category it has not seen with zeros,
   like the `OneHotEncoder(handle_unknown="ignore")` of upstream; the encoder

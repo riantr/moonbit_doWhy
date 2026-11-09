@@ -1,6 +1,20 @@
 ///|
 /// The tests of the general helpers of the `gcm` package.
 ///
+/// The cases mirror the upstream test file `tests/gcm/util/test_general.py`:
+/// the difference of the means, the variance of the deviations, the set
+/// difference of two matrices, the standardisation of the columns, the
+/// discrete check, the random permutation and the geometric median. The
+/// one-hot encoding and the two checks of whether a column is categorical are
+/// the tests of `encoding_test.mbt`, which mirror the cases of the same
+/// upstream file.
+///
+/// The upstream cases that are not ported are the `catboost` encoder, which
+/// needs the `catboost` package, the `shape_into_2d` helper, which the port
+/// does not need because every matrix is two dimensional already, and
+/// `set_random_seed`, which seeds the global generator of numpy; the port takes
+/// a generator as an argument instead.
+///
 /// The fixture is generated with the deterministic generator of the `utils`
 /// package, and the expected numbers are the ones the upstream
 /// `dowhy.gcm.util.general` produces on the very same rows, which

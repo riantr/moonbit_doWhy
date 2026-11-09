@@ -650,6 +650,19 @@ statsmodels / scikit-learn conventions are deliberate:
   because the library has no file system. It is generated from the upstream
   file `tests/sample_dag.txt` by `_verify/gen_graph_fixture.py`.
 
+- The `is_categorical` and `has_categorical` of the `gcm` package decide
+  whether a column is categorical from the kind of the column of the frame, and
+  not from a numpy dtype, because the frame of the port holds no dtype: a
+  discrete column is categorical and a numeric one is not. The upstream asks
+  the same question of the dtype and refuses a categorical input that holds
+  missing values; the frame of the port holds no missing value.
+- The one-hot encoding of a matrix that holds a numerical column among the
+  categorical ones expands every categorical column into one column per
+  category in lexicographic order and keeps the numerical column in place, so
+  the fixture of the upstream test
+  `[[d, 1, a], [b, 2, d], [a, 3, a]]` becomes
+  `[[0, 0, 1, 1, 1, 0], [0, 1, 0, 2, 0, 1], [1, 0, 0, 3, 1, 0]]`.
+
 ## Package layout
 
 | Package | Ports |

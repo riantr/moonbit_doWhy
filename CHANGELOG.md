@@ -1722,3 +1722,37 @@ toolchain.
   warning, and a warning is a failure of the gate.
 
 [0.0.34]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.34
+
+## [0.0.35] - 2026-11-09
+
+The encoding cases of the upstream general utilities, and the two checks of
+whether a column of a frame is categorical.
+
+### Added
+
+- `gcm.is_categorical` and `gcm.has_categorical`, the port of
+  `dowhy.gcm.util.general.is_categorical` and of its `has_categorical`. The
+  upstream decides from the numpy dtype of the columns; the port decides from
+  the kind of the column of its frame, which holds no dtype.
+- the tests of the upstream file `tests/gcm/util/test_general.py` that the port
+  can reach: the one-hot encoding of a matrix that holds a numerical column
+  among the categorical ones, the encoding of a category that the encoder has
+  not seen, and the two checks of whether a column is categorical.
+- the name of the upstream file in the header of the general utilities test,
+  with the three cases of it that are not ported: the `catboost` encoder, the
+  `shape_into_2d` helper and `set_random_seed`.
+
+### Notes
+
+- The one-hot encoding of the upstream fixture
+  `[[d, 1, a], [b, 2, d], [a, 3, a]]` is
+  `[[0, 0, 1, 1, 1, 0], [0, 1, 0, 2, 0, 1], [1, 0, 0, 3, 1, 0]]` in the port,
+  which is the vector the upstream test asserts: every categorical column
+  becomes one column per category in lexicographic order and the numerical
+  column keeps its place.
+- A category that the encoder has not seen is encoded with zeros, which is what
+  `OneHotEncoder(handle_unknown="ignore")` does in the upstream.
+- `_verify/upstream_test_coverage.py` reports 51 of the 74 test files of the
+  upstream as mirrored.
+
+[0.0.35]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.35
