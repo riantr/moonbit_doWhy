@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.36.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.37.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -18,7 +18,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators) |
 | Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
-| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome, random common cause, unobserved common cause, the **significance test** of the refutations, and the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules) |
+| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome and its two branches --, random common cause, unobserved common cause, the **significance test** of the refutations, and the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset` and the fixtures the upstream tests use) |
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
 | Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
@@ -102,7 +102,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
 | `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
-| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter and of the data subset refuter |
+| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter, of the data subset refuter and of the dummy outcome refuter |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
 The root package `riantr/moonbit_dowhy` holds `CausalModel`, the entry point
@@ -478,6 +478,37 @@ The `refuters` package differs from upstream in the following ways:
   reads a variable that it never defines and it writes the integer zero into
   the rows it does not change. The port perturbs a discrete column with
   another category and leaves the rows it does not change alone.
+- The dummy outcome refuter takes the list of transformations of the outcome
+  as `Transformation` values: `zero`, `noise`, `permute`, `linear_regression`,
+  the k nearest neighbours and a model the caller gives. The default list is
+  `[zero, noise(1)]`, the `DEFAULT_TRANSFORMATION` of the upstream, so the
+  simulated outcome of the default refutation is zero followed by a normal
+  noise, and not the uniform draw of `[0, 1]` the port used before 0.0.37.
+- The list decides the branch, the way the `_has_estimator` of the upstream
+  does: a list without an estimator simulates the whole data at once and
+  reports one refutation, a list with one buckets the treatment and reports
+  one refutation per bucket, so `refuters.refute_dummy_outcome` returns an
+  array. `CausalModel::refute_estimate` reports the first refutation of the
+  array.
+- The buckets of the estimator branch keep the quirk of the upstream: the
+  edges of the cut are the ranges `(max - min)` of every numeric column of the
+  frame, divided by `bucket_size_scale_factor * std of the treatment`, in the
+  column order of the frame, rather than the range of the treatment column
+  alone, and they cut the treatment the way `pandas.cut` does, so a row whose
+  treatment lies at or below the first edge takes part in no bucket. A frame
+  whose ranges do not increase makes the port abort with the message of
+  `pandas.cut`, `bins must increase monotonically.`
+- `svm`, `random_forest` and `neural_network` need the estimators the port
+  does not have, so `Transformation` has no variant for them and a list that
+  names one of them cannot be built.
+- The model of a custom transformation takes the covariates of the training
+  rows, the outcome of the training rows and the covariates of the rows to
+  predict, and returns the two predictions. The upstream takes a callable that
+  returns a fitted estimator, which is then applied to both, because MoonBit
+  has no partial application of a fitted object.
+- The known causal effect of the simulated outcome is a function of the
+  treatment column, `true_causal_effect`, and it defaults to zero for every
+  row, the `DEFAULT_TRUE_CAUSAL_EFFECT` of the upstream.
 
 The `overrule` package differs from upstream in the following ways:
 

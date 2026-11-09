@@ -1794,3 +1794,75 @@ The categorical conditioning variable of the generalised covariance measure.
   fixture is fixed.
 
 [0.0.36]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.36
+
+## [0.0.37] - 2026-11-09
+
+The transformation list of the dummy outcome refuter, and the two branches it
+chooses between.
+
+### Added
+
+- `refuters.Transformation` -- the list of transformations of the outcome of the
+  dummy outcome refuter: `zero`, `noise`, `permute`, `linear_regression`, the k
+  nearest neighbours and a model the caller gives. The default list is
+  `[zero, noise(1)]`, which is the `DEFAULT_TRANSFORMATION` of the upstream.
+- the two branches of the upstream `refute_dummy_outcome`, which the list
+  decides: a list without an estimator simulates the whole data at once and
+  reports one refutation, a list with one buckets the treatment and reports one
+  refutation per bucket.
+- `true_causal_effect` and `required_variables` as named optional arguments of
+  `refuters.refute_dummy_outcome`.
+- the port of `preprocess_data_by_treatment`, `process_data`, `_has_estimator`,
+  `permute` and `noise` of `dowhy.causal_refuters.dummy_outcome_refuter`.
+- the port of `tests/causal_refuters/test_dummy_outcome_refuter.py` as
+  `src/tests/dummy_outcome_refuter.mbt`, ten of its sixteen cases.
+- `_verify/dummy_outcome_reference.py` -- the upstream refuter on the cases the
+  port mirrors, which prints how many refutations come back and the new effect of
+  each of them.
+
+### Changed
+
+- `refuters.refute_dummy_outcome` returns `Array[CausalRefutation]` rather than
+  one refutation, the type of the list the upstream returns.
+  `CausalModel::refute_estimate` reports the first one, which is the only one for
+  the default transformation list.
+- the simulated outcome of the default list is `zero` followed by a normal noise
+  of standard deviation one, the `DEFAULT_TRANSFORMATION` of the upstream. The
+  port drew a uniform number in `[0, 1]` before, which shifts the mean of the
+  simulated outcome by half a unit.
+- `refuters.refute_dummy_outcome` takes the name of the treatment column.
+
+### Notes
+
+- The buckets of the estimator branch are the ones of the upstream, including
+  its quirk. The upstream derives the edges of the cut from the ranges of *every*
+  numeric column of the frame rather than from the range of the treatment column,
+  so the edges are `(max - min) of the column` over
+  `bucket_size_scale_factor * std of the treatment`, in the column order of the
+  frame, and `pandas.cut` reads them as the edges of the buckets. On the
+  continuous treatment of the upstream's own `linear_dataset`, whose columns are
+  `Z0, W0, v0, y`, the four columns give four increasing edges and therefore
+  three buckets, and the refuter reports three refutations. One run of the
+  upstream gives the edges `0.2716, 1.7142, 11.6501, 122.3968` and buckets of
+  `47`, `437` and `382` rows of the `1000` of the frame. The rows whose treatment
+  is at or below the first edge take part in no bucket.
+- A frame whose per-column ranges do not increase makes `pandas.cut` raise
+  `ValueError: bins must increase monotonically`, and the port aborts with the
+  same message. This is why the binary treatment cases whose list carries an
+  estimator have no assertion to mirror: the treatment of such a frame spans one
+  unit while the outcome of the same frame spans tens.
+- The custom model of the upstream is a callable that returns a fitted estimator,
+  which is then applied to the training rows and to the rows to predict. The port
+  takes the two predictions directly, because MoonBit has no partial application
+  of a fitted object.
+- `svm`, `random_forest` and `neural_network` need the estimators the port does
+  not have, so `Transformation` has no variant for them and a list that names one
+  of them cannot be built. The six upstream cases that use them are not mirrored.
+- The nearest neighbours of the port are the `KNeighborsRegressor` of
+  scikit-learn with its default weights: the mean of the targets of the k nearest
+  training rows in the euclidean distance, the ties taken in the order of the
+  training rows.
+- `_verify/upstream_test_coverage.py` reports 53 of the 74 test files of the
+  upstream as mirrored.
+
+[0.0.37]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.37

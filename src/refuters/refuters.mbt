@@ -777,49 +777,6 @@ pub fn refute_data_subset(
 }
 
 ///|
-/// The dummy outcome refuter.
-///
-/// The outcome is replaced by a random variable; the refuted effect must be
-/// close to zero.
-pub fn refute_dummy_outcome(
-  estimator : @estimators.CausalEstimator,
-  estimand : @identifiers.IdentifiedEstimand,
-  data : @api.DataFrame,
-  outcome_name : String,
-  num_simulations : Int32,
-  treatment_value : Double,
-  control_value : Double,
-  target_units : String,
-  random : @utils.Random,
-) -> CausalRefutation {
-  let n = data.nrows()
-  let estimates : Array[Double] = []
-  for i = 0; i < num_simulations; i = i + 1 {
-    let dummy : Array[Double] = []
-    for i = 0; i < n; i = i + 1 {
-      dummy.push(random.next_double())
-    }
-    let dummy_data = data.with_numeric(outcome_name, dummy)
-    let effect = reestimate(
-      estimator, estimand, dummy_data, treatment_value, control_value, target_units,
-    )
-    estimates.push(effect)
-  }
-  let mean_effect = @utils.mean(estimates)
-  let refutation = CausalRefutation::new(
-    0.0, mean_effect, "Refute: Use a Dummy Outcome",
-  )
-  refutation.new_effect_lower = @utils.percentile(estimates, 2.5)
-  refutation.new_effect_upper = @utils.percentile(estimates, 97.5)
-  // The dummy outcome severs the causal relation, so the zero estimate is the
-  // one the refutation tests against the estimates it produced.
-  let (p_value, significant) = test_significance(0.0, estimates)
-  refutation.p_value = p_value
-  refutation.is_significant = significant
-  refutation
-}
-
-///|
 /// The random common cause refuter.
 ///
 /// A random variable is added to the adjustment set; a robust estimate does

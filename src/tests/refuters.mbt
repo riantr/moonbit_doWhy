@@ -41,17 +41,22 @@ test "the dummy outcome refuter drives the effect to zero" {
   let dataset = confounded()
   let estimator = fitted_estimator(dataset)
   let random = @utils.Random::new(11)
-  let refutation = @refuters.refute_dummy_outcome(
+  let refutations = @refuters.refute_dummy_outcome(
     estimator,
     backdoor_estimand(dataset),
     dataset.frame(),
     "y",
+    "v0",
     5,
     1.0,
     0.0,
     "ate",
     random,
   )
+  // The default transformation list carries no estimator, so the whole data is
+  // simulated at once and a single refutation comes back.
+  assert_eq(refutations.length(), 1)
+  let refutation = refutations[0]
   assert_true(refutation.new_effect().abs() < 1.0)
   assert_eq(refutation.refutation_type(), "Refute: Use a Dummy Outcome")
 }

@@ -620,17 +620,22 @@ pub fn CausalModel::refute_estimate(
         random,
       )
     "dummy_outcome" =>
+      // The dummy outcome refuter reports one refutation per bucket of the
+      // treatment. The default transformation list carries no estimator, so
+      // there is exactly one, and the first one is the refutation the caller
+      // gets.
       @refuters.refute_dummy_outcome(
         estimator,
         estimand,
         self.data,
         self.outcome[0],
+        self.treatment[0],
         num_simulations,
         estimate.treatment_value,
         estimate.control_value,
         "ate",
         random,
-      )
+      )[0]
     "random_common_cause" =>
       @refuters.refute_random_common_cause(
         estimator,

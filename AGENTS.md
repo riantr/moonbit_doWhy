@@ -1074,3 +1074,43 @@ README makes, so they are tracked in the repository:
   equations over the rows instead of building the diagonal weight matrix of
   the IRLS step, and the propensity score matching estimator searches the
   sorted scores instead of scanning every unit of the other group.
+- `dummy_outcome_reference.py` runs the dummy outcome refuter of the upstream on
+  the cases the port mirrors and prints how many refutations come back and the
+  new effect of each of them. It runs the refuter through the module function
+  `dowhy.causal_refuters.dummy_outcome_refuter.refute_dummy_outcome` rather than
+  through `CausalModel.refute_estimate`, because `DummyOutcomeRefuter` cannot be
+  instantiated on its own (its base class asks for the estimand and the estimate)
+  and because the module function takes the transformation list explicitly.
+- The buckets of the estimator branch of the dummy outcome refuter are the
+  upstream's quirk, measured rather than inferred: the edges of the cut are the
+  ranges `(max - min)` of **every numeric column** of the frame, divided by
+  `bucket_size_scale_factor * std of the treatment column`, in the column order
+  of the frame, and `pandas.cut` reads the resulting Series as the edges of the
+  buckets. On the continuous treatment of the upstream's own `linear_dataset`,
+  whose columns are `Z0, W0, v0, y`, the four columns give four increasing edges
+  and therefore three buckets, and the refuter reports three refutations; one run
+  gives the edges `0.2716, 1.7142, 11.6501, 122.3968` and buckets of `47`, `437`
+  and `382` of the `1000` rows. The exact numbers vary between runs, because the
+  upstream draws its frame with the global generator of numpy; the three buckets
+  do not. A frame whose ranges do not increase makes `pandas.cut` raise
+  `ValueError: bins must increase monotonically`, which is why no binary
+  treatment case of the upstream file whose list carries an estimator can pass:
+  a binary treatment spans one unit while the outcome of the same frame spans
+  tens. Measured on a hand built frame in the same column order, at `1000` and
+  at `20000` rows: the continuous treatment gives three buckets, and the binary
+  one gives the edges `4.06, 26.048, 4.06, 93.103` (`4.027, 30.372, 4.027,
+  111.648` at the larger frame) and the `ValueError`. The port aborts with the
+  same message.
+- The upstream conversion `np.vectorize(convert_to_binary)` of
+  `dowhy.datasets.linear_dataset` is broken on numpy 2.5.1: `convert_to_binary`
+  returns the one element array of `np.random.choice([0, 1], 1, p=...)`, so
+  every element of the vectorised call is an array and numpy refuses it with
+  `ValueError: setting an array element with a sequence`. The reference scripts
+  of this repository therefore build the rows of the port in Python instead of
+  calling `linear_dataset` when the treatment is binary, and a case of the
+  upstream that needs that dataset cannot be run here at all.
+- `permute` of the upstream refuter writes into the array it is given, so a case
+  that permutes a read-only array raises `ValueError: output array is read-only`
+  on numpy 2.x. The upstream's own permutation cases of the dummy outcome
+  refuter therefore fail in this environment, and the port's own permutation
+  cases are the only evidence for that branch.
