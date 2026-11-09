@@ -655,7 +655,7 @@ pub fn CausalModel::refute_estimate(
         self.treatment[0],
         self.outcome[0],
         0.05,
-        num_simulations,
+        0.05,
         estimate.treatment_value,
         estimate.control_value,
         "ate",

@@ -148,11 +148,12 @@ test "the unobserved common cause refuter moves the effect when the confounder i
     "v0",
     "y",
     1.0,
-    5,
+    1.0,
     1.0,
     0.0,
     "ate",
     random,
+    effect_on_t=@refuters.ConfoundersEffectOnT::linear(),
   )
   assert_true((refutation.new_effect() - original).abs() > 0.0)
   assert_eq(
@@ -176,11 +177,12 @@ test "the unobserved common cause refuter keeps the effect when the confounder i
     "v0",
     "y",
     0.0,
-    5,
+    0.0,
     1.0,
     0.0,
     "ate",
     random,
+    effect_on_t=@refuters.ConfoundersEffectOnT::linear(),
   )
   let error = (refutation.new_effect() - original).abs()
   assert_true(error < original.abs() * 0.1)

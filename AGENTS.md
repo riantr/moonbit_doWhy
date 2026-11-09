@@ -1114,3 +1114,24 @@ README makes, so they are tracked in the repository:
   on numpy 2.x. The upstream's own permutation cases of the dummy outcome
   refuter therefore fail in this environment, and the port's own permutation
   cases are the only evidence for that branch.
+- The refuter of the unobserved common cause shares one confounder between the
+  treatment and the outcome: `_include_confounders_effect` draws a single
+  `w_random` and uses it for both, adds `kappa_t * w` to the treatment and
+  **subtracts** `kappa_y * w` from the outcome. The subtraction is deliberate
+  upstream -- the confounder of the data is assumed to have acted on both
+  columns, so removing it from the outcome is what undoes its effect -- and the
+  port keeps the sign.
+- The `binary_flip` strength of that refuter is a probability of a flip, read
+  through the central interval of the standard normal: `alpha` is
+  `2 * kappa - 1` above one half and `1 - 2 * kappa` below it, the edge is the
+  lower quantile of the interval above one half and the upper quantile below it,
+  and every row whose draw is at or beyond the edge flips. With the infinite
+  edges of the two ends, that gives `0` flips nothing, `0.5` flips half of the
+  rows and `1` flips every row. A strength of `0` therefore leaves the data
+  untouched, which is the only assertion the upstream harness makes about this
+  refuter, and the port asserts it bit for bit.
+- The refuter of the unobserved common cause reports **one** refutation, not the
+  mean of a loop: the upstream `sensitivity_simulation` draws one confounder,
+  refits once and returns, so there is no interval to report and the port sets
+  the two bounds of the refutation to the refuted effect.
+

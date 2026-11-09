@@ -834,60 +834,6 @@ pub fn refute_random_common_cause(
 }
 
 ///|
-/// The unobserved common cause refuter.
-///
-/// An unobserved confounder is simulated with the strength `epsilon` and the
-/// effect is re-estimated; the refutation reports how much the estimate moves
-/// when the confounder is strong.
-pub fn refute_add_unobserved_common_cause(
-  estimator : @estimators.CausalEstimator,
-  estimand : @identifiers.IdentifiedEstimand,
-  data : @api.DataFrame,
-  treatment_name : String,
-  outcome_name : String,
-  epsilon : Double,
-  num_simulations : Int32,
-  treatment_value : Double,
-  control_value : Double,
-  target_units : String,
-  random : @utils.Random,
-) -> CausalRefutation {
-  let n = data.nrows()
-  let treatment = data.numeric(treatment_name)
-  let outcome = data.numeric(outcome_name)
-  let estimates : Array[Double] = []
-  for i = 0; i < num_simulations; i = i + 1 {
-    let confounder : Array[Double] = []
-    for i = 0; i < n; i = i + 1 {
-      confounder.push(random.next_normal())
-    }
-    let new_treatment : Array[Double] = []
-    let new_outcome : Array[Double] = []
-    for i = 0; i < n; i = i + 1 {
-      new_treatment.push(treatment[i] + epsilon * confounder[i])
-      new_outcome.push(outcome[i] - epsilon * confounder[i])
-    }
-    let noisy = data.with_numeric(treatment_name, new_treatment)
-    let noisy = noisy.with_numeric(outcome_name, new_outcome)
-    let effect = reestimate(
-      estimator, estimand, noisy, treatment_value, control_value, target_units,
-    )
-    estimates.push(effect)
-  }
-  let mean_effect = @utils.mean(estimates)
-  let refutation = CausalRefutation::new(
-    estimator
-    .estimate_effect(data, treatment_value, control_value, target_units)
-    .estimate(),
-    mean_effect,
-    "Refute: Add an Unobserved Common Cause",
-  )
-  refutation.new_effect_lower = @utils.percentile(estimates, 2.5)
-  refutation.new_effect_upper = @utils.percentile(estimates, 97.5)
-  refutation
-}
-
-///|
 /// A column with the row indices, used to resample the data.
 fn index_column(n : Int32) -> Array[Double] {
   let indices : Array[Double] = []

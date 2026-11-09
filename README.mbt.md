@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.37.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.38.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -102,7 +102,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
 | `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
-| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter, of the data subset refuter and of the dummy outcome refuter |
+| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter, of the data subset refuter, of the dummy outcome refuter and of the unobserved common cause refuter |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
 The root package `riantr/moonbit_dowhy` holds `CausalModel`, the entry point
@@ -509,6 +509,24 @@ The `refuters` package differs from upstream in the following ways:
 - The known causal effect of the simulated outcome is a function of the
   treatment column, `true_causal_effect`, and it defaults to zero for every
   row, the `DEFAULT_TRUE_CAUSAL_EFFECT` of the upstream.
+- The refuter of the unobserved common cause takes the strength on the
+  treatment and the strength on the outcome separately, as `kappa_t` and
+  `kappa_y`, where the port used to take one `epsilon` for both, and it reports
+  a single refutation rather than the mean of a simulation loop: the upstream
+  draws one confounder and reports one refutation, so the port has no interval
+  to report besides the refuted effect itself. The two kinds of effect are
+  enumerations, `ConfoundersEffectOnT` and `ConfoundersEffectOnY`, with the
+  defaults of the upstream: `binary_flip` on the treatment and `linear` on the
+  outcome. The `binary_flip` strength is the probability of a flip and the port
+  reproduces the edges of the upstream, so `0` flips nothing, `0.5` flips half
+  of the rows and `1` flips every row.
+- The `percent_change_of_confounder` argument of the upstream refuter, which
+  infers the two strengths from the observed common causes, is not ported: the
+  strengths are the two arguments of the port. The three `..._range_...` cases of
+  the upstream test file are therefore not mirrored either, because they pass a
+  list of strengths and draw a matrix of refutations for a plot. The sensitivity
+  analyzers of the same upstream module (`linear-partial-R2`,
+  `non-parametric-partial-R2` and `e-value`) are not ported.
 
 The `overrule` package differs from upstream in the following ways:
 

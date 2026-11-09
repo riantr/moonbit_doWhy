@@ -1866,3 +1866,58 @@ chooses between.
   upstream as mirrored.
 
 [0.0.37]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.37
+
+## [0.0.38] - 2026-11-09
+
+The refuter that adds an unobserved common cause, ported from the upstream
+`direct-simulation` branch.
+
+### Added
+
+- `refuters.ConfoundersEffectOnT` and `refuters.ConfoundersEffectOnY`, the two
+  kinds of effect a simulated confounder has on the treatment and on the
+  outcome: a linear effect and a flip of the value.
+- `effect_on_t` and `effect_on_y` as named optional arguments of
+  `refuters.refute_add_unobserved_common_cause`, with the defaults of the
+  upstream: `binary_flip` on the treatment and `linear` on the outcome.
+- the port of `_include_confounders_effect` and of the scalar branch of
+  `sensitivity_simulation` of `dowhy.causal_refuters.add_unobserved_common_cause`.
+- the port of the two refutation cases of
+  `tests/causal_refuters/test_add_unobserved_common_cause.py` as
+  `src/tests/add_unobserved_common_cause.mbt`.
+
+### Changed
+
+- `refuters.refute_add_unobserved_common_cause` takes the strength on the
+  treatment and the strength on the outcome as two arguments, `kappa_t` and
+  `kappa_y`, rather than one `epsilon` for both, and it reports a single
+  refutation rather than the mean of a simulation loop. The upstream draws one
+  confounder and reports one refutation, so the interval of the refutation is the
+  refuted effect itself.
+- the outcome of the simulated confounder is offset with `-kappa_y * w` and not
+  `+kappa_y * w`: the upstream subtracts it from the outcome to remove the effect
+  of the confounder the data holds, which it assumes acted on both columns with
+  the same sign.
+
+### Notes
+
+- A strength of `0` leaves the data untouched, so the refuted effect is the
+  estimate of the data down to the last bit. That is the assertion the upstream
+  harness makes for every case of the file, and the port asserts it twice, once
+  for the binary treatment and once for the continuous one.
+- A `binary_flip` strength is the probability of a flip: `0` flips nothing,
+  `0.5` flips half of the rows and `1` flips every row. The upstream builds the
+  central interval of the standard normal that the probability spans and takes its
+  lower edge when the probability is at least one half and its upper edge
+  otherwise, and the port reproduces that, including the infinite edges of the two
+  ends.
+- The three `..._range_...` cases of the upstream file are not mirrored: they pass
+  a list of strengths and draw a matrix of refutations for a plot, and the matrix
+  path reports no number a test could assert. The two sensitivity analyzers of the
+  file (`linear-partial-R2` and the partial R2 of the confounding) are not ported
+  yet, and the `percent_change_of_confounder` argument that infers the strengths
+  from the observed common causes is not ported either.
+- `_verify/upstream_test_coverage.py` reports 54 of the 74 test files of the
+  upstream as mirrored.
+
+[0.0.38]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.38
