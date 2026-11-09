@@ -5,7 +5,14 @@ MoonBit port of [DoWhy 0.14](https://github.com/py-why/dowhy) (PyWhy).
 ## Toolchain conventions in this repository
 
 These are properties of the MoonBit toolchain this repository builds with
-(`moon 0.1.20261028`); they are easy to get wrong and costly to debug.
+(`moon 0.1.20261104`, `moonc v0.10.20+65efd5b93`); they are easy to get wrong
+and costly to debug.
+
+- **A derived trait is declared with `#derive(...)` before the type, not with
+  `derive(...)` after it.** The trailing form is a deprecation warning on the
+  current toolchain, and a warning is a failure in this repository. The
+  `extend Type with Eq::{equal, not_equal}` declaration stays: the derived
+  methods are promoted as ordinary methods, which is deprecated as well.
 
 - **Imports live in `moon.pkg`, never in `.mbt` files.** A file that starts
   with an `import { ... }` block does not compile.
@@ -632,6 +639,17 @@ statsmodels / scikit-learn conventions are deliberate:
   samples, so its value is the same number in the port and in the upstream:
   `0.00285` on the fixture of the upstream test file.
 
+- The check of a backdoor set and of a frontdoor set take the algorithm of
+  the upstream as an enumeration, `DseparationAlgorithm`, instead of the string
+  `dseparation_algo`. The default branch of the frontdoor check asks for the
+  d-separation of the graph, which is what the upstream does when the caller
+  names no algorithm, and the naive branch asks for every directed path from
+  the treatment to the outcome to be blocked.
+- The graph of the daggity web site of the upstream test file
+  `tests/test_causal_graph.py` is a literal of the port, `daggity_fixture`,
+  because the library has no file system. It is generated from the upstream
+  file `tests/sample_dag.txt` by `_verify/gen_graph_fixture.py`.
+
 ## Package layout
 
 | Package | Ports |
@@ -999,6 +1017,21 @@ README makes, so they are tracked in the repository:
   generator of numpy and the ones of the port with the generator of the port,
   so the two draw different subsets. The tolerances of the upstream tests are
   the ones the port uses.
+- `causal_graph_reference.py` runs the graph functions of the upstream on the
+  daggity fixture of the upstream test file `tests/test_causal_graph.py` with
+  the `pydot` reader, because `pygraphviz` is not installed here. It prints the
+  nodes, the edges, the answers of the two adjustment-set checks, the backdoor
+  paths in the order the upstream gives them, the instruments and the directed
+  path queries, which are the numbers the tests of the port are compared
+  against.
+- `gen_graph_fixture.py` writes `src/graph/daggity_fixture.mbt` mechanically
+  from the fixture of the upstream, so the graph string cannot be
+  mistranscribed.
+- `upstream_test_coverage.py` maps the test files of the port to the test files
+  of the upstream. It reads a name of a header in three forms -- a path, a bare
+  file name and a glob -- because a test file of the port names the upstream
+  file it mirrors one by one, by its bare name, or through a glob such as
+  `tests/causal_estimators/test_*_estimator.py`.
 - `overrule_reference.py` runs the upstream of the refuter that assesses the
   support and the overlap on the fixture of the upstream test file, with the
   program of the rules solved with the `HiGHS` solver of `scipy` instead of

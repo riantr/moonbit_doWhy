@@ -6,6 +6,30 @@
 /// unobserved flag that the identifiers rely on.
 
 ///|
+/// The algorithm of the checks of the adjustment sets.
+///
+/// This is the port of the `dseparation_algo` argument of the upstream, which
+/// is the string `"default"` or `"naive"`.
+pub enum DseparationAlgorithm {
+  /// The d-separation of the graph.
+  Default
+  /// Every path of the graph has to be blocked by the candidate set.
+  Naive
+}
+
+///|
+/// The d-separation of the graph.
+pub fn DseparationAlgorithm::default() -> DseparationAlgorithm {
+  Default
+}
+
+///|
+/// The naive check of the paths.
+pub fn DseparationAlgorithm::naive() -> DseparationAlgorithm {
+  Naive
+}
+
+///|
 /// A causal graph with the semantic role of every node.
 pub struct CausalGraph {
   treatment_name : Array[String]
@@ -320,24 +344,45 @@ pub fn CausalGraph::check_dseparation(
 
 ///|
 /// Whether the candidate set blocks the backdoor paths.
+///
+/// The default algorithm of the upstream removes the outgoing edges of the
+/// treatment and asks for the d-separation of the two node sets given the
+/// candidate set; the naive one asks for every backdoor path to be blocked.
 pub fn CausalGraph::check_valid_backdoor_set(
   self : CausalGraph,
   nodes1 : Array[String],
   nodes2 : Array[String],
   nodes3 : Array[String],
   new_graph : DirectedGraph?,
+  algo~ : DseparationAlgorithm = DseparationAlgorithm::default(),
 ) -> Bool {
-  match new_graph {
-    Some(graph) => d_separated(graph, nodes1, nodes2, nodes3)
-    None => {
-      let graph = self.do_surgery(nodes1, true, false, [], false)
-      d_separated(graph, nodes1, nodes2, nodes3)
+  match algo {
+    Naive => {
+      let paths = get_backdoor_paths(self.graph, nodes1, nodes2)
+      for path in paths {
+        if !is_blocked(self.graph, path, nodes3) {
+          return false
+        }
+      }
+      true
     }
+    Default =>
+      match new_graph {
+        Some(graph) => d_separated(graph, nodes1, nodes2, nodes3)
+        None => {
+          let graph = self.do_surgery(nodes1, true, false, [], false)
+          d_separated(graph, nodes1, nodes2, nodes3)
+        }
+      }
   }
 }
 
 ///|
 /// Whether the candidate set is a valid frontdoor set.
+///
+/// The default algorithm of the upstream asks for the d-separation of the two
+/// node sets given the candidate set; the naive one asks for every directed
+/// path from the treatment to the outcome to be blocked.
 pub fn CausalGraph::check_valid_frontdoor_set(
   self : CausalGraph,
   nodes1 : Array[String],
@@ -345,10 +390,10 @@ pub fn CausalGraph::check_valid_frontdoor_set(
   candidate_nodes : Array[String],
   frontdoor_paths : Array[Array[String]],
   new_graph : DirectedGraph?,
+  algo~ : DseparationAlgorithm = DseparationAlgorithm::default(),
 ) -> Bool {
-  match new_graph {
-    Some(graph) => d_separated(graph, nodes1, nodes2, candidate_nodes)
-    None => {
+  match algo {
+    Naive => {
       let paths = if frontdoor_paths.length() == 0 {
         self.get_all_directed_paths(nodes1, nodes2)
       } else {
@@ -361,6 +406,11 @@ pub fn CausalGraph::check_valid_frontdoor_set(
       }
       true
     }
+    Default =>
+      match new_graph {
+        Some(graph) => d_separated(graph, nodes1, nodes2, candidate_nodes)
+        None => d_separated(self.graph, nodes1, nodes2, candidate_nodes)
+      }
   }
 }
 

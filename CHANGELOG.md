@@ -1678,3 +1678,47 @@ boolean rules, the port of the `assess_overlap` refuter of the upstream.
   zero.
 
 [0.0.33]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.33
+
+## [0.0.34] - 2026-11-09
+
+The tests of the graph operations of the upstream, the tests of the model
+pieces of the upstream, and the migration to the syntax of the current
+toolchain.
+
+### Added
+
+- the tests of the upstream file `tests/test_causal_graph.py`: the graph of the
+  daggity web site of its fixture, the two adjustment-set checks, the
+  d-separation, the do-surgery, the backdoor paths, the instruments and the
+  directed path queries, on the same graph the upstream reads.
+- the tests of the upstream file `tests/gcm/test_graph.py`: the samples of a
+  fitted probabilistic causal model have the mean and the standard deviation of
+  the data, the mechanism that is assigned to a node is the one that is read
+  back, and a node is a root exactly when it has no parents.
+- the tests of the constant inputs of the upstream file
+  `tests/gcm/independence_test/test_kernel.py`, which the kernel based test
+  removes before it runs.
+- `CausalGraph::check_valid_backdoor_set` and
+  `CausalGraph::check_valid_frontdoor_set` take the `DseparationAlgorithm` of
+  the upstream as a labelled optional argument. The default branch of the
+  frontdoor check is now the d-separation of the graph, which is what the
+  upstream does when the caller names no algorithm.
+- `_verify/causal_graph_reference.py` -- the graph functions of the upstream on
+  the daggity fixture of its own test file.
+- `_verify/gen_graph_fixture.py` -- writes the daggity fixture of the port from
+  the fixture of the upstream.
+
+### Changed
+
+- `_verify/upstream_test_coverage.py` reads the bare file names and the globs
+  of the headers of the test files of the port, and the hyphens of a path, so
+  that the map of the two test suites is the real one. It reports 49 of the 74
+  test files of the upstream as mirrored.
+
+### Fixed
+
+- The `derive(Eq)` of `src/gcm/equation_parser.mbt` is the `#derive(Eq)`
+  attribute the current toolchain asks for. The trailing form is a deprecation
+  warning, and a warning is a failure of the gate.
+
+[0.0.34]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.34

@@ -1,6 +1,12 @@
 ///|
 /// The tests of the kernel based independence test of the `gcm` package.
 ///
+/// The cases mirror the upstream test file
+/// `tests/gcm/independence_test/test_kernel.py`: the marginal and the
+/// conditional test of independent and of dependent data, the tests that only
+/// approximate the null distribution, the determinism of the test for a given
+/// seed, and the constant inputs, which the test removes before it runs.
+///
 /// The expectations are the numbers the upstream `dowhy.gcm` computes on the
 /// very fixtures of this file, with the kernel conditional independence test
 /// of the `causal-learn` package. The reference script
@@ -294,7 +300,7 @@ test "the p-value of the unconditional test is symmetric in its two variables" {
 test "a constant variable makes the test return the p-value of one" {
   let frame = @gcm.validation_chain_frame()
   let constant = kernel_constant(frame.nrows())
-  let p_value = @gcm.kernel_based(
+  let constant_x = @gcm.kernel_based(
     constant,
     kernel_column(frame, "X"),
     None,
@@ -304,7 +310,18 @@ test "a constant variable makes the test return the p-value of one" {
     kernel_first_p_value,
     @utils.Random::new(KERNEL_SEED),
   )
-  assert_eq(p_value, 1.0)
+  assert_eq(constant_x, 1.0)
+  let constant_y = @gcm.kernel_based(
+    kernel_column(frame, "X"),
+    constant,
+    None,
+    false,
+    1,
+    2000,
+    kernel_first_p_value,
+    @utils.Random::new(KERNEL_SEED),
+  )
+  assert_eq(constant_y, 1.0)
 }
 
 ///|
@@ -328,42 +345,18 @@ test "a conditioning variable that holds a single value makes the test the uncon
 }
 
 ///|
-/// The bootstrap of the test merges the p-values of its runs.
-test "the bootstrap of the test merges the p-values of its runs" {
+/// A constant column of a variable is removed before the test.
+test "a constant column of a variable is removed before the test" {
   let frame = @gcm.validation_chain_frame()
-  let x = kernel_column(frame, "X")
-  let y = kernel_column(frame, "Y")
-  let z = kernel_column(frame, "Z")
-  let smallest = @gcm.kernel_based(
-    x,
-    y,
-    Some(z),
-    true,
-    3,
-    2000,
-    kernel_smallest_p_value,
-    @utils.Random::new(KERNEL_SEED),
-  )
-  assert_true(smallest >= 0.0)
-  assert_true(smallest <= 1.0)
-  // The smallest of the three runs is the smallest of the p-values of the
-  // runs, and the p-value of a single run is the p-value of the test.
-  let single = kernel_conditional(frame, "X", "Y", "Z")
-  assert_true(smallest <= single + KERNEL_TOLERANCE)
-}
-
-///|
-/// The test tells a dependent pair of variables from an independent one.
-test "the test tells a dependent pair of variables from an independent one" {
-  let frame = @gcm.validation_chain_frame()
-  // Z is a child of X in the fixture, so the pair is dependent and the
-  // p-value is tiny. The pair of X and the first column of the fixture of Y
-  // is not a pair the graph knows, but the two columns are drawn from
-  // independent normal distributions.
-  let dependent = kernel_pair(frame, "X", "Z")
-  assert_true(dependent < 1.0e-10)
-  let independent = @gcm.kernel_based(
-    kernel_column(frame, "X"),
+  // The matrix of X holds the column of X and a column that holds a single
+  // value, so the test has to remove the second one and give the p-value of
+  // the pair of X and Y.
+  let with_constant = @utils.Matrix::from_columns([
+    kernel_column(frame, "X").col(0),
+    kernel_constant(frame.nrows()).col(0),
+  ])
+  let p_value = @gcm.kernel_based(
+    with_constant,
     kernel_column(frame, "Y"),
     None,
     false,
@@ -372,5 +365,73 @@ test "the test tells a dependent pair of variables from an independent one" {
     kernel_first_p_value,
     @utils.Random::new(KERNEL_SEED),
   )
+  assert_true(kernel_same(p_value, kernel_pair(frame, "X", "Y")))
+}
+
+///|
+/// The bootstrap of the test merges the p-values of its runs.
+test "the bootstrap of the test merges the p-values of its runs" {
+  let frame = @gcm.validation_chain_frame()
+  let x = kernel_column(frame, "X")
+  let y = kernel_column(frame, "Y")
+  let z = kernel_column(frame, "Z")
+  // The p-values of the runs are collected, so that the result of the
+  // adjustment can be compared with them.
+  let runs : Array[Double] = []
+  let smallest = @gcm.kernel_based(
+    x,
+    y,
+    Some(z),
+    true,
+    3,
+    2000,
+    fn(p_values) {
+      for p_value in p_values {
+        runs.push(p_value)
+      }
+      kernel_smallest_p_value(p_values)
+    },
+    @utils.Random::new(KERNEL_SEED),
+  )
+  assert_eq(runs.length(), 3)
+  assert_true(smallest >= 0.0)
+  assert_true(smallest <= 1.0)
+  // The result of the adjustment is the smallest of the p-values of the runs.
+  let mut minimum = runs[0]
+  for p_value in runs {
+    if p_value < minimum {
+      minimum = p_value
+    }
+  }
+  assert_eq(smallest, minimum)
+  // The smallest of the three runs is not larger than the p-value of a single
+  // run of the test.
+  let single = kernel_conditional(frame, "X", "Y", "Z")
+  assert_true(smallest <= single + KERNEL_TOLERANCE)
+}
+
+///|
+/// The test tells a dependent pair of variables from an independent one.
+test "the test tells a dependent pair of variables from an independent one" {
+  let frame = @gcm.validation_chain_frame()
+  // Z is a child of X in the fixture, so the pair is dependent and the p-value
+  // is tiny.
+  let dependent = kernel_pair(frame, "X", "Z")
+  assert_true(dependent < 1.0e-10)
+  // The rows of Z are shuffled, which breaks the dependence of the pair: the
+  // two columns hold then the draws of two independent samples.
+  let rng = @utils.Random::new(KERNEL_SEED)
+  let shuffled = @utils.Random::shuffle(rng, kernel_column(frame, "Z").col(0))
+  let independent = @gcm.kernel_based(
+    kernel_column(frame, "X"),
+    @utils.Matrix::from_columns([shuffled]),
+    None,
+    false,
+    1,
+    2000,
+    kernel_first_p_value,
+    @utils.Random::new(KERNEL_SEED),
+  )
   assert_true(independent > dependent)
+  assert_true(independent > 1.0e-3)
 }

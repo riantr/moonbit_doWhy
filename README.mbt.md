@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.33.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.34.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -385,6 +385,14 @@ Four behaviours of the mediation differ on purpose:
   variable or no frontdoor variable. The port aborts with the message of the
   upstream, and `CausalEstimator::two_stage_error` reports that message
   before the fit, because MoonBit cannot catch an abort.
+
+- The check of a backdoor set and of a frontdoor set take the algorithm of
+  the upstream as an enumeration, `DseparationAlgorithm`, instead of the string
+  `dseparation_algo`: the default algorithm asks for the d-separation of the
+  graph and the naive one asks for every path to be blocked. The default branch
+  of the frontdoor check is the one the upstream takes when the caller names no
+  algorithm, which is the d-separation of the graph rather than the blocking of
+  the directed paths.
 
 The `estimators` package and the test suites of the port differ from upstream
 in the following ways:

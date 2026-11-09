@@ -590,6 +590,7 @@ priv struct EqToken {
 
 ///|
 /// The kind of a token of the expression of an equation.
+#derive(Eq)
 priv enum EqTokenKind {
   Number
   Identifier
@@ -601,7 +602,7 @@ priv enum EqTokenKind {
   RParen
   Comma
   End
-} derive(Eq)
+}
 
 ///|
 extend EqTokenKind with Eq::{equal, not_equal}
