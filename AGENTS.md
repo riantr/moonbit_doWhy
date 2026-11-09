@@ -663,6 +663,15 @@ statsmodels / scikit-learn conventions are deliberate:
   `[[d, 1, a], [b, 2, d], [a, 3, a]]` becomes
   `[[0, 0, 1, 1, 1, 0], [0, 1, 0, 2, 0, 1], [1, 0, 0, 3, 1, 0]]`.
 
+- The generalised covariance measure of the `gcm` package takes its
+  conditioning variable as a frame in `generalised_cov_based_with_categorical`
+  and encodes its categorical columns itself, with the one-hot encoding of the
+  package. The upstream passes the conditioning variable to the automatic model
+  selection of `dowhy.gcm.auto`, which encodes it; the two routes agree to about
+  `1e-3` on the categorical fixture of the upstream test file
+  `tests/gcm/independence_test/test_generalised_cov_measure.py` and lead to the
+  same decision on six seeds.
+
 ## Package layout
 
 | Package | Ports |
@@ -1040,6 +1049,12 @@ README makes, so they are tracked in the repository:
 - `gen_graph_fixture.py` writes `src/graph/daggity_fixture.mbt` mechanically
   from the fixture of the upstream, so the graph string cannot be
   mistranscribed.
+- `gcm_categorical_reference.py` runs the upstream on the categorical fixture of
+  its own independence test, both through the automatic encoding of the
+  conditioning variable and on an explicitly one-hot encoded one, and asserts
+  that the two routes lead to the same decision on six seeds. That assertion is
+  the evidence that `generalised_cov_based_with_categorical` reproduces the
+  upstream, whose model selection the port does not have.
 - `upstream_test_coverage.py` maps the test files of the port to the test files
   of the upstream. It reads a name of a header in three forms -- a path, a bare
   file name and a glob -- because a test file of the port names the upstream

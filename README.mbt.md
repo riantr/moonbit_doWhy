@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.35.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.36.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -634,6 +634,13 @@ following ways:
 - `gcm` has one causal model type. The upstream distinguishes the
   probabilistic causal model from the structural one, but every mechanism of
   the port is a functional causal model, so the two are the same here.
+- `gcm` encodes the categorical conditioning variable of the generalised
+  covariance measure itself, with the one-hot encoding of its own encoding
+  layer, where the upstream hands the conditioning variable to the automatic
+  model selection of `dowhy.gcm.auto`, which encodes it. The two routes agree to
+  about `1e-3` on the fixture of the upstream test file and lead to the same
+  decision: the explicit encoding is how
+  `generalised_cov_based_with_categorical` is exposed.
 - `gcm` decides whether a column is categorical from the kind of the column
   of the frame and not from a numpy dtype, because the frame of the port holds
   no dtype: a discrete column is categorical and a numeric one is not.

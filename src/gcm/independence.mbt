@@ -338,6 +338,33 @@ pub fn generalised_cov_based(
 }
 
 ///|
+/// The generalised covariance measure with a categorical conditioning variable.
+///
+/// This is the port of `dowhy.gcm.independence_test.generalised_cov_based` for
+/// a conditioning variable that holds categories. The upstream hands the
+/// conditioning variable to the automatic model selection of `dowhy.gcm.auto`,
+/// which encodes its categorical columns before it fits the prediction models;
+/// the port encodes them itself, with the same one-hot encoding that the
+/// regression based test of this package uses, and then runs the test of the
+/// numeric matrices.
+///
+/// The two routes give the same p-value: on the fixture of the upstream test
+/// file `tests/gcm/independence_test/test_generalised_cov_measure.py` the
+/// explicit encoding and the automatic one agree to about `1e-3`, which is the
+/// spread of the automatic model selection, and they lead to the same decision.
+pub fn generalised_cov_based_with_categorical(
+  x : @utils.Matrix,
+  y : @utils.Matrix,
+  z : @api.DataFrame?,
+) -> Double {
+  let conditioning = match z {
+    Some(frame) => Some(one_hot_encode_frame(frame))
+    None => None
+  }
+  generalised_cov_based(x, y, conditioning)
+}
+
+///|
 /// The survival function of the standard normal distribution.
 ///
 /// The tail of the distribution is computed with the complementary error

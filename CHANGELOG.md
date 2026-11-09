@@ -1756,3 +1756,41 @@ whether a column of a frame is categorical.
   upstream as mirrored.
 
 [0.0.35]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.35
+
+## [0.0.36] - 2026-11-09
+
+The categorical conditioning variable of the generalised covariance measure.
+
+### Added
+
+- `gcm.generalised_cov_based_with_categorical`, which takes the conditioning
+  variable as a frame and encodes its categorical columns. The upstream passes
+  the conditioning variable to the automatic model selection of
+  `dowhy.gcm.auto`, which encodes the categorical columns; the port has no model
+  selection, so it encodes them itself with the one-hot encoding of its own
+  encoding layer.
+- the two categorical cases of the upstream file
+  `tests/gcm/independence_test/test_generalised_cov_measure.py`: the fixture is
+  independent given its category and dependent once the category is permuted.
+- the name of the upstream file in the header of the independence test, and the
+  note that its case which asks for a `ValueError` on a categorical X or Y has
+  no assertion in the port: MoonBit has no exception, and the port aborts.
+- `_verify/gcm_categorical_reference.py` -- the upstream runs on the categorical
+  fixture of its own test file, through its automatic encoding of the
+  conditioning variable and on an explicitly one-hot encoded one, and asserts
+  that the two routes lead to the same decision on six seeds.
+
+### Notes
+
+- The explicit encoding and the automatic one of the upstream agree on the
+  fixture of its own test file. On six seeds the p-value of the independent case
+  is `0.813871` and `0.813946`, `0.520490` and `0.521915`, `0.455537` and
+  `0.455544`, `0.289562` and `0.285463`, `0.697020` and `0.697224`, `0.523618`
+  and `0.521257`, and the p-value of the permuted case is `0.0` in both. The
+  difference is the spread of the automatic model selection, and the decision is
+  the same on every seed.
+- The upstream marks the two cases as flaky, because it draws its rows from the
+  global generator of numpy; the port draws them from its own generator, so its
+  fixture is fixed.
+
+[0.0.36]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.36
