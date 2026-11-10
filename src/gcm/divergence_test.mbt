@@ -5,6 +5,12 @@
 /// package, and the expected numbers are the ones the upstream
 /// `dowhy.gcm.divergence` produces on the very same rows, which
 /// `_verify/gcm_divergence_reference.py` prints.
+///
+/// The thirteen cases of the upstream test file `tests/gcm/test_divergence.py`
+/// are among the cases of this file, except the one that checks the matrix of
+/// probabilities of an array of the object dtype: a matrix of the port holds
+/// numbers only and has no dtype, so the check of such an array has no
+/// counterpart here.
 
 ///|
 /// The seed of the gaussian fixture.
@@ -21,6 +27,10 @@ const EXPONENTIAL_SEED : UInt64 = 2026UL
 ///|
 /// The seed of the categorical fixture.
 const CATEGORICAL_SEED : UInt64 = 2027UL
+
+///|
+/// The seed of the mixed fixture.
+const MIXED_SEED : UInt64 = 2028UL
 
 ///|
 /// The seed of the generator that draws the folds of the classifier estimator.
@@ -161,6 +171,53 @@ fn probability_fixture() -> (@utils.Matrix, @utils.Matrix) {
 }
 
 ///|
+/// The mixed fixture: a gaussian column and a column of categories.
+///
+/// The first sample holds the gaussian column around zero and three equally
+/// likely categories, the second one the gaussian column around one and the
+/// same categories, and the third one the gaussian column around one and four
+/// equally likely categories.
+fn mixed_fixture() -> (
+  Array[Double],
+  Array[Double],
+  Array[Double],
+  Array[Double],
+) {
+  let rng = @utils.Random::new(MIXED_SEED)
+  let x_gaussian = normal_sample(rng, 0.0, 2000)
+  let x_categories = categorical_sample(
+    rng,
+    [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0],
+    2000,
+  )
+  let y_gaussian = normal_sample(rng, 1.0, 2000)
+  let y_categories = categorical_sample(rng, [0.25, 0.25, 0.25, 0.25], 2000)
+  (x_gaussian, x_categories, y_gaussian, y_categories)
+}
+
+///|
+/// The design matrix of a sample of the mixed fixture.
+///
+/// The categories are the ones of the union of the two samples, the way the
+/// upstream fits its encoder on the samples of both distributions, so the two
+/// samples of a comparison hold the same number of columns.
+fn mixed_design(
+  gaussian : Array[Double],
+  categories : Array[Double],
+  labels : Array[Double],
+) -> @utils.Matrix {
+  let columns : Array[Array[Double]] = [gaussian]
+  for label in labels {
+    let column : Array[Double] = []
+    for category in categories {
+      column.push(if category == label { 1.0 } else { 0.0 })
+    }
+    columns.push(column)
+  }
+  @utils.Matrix::from_columns(columns)
+}
+
+///|
 /// test "the nearest neighbour divergence of two gaussian samples"
 ///
 /// The expected numbers are the ones the upstream estimator produces on the very
@@ -223,6 +280,33 @@ test "the automatic estimate sends a single column to the nearest neighbour esti
     @utils.Random::new(SPLIT_SEED),
   )
   assert_true(nearly_equal(value, 0.478172898070))
+}
+
+///|
+/// test "the automatic estimate sends a categorical sample to the categorical
+/// estimator"
+///
+/// The upstream detects the categorical input from the dtype of its numpy
+/// array, and the port asks for it with the flag `categorical`, so the
+/// estimate is the one of the categorical estimator. The expected number is the
+/// one the upstream estimator produces on the very same rows, which the
+/// reference script prints under `CATEGORICAL_AUTO`.
+test "the automatic estimate sends a categorical sample to the categorical estimator" {
+  let (x, y) = categorical_fixture()
+  let same = @gcm.auto_estimate_kl_divergence(
+    x,
+    x,
+    @utils.Random::new(SPLIT_SEED),
+    categorical=true,
+  )
+  assert_true(nearly_equal(same, 0.0))
+  let different = @gcm.auto_estimate_kl_divergence(
+    x,
+    y,
+    @utils.Random::new(SPLIT_SEED),
+    categorical=true,
+  )
+  assert_true(nearly_equal(different, 0.174594974723))
 }
 
 ///|
@@ -314,6 +398,61 @@ test "the classifier divergence of several columns" {
     @utils.Random::new(SPLIT_SEED),
   )
   assert_true((different - 1.038373424250).abs() < 0.05)
+}
+
+///|
+/// test "the classifier divergence of a sample of a gaussian and a categorical
+/// column"
+///
+/// The upstream fits the encoder of its categorical column inside the model,
+/// and the port encodes the column before the fit, the way the mechanism of the
+/// `gcm` package does it for every other model. The categories of the encoding
+/// are the ones of the union of the two samples, the way the upstream fits its
+/// encoder on the samples of both distributions.
+///
+/// The upstream draws the folds of its cross validation with the global numpy
+/// random state and fits its classifier with the penalty of its default, while
+/// the port draws the folds with its own generator and fits the classifier
+/// without a penalty, so the two estimates only agree up to the tolerance of
+/// the comparison. The expected numbers are the ones the upstream estimator
+/// produces on the very same rows, which the reference script prints under
+/// `MIXED_CLF`.
+test "the classifier divergence of a sample of a gaussian and a categorical column" {
+  let (x_gaussian, x_categories, y_gaussian, y_categories) = mixed_fixture()
+  // The two samples that share their categories.
+  let three = [0.0, 1.0, 2.0]
+  let x_three = mixed_design(x_gaussian, x_categories, three)
+  let y_three = mixed_design(y_gaussian, x_categories, three)
+  // The two samples whose categories differ.
+  let four = [0.0, 1.0, 2.0, 3.0]
+  let x_four = mixed_design(x_gaussian, x_categories, four)
+  let y_four = mixed_design(y_gaussian, y_categories, four)
+  let same = @gcm.estimate_kl_divergence_continuous_clf(
+    x_three,
+    x_three,
+    5,
+    @gcm.EPS,
+    @utils.Random::new(SPLIT_SEED),
+  )
+  assert_true(nearly_equal(same, 0.0))
+  // Only the gaussian column changed.
+  let gaussian_only = @gcm.estimate_kl_divergence_continuous_clf(
+    x_three,
+    y_three,
+    5,
+    @gcm.EPS,
+    @utils.Random::new(SPLIT_SEED),
+  )
+  assert_true((gaussian_only - 0.428117499590).abs() < 0.05)
+  // Both columns changed.
+  let both = @gcm.estimate_kl_divergence_continuous_clf(
+    x_four,
+    y_four,
+    5,
+    @gcm.EPS,
+    @utils.Random::new(SPLIT_SEED),
+  )
+  assert_true((both - 0.712343342538).abs() < 0.05)
 }
 
 ///|

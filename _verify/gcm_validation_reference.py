@@ -34,9 +34,13 @@ loader, so this script registers them with it before loading them:
   * `dowhy.gcm.fitting_sampling` holds the upstream `fit`.
 
 The constructor of `InvertibleStructuralCausalModel` imports
-`dowhy.causal_graph` and `dowhy.causal_model`, so those two modules are
-registered as well, and the stubbed packages of the loader are pointed at the
-real directories of the upstream, the way `gcm_whatif_reference.py` does it.
+`dowhy.causal_graph`, so that module is registered as well, and the stubbed
+packages of the loader are pointed at the real directories of the upstream, the
+way `gcm_whatif_reference.py` does it. The constructor imports
+`dowhy.causal_model` as well, but only for an `isinstance` check of the graph
+it is given, and the graph of the reference is a `networkx` graph, so the module
+is stubbed with a placeholder class instead of being loaded: the real one pulls
+in the whole graph learning stack of the upstream.
 
 The script needs the `causal-learn` package to be installed, because the
 upstream delegates the kernel based independence test to it.
@@ -62,6 +66,7 @@ from __future__ import annotations
 
 import os
 import sys
+import types
 
 import networkx as nx
 import numpy as np
@@ -119,7 +124,24 @@ def register_missing_modules() -> None:
     upstream_gcm._PATHS["dowhy.gcm.independence_test.kernel_operation"] = "gcm/independence_test/kernel_operation.py"
     upstream_gcm._PATHS["dowhy.gcm.fitting_sampling"] = "gcm/fitting_sampling.py"
     upstream_gcm._PATHS["dowhy.causal_graph"] = "causal_graph.py"
-    upstream_gcm._PATHS["dowhy.causal_model"] = "causal_model.py"
+
+
+def stub_causal_model() -> None:
+    """Stubs the upstream `dowhy.causal_model` with a placeholder class.
+
+    The constructor of `InvertibleStructuralCausalModel` imports the module and
+    uses its `CausalModel` class for an `isinstance` check of the graph it is
+    given. The graph of the reference is a `networkx` graph, so the check is
+    false with the placeholder class as well. The real module is not loaded,
+    because it pulls in the whole graph learning stack of the upstream.
+    """
+    module = types.ModuleType("dowhy.causal_model")
+
+    class CausalModel:  # noqa: D101
+        """The placeholder of the class the upstream checks the graph against."""
+
+    module.CausalModel = CausalModel  # type: ignore[attr-defined]
+    sys.modules["dowhy.causal_model"] = module
 
 
 def expose_upstream_packages() -> None:
@@ -244,6 +266,7 @@ def print_invertible_model_outcome(
 
 def main() -> None:
     register_missing_modules()
+    stub_causal_model()
 
     config = load("dowhy.gcm.config")
     # The progress bars of the upstream fitting would write to the standard
@@ -271,7 +294,6 @@ def main() -> None:
     # modules of the wider package, which the stubbed packages do not reach.
     expose_upstream_packages()
     load("dowhy.causal_graph")
-    load("dowhy.causal_model")
 
     kernel_based = independence.kernel_based
 

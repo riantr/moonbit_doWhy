@@ -8,6 +8,9 @@
 /// The two tests of the upstream are therefore the tests of that copy: the
 /// copy carries the new setting and the configuration it was made from keeps
 /// the old one.
+///
+/// The two cases of the upstream test file `tests/gcm/test_config.py` are among
+/// the cases of this file.
 
 ///|
 test "the progress bars are turned on and off on a copy of the configuration" {

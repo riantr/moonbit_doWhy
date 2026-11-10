@@ -366,6 +366,21 @@ statsmodels / scikit-learn conventions are deliberate:
   because the walk takes the nearer of the two sides of the value first, and
   the distance of a single column is computed like the one of two rows of two
   matrices, so the numbers of the walk and of the pairwise search are the same.
+- The classifier based divergence of the `gcm` package fits its classifier with
+  the penalty of the upstream, which is the `L2` penalty of
+  `sklearn.linear_model.LogisticRegression` with its default `C = 1.0`. The
+  penalty is not a detail: the one-hot encoding of a categorical column and the
+  intercept are collinear, so the design of a sample with a categorical column
+  is rank deficient. The penalty of the upstream lifts that degeneracy, while
+  an unpenalised fit has to solve a singular weighted normal equation, and the
+  pseudo inverse of it is then dominated by its noise: the estimate of such a
+  sample came out as zero or as a value of ten, where the upstream gives
+  `0.428` and `0.712`.
+- The automatic divergence of the `gcm` package asks the caller whether the
+  sample is a categorical one, with the flag `categorical` of
+  `auto_estimate_kl_divergence`. The upstream detects it from the dtype of its
+  numpy array, and a matrix of the port holds numbers only, so the flag
+  carries the information the dtype would carry.
 - The bins of the discretised entropy of the `gcm` package follow the
   convention of `numpy.histogram`: every bin but the last one is half open, so
   a value that sits exactly on an edge belongs to the bin on its right, and the
@@ -819,6 +834,17 @@ README makes, so they are tracked in the repository:
   fixture of `gen_validation_testdata.py` cannot be used for that: the
   automatic assignment of the port always fits a linear regressor and therefore
   cannot capture a non-linear relation.
+- `gcm_divergence_reference.py` computes the numbers of the divergence
+  estimators -- the nearest neighbour estimator, the categorical estimator, the
+  estimator of the probabilities, the classifier based estimator and the
+  automatic estimate -- with the upstream `dowhy.gcm.divergence` code, which is
+  where the expectations of the tests of the divergences come from. The
+  fixtures of the script are drawn with the generator of the `utils` package of
+  the port, and the script reproduces that generator in Python, so that the
+  fixtures of the port and the fixtures of the script are the same numbers. The
+  upstream draws the folds of its cross validation with the global generator of
+  numpy, so the script seeds it before every call of the classifier based
+  estimator.
 - `gcm_validation_reference.py` computes the numbers of the validation layer --
   the p-values of the kernel based independence test on every fixture, the
   outcome and the summary of the validation of the causal structure and the

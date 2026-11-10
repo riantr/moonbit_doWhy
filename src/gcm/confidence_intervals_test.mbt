@@ -4,6 +4,11 @@
 /// The expected numbers are the ones the upstream
 /// `dowhy.gcm.confidence_intervals` produces, which
 /// `_verify/gcm_stats_reference.py` prints.
+///
+/// The case of the upstream test file `tests/gcm/test_confidence_intervals.py`
+/// is among the cases of this file: the counter of the upstream returns 1, 2,
+/// ..., 20, so the median of the twenty bootstrap results is 10.5 and their
+/// 5th and 95th percentile are 1.95 and 19.05.
 
 ///|
 /// The seed of the generator of the test.

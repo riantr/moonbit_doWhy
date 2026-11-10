@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.43.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.44.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -586,7 +586,9 @@ following ways:
   global for them to live in, and it runs nothing in parallel.
 - `gcm` detects a categorical input from the numeric shape instead of from
   the numpy dtype, so a distinct number is a category of the categorical
-  divergence and `auto_estimate_kl_divergence` does not dispatch to it.
+  divergence, and `auto_estimate_kl_divergence` dispatches to it when the
+  caller sets its flag `categorical`. The flag carries the information the
+  dtype of the upstream would carry.
   The `GaussianMixtureDensityEstimator` is **not ported**, because upstream
   uses the variational inference of `sklearn.mixture.BayesianGaussianMixture`;
   the kernel density estimator is ported exactly.
@@ -853,6 +855,15 @@ following ways:
   divergence of two samples of a few thousand values costs `O(n log n)` instead
   of the `O(n^2)` of the pairwise search. The distances are the same numbers,
   because the walk takes the nearer of the two sides of the value first.
+- `gcm` draws the folds of the cross validation of the classifier based
+  divergence with the generator it is given, and the upstream draws them with
+  the global generator of numpy. The two estimates therefore differ on the
+  same rows, and they agree to about `1e-3` on the samples of the upstream test
+  file `tests/gcm/test_divergence.py`. The classifier itself is fitted with the
+  penalty of the upstream, the `L2` penalty of
+  `sklearn.linear_model.LogisticRegression` with its default `C = 1.0`; the
+  penalty is what keeps the fit of a sample with a categorical column stable,
+  because the one-hot encoding of the column and the intercept are collinear.
 - `gcm` computes the entropy of a sample of discrete values by counting the
   distinct rows, like `numpy.unique(x, axis=0)`. The rows are identified by
   their values, so two rows that hold the same numbers are the same row.

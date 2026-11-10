@@ -12,6 +12,16 @@
 /// The tests of the invertible model use the regression based test of the `gcm`
 /// package, which is the closest counterpart of the kernel based test that the
 /// upstream uses by default.
+///
+/// The nine cases of the upstream test file `tests/gcm/test_validation.py` are
+/// among the cases of this file. Two of them depend on the number of the rows
+/// of the data: the upstream test file uses five thousand rows of the non-linear
+/// data and asserts that the invertible model of the correct graph is not
+/// rejected and that the one of the graph with a collider is rejected, while
+/// the sixty rows of the fixture of the port are too few for the upstream to
+/// tell the signal from the noise. The outcomes of the upstream on the sixty
+/// rows are the ones the reference script prints, and the port agrees with
+/// them.
 
 ///|
 /// The significance level of the tests.
@@ -192,6 +202,47 @@ fn assert_edge_dependence_test(
           )
           assert_eq(result.success(), success)
         }
+        None =>
+          abort(
+            "the node " +
+            node +
+            " has no edge dependence test of the parent " +
+            parent,
+          )
+      }
+    None => abort("the summary has no node " + node)
+  }
+}
+
+///|
+/// The p-value and the FDR adjusted p-value of the local Markov test of a
+/// node.
+fn local_markov_values(
+  summary : @gcm.ValidationSummary,
+  node : String,
+) -> (Double, Double) {
+  match summary.node(node) {
+    Some(node_validation) =>
+      match node_validation.local_markov_test() {
+        Some(result) => (result.p_value(), result.fdr_adjusted_p_value())
+        None => abort("the node " + node + " has no local Markov test")
+      }
+    None => abort("the summary has no node " + node)
+  }
+}
+
+///|
+/// The p-value and the FDR adjusted p-value of the dependence test of the edge
+/// between the given parent and the node.
+fn edge_dependence_values(
+  summary : @gcm.ValidationSummary,
+  node : String,
+  parent : String,
+) -> (Double, Double) {
+  match summary.node(node) {
+    Some(node_validation) =>
+      match node_validation.edge_dependence_test_of(parent) {
+        Some(result) => (result.p_value(), result.fdr_adjusted_p_value())
         None =>
           abort(
             "the node " +
@@ -523,6 +574,34 @@ test "the validation of the general graph is not rejected" {
 }
 
 ///|
+/// test "the validation with the false discovery rate control has adjusted
+/// p-values that are not smaller than the p-values"
+///
+/// The control of Benjamini and Hochberg only raises the p-values, so the
+/// adjusted p-value of every test is not smaller than the p-value of the same
+/// test. The upstream asserts the same relation for the four tests of the fork
+/// graph.
+test "the validation with the false discovery rate control has adjusted p-values that are not smaller than the p-values" {
+  let (outcome, summary) = @gcm.refute_causal_structure(
+    fork_graph(),
+    @gcm.validation_fork_frame(),
+    kernel_test,
+    kernel_test,
+    VALIDATION_SIGNIFICANCE_LEVEL,
+    Some(@gcm.FdrControlMethod::fdr_bh()),
+  )
+  assert_eq(outcome.to_string(), "NotRejected")
+  let (x_markov, x_markov_adjusted) = local_markov_values(summary, "X")
+  let (x_edge, x_edge_adjusted) = edge_dependence_values(summary, "X", "Z")
+  let (y_markov, y_markov_adjusted) = local_markov_values(summary, "Y")
+  let (y_edge, y_edge_adjusted) = edge_dependence_values(summary, "Y", "Z")
+  assert_true(x_markov_adjusted >= x_markov)
+  assert_true(x_edge_adjusted >= x_edge)
+  assert_true(y_markov_adjusted >= y_markov)
+  assert_true(y_edge_adjusted >= y_edge)
+}
+
+///|
 /// test "the validation without the false discovery rate control has no
 /// adjusted p-value"
 ///
@@ -818,6 +897,74 @@ test "the validation of the invertible model of a linear chain is not rejected" 
 test "the validation of the invertible model of a non-linear chain is rejected" {
   let data = @gcm.validation_nonlinear_frame()
   let model = fitted_model([("X", "Y"), ("Y", "Z")], data)
+  let p_values = invertible_p_values(model, data, kernel_test)
+  assert_true(p_values.length() > 0)
+  let outcome = @gcm.refute_invertible_model(
+    model,
+    data,
+    kernel_test,
+    VALIDATION_SIGNIFICANCE_LEVEL,
+    None,
+  )
+  assert_eq(outcome.to_string(), "Rejected")
+  let controlled = @gcm.refute_invertible_model(
+    model,
+    data,
+    kernel_test,
+    VALIDATION_SIGNIFICANCE_LEVEL,
+    Some(@gcm.FdrControlMethod::fdr_bh()),
+  )
+  assert_eq(controlled.to_string(), "Rejected")
+}
+
+///|
+/// test "the validation of the invertible model of a reversed chain is
+/// rejected"
+///
+/// The graph is `Z -> Y -> X`, which is the wrong direction of the relation of
+/// the fixture, so the noise of the mechanism of the node `X` depends on its
+/// parent. The upstream rejects the model of the same graph on the same rows,
+/// with the p-value `3.8957551387386324e-05` for the node `X`.
+test "the validation of the invertible model of a reversed chain is rejected" {
+  let data = @gcm.validation_nonlinear_frame()
+  let model = fitted_model([("Z", "Y"), ("Y", "X")], data)
+  let p_values = invertible_p_values(model, data, kernel_test)
+  assert_true(p_values.length() > 0)
+  let outcome = @gcm.refute_invertible_model(
+    model,
+    data,
+    kernel_test,
+    VALIDATION_SIGNIFICANCE_LEVEL,
+    None,
+  )
+  assert_eq(outcome.to_string(), "Rejected")
+  let controlled = @gcm.refute_invertible_model(
+    model,
+    data,
+    kernel_test,
+    VALIDATION_SIGNIFICANCE_LEVEL,
+    Some(@gcm.FdrControlMethod::fdr_bh()),
+  )
+  assert_eq(controlled.to_string(), "Rejected")
+}
+
+///|
+/// test "the validation of the invertible model of a graph with a collider is
+/// rejected"
+///
+/// The graph is `X -> Y <- Z`, so the node `Y` has the two parents `X` and `Z`.
+/// The relation of the fixture is `Y = X * X + noise`, and the automatic
+/// assignment of the port always picks a linear regressor, so the residual of
+/// the mechanism of the node `Y` still depends on its parents.
+///
+/// The upstream rejects a model of that graph as well, on the five thousand
+/// rows of its own test file. On the sixty rows of the fixture of the port the
+/// upstream does not reject it, because its own selection of the causal
+/// mechanisms captures the relation `Y = X * X` and the p-value of the node
+/// `Y` is `0.6384596059805349` there.
+test "the validation of the invertible model of a graph with a collider is rejected" {
+  let data = @gcm.validation_nonlinear_frame()
+  let model = fitted_model([("X", "Y"), ("Z", "Y")], data)
   let p_values = invertible_p_values(model, data, kernel_test)
   assert_true(p_values.length() > 0)
   let outcome = @gcm.refute_invertible_model(

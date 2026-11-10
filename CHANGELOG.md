@@ -2223,3 +2223,70 @@ The readers of the temporal graphs of the upstream.
 - The `non-parametric-partial-R2` analyzer of the upstream is not ported yet.
 
 [0.0.43]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.43
+
+## [0.0.44] - 2026-11-10
+
+The test files of the `gcm` package of the upstream that the port mirrors.
+
+### Added
+
+- the two cases of the upstream test file `tests/gcm/test_ml.py` that fit a
+  regressor and a classifier on a sample with a categorical column, in
+  `src/gcm/ml_test.mbt`. The upstream fits the encoder of the categorical
+  column inside the model, and the port encodes the column before the fit, the
+  way the mechanism of the `gcm` package does it for every other model.
+- the three cases of the upstream test file `tests/gcm/test_validation.py` that
+  the port did not have: the relation between the p-values and the p-values
+  adjusted by the false discovery rate control, the validation of the invertible
+  model of a reversed chain and the validation of the invertible model of a
+  graph with a collider. They are in `src/gcm/validation_test.mbt`.
+- the two cases of the upstream test file `tests/gcm/test_divergence.py` that
+  the port did not have: the automatic estimate of a categorical sample and the
+  classifier based divergence of a sample with a gaussian and a categorical
+  column. They are in `src/gcm/divergence_test.mbt`.
+- the flag `categorical` of `gcm.auto_estimate_kl_divergence`, which tells the
+  estimator that a sample holds the categories of a categorical distribution.
+  The upstream reads that from the dtype of its numpy array, and a matrix of
+  the port holds numbers only, so the flag carries the information the dtype
+  would carry.
+
+### Changed
+
+- The classifier based divergence of the `gcm` package fits its classifier with
+  the penalty of the upstream, which is the `L2` penalty of
+  `sklearn.linear_model.LogisticRegression` with its default `C = 1.0`, and not
+  without a penalty. The penalty is not a detail: the one-hot encoding of a
+  categorical column and the intercept are collinear, so the design of a
+  sample with a categorical column is rank deficient, and an unpenalised fit
+  has to solve a singular weighted normal equation, whose pseudo inverse is
+  dominated by its noise. With the penalty of the upstream the estimates of the
+  port agree with the ones of the upstream to about `1e-3` on the rows of the
+  upstream test file, where the tolerance of the tests was `0.05` before.
+
+### Notes
+
+- The header of every test file of the `gcm` package names the upstream test
+  file it mirrors, and the counter of `_verify/upstream_test_coverage.py` counts
+  64 of the 74 test files of the upstream now.
+- The outcome of the validation of the invertible model depends on the number
+  of the rows of the data. The upstream test file uses five thousand rows of
+  the non-linear data, and the sixty rows of the fixture of the port are too
+  few for the upstream to tell the signal from the noise: the upstream rejects
+  the model of the correct graph on the sixty rows and does not reject the
+  model of the graph with a collider there, while its own test file expects
+  the opposite of both. The port agrees with the upstream on the rows of the
+  fixture, and the outcomes of the upstream on those rows are the ones the
+  reference script prints.
+- The reference script `_verify/gcm_validation_reference.py` no longer reads
+  the module `dowhy.causal_model` of the upstream. The constructor of
+  `InvertibleStructuralCausalModel` imports it for an `isinstance` check of the
+  graph it is given, and the graph of the reference is a `networkx` graph, so
+  the module is stubbed with a placeholder class instead: the real one pulls in
+  the whole graph learning stack of the upstream.
+- The case of the upstream test file `tests/gcm/test_divergence.py` that checks
+  the matrix of probabilities of an array of the object dtype has no
+  counterpart in the port: a matrix of the port holds numbers only and has no
+  dtype.
+- The `non-parametric-partial-R2` analyzer of the upstream is not ported yet.
+
+[0.0.44]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.44

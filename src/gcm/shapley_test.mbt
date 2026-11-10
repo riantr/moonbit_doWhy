@@ -5,6 +5,11 @@
 /// package, and the expected numbers are the ones the upstream
 /// `dowhy.gcm.shapley` produces on the very same rows, which
 /// `_verify/gcm_shapley_reference.py` prints.
+///
+/// The ten cases of the upstream test file `tests/gcm/test_shapley.py` are
+/// among the cases of this file: the three methods of the approximation with
+/// the automatic choice of the method, the five methods of the upstream and
+/// the three cases of the reproducibility of the random methods.
 
 ///|
 /// The seed of the fixture.

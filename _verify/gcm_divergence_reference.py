@@ -76,6 +76,7 @@ GAUSSIAN_SEED = 2024
 MULTI_SEED = 2025
 EXPONENTIAL_SEED = 2026
 CATEGORICAL_SEED = 2027
+MIXED_SEED = 2028
 
 # The seed of the numpy random state, which the upstream classifier based estimator
 # uses for the folds of its cross validation.
@@ -147,6 +148,35 @@ def overlapping_fixture() -> tuple[np.ndarray, np.ndarray]:
     return x, y
 
 
+def mixed_fixture() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """The fixture of the mixed gaussian and categorical sample.
+
+    The sample `x` holds a gaussian column and a column of three categories,
+    `y_gaussian` holds the gaussian column shifted by one and the same
+    categories, and `y_categorical` holds the shifted gaussian column and four
+    categories. The upstream builds its samples as object arrays, so the
+    categories are the strings of the numbers.
+    """
+    rng = Xorshift(MIXED_SEED)
+    x_gaussian = normals(rng, 0.0, 2000)
+    x_categories = categories(rng, [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0], 2000)
+    y_gaussian = normals(rng, 1.0, 2000)
+    y_categories = categories(rng, [0.25, 0.25, 0.25, 0.25], 2000)
+
+    def sample(gaussian: np.ndarray, categorical: np.ndarray) -> np.ndarray:
+        # The upstream builds its samples as object arrays, so the gaussian
+        # column keeps its numbers and the categorical column its strings. The
+        # array is built the way the upstream builds it, because a column
+        # stack of a numeric and a string array would turn the numbers into
+        # strings as well.
+        return np.array([gaussian, categorical.astype(int).astype(str)], dtype=object).T
+
+    x = sample(x_gaussian, x_categories)
+    y_gaussian_same_categories = sample(y_gaussian, x_categories)
+    y_other_categories = sample(y_gaussian, y_categories)
+    return x, y_gaussian_same_categories, y_other_categories
+
+
 def probability_fixture() -> tuple[np.ndarray, np.ndarray]:
     """Two rows of probabilities and the same two rows with the first two swapped."""
     x = np.array([[0.25, 0.5, 0.125, 0.125], [0.5, 0.25, 0.125, 0.125]])
@@ -214,6 +244,19 @@ def main() -> None:
     print("CATEGORICAL")
     print(f"  same = {divergence.estimate_kl_divergence_categorical(xc, xc):.12f}")
     print(f"  different = {divergence.estimate_kl_divergence_categorical(xc, yc):.12f}")
+    # The automatic estimate of the upstream detects a categorical input from the
+    # dtype of its numpy array, so the categories are the strings of the numbers.
+    xc_str = xc.astype(int).astype(str)
+    yc_str = yc.astype(int).astype(str)
+    print("CATEGORICAL_AUTO")
+    print(f"  same = {divergence.auto_estimate_kl_divergence(xc_str, xc_str):.12f}")
+    print(f"  different = {divergence.auto_estimate_kl_divergence(xc_str, yc_str):.12f}")
+
+    xm, ym_same, ym_other = mixed_fixture()
+    print("MIXED_CLF")
+    print(f"  same = {upstream_clf(divergence, xm, xm):.12f}")
+    print(f"  gaussian_only = {upstream_clf(divergence, xm, ym_same):.12f}")
+    print(f"  both = {upstream_clf(divergence, xm, ym_other):.12f}")
 
     xo, yo = overlapping_fixture()
     print("OVERLAPPING_KNN")

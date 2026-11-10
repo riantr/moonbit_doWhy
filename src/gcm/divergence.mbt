@@ -7,9 +7,11 @@
 /// distinct values of the samples as the categories.
 ///
 /// The upstream code detects a categorical input from the dtype of its numpy
-/// array, which a matrix of numbers cannot show. The port therefore dispatches
-/// on the shape of the matrix alone, and the categorical estimator has to be
-/// called explicitly.
+/// array, which a matrix of numbers cannot show. The port therefore asks the
+/// caller for it: the flag `categorical` of `auto_estimate_kl_divergence`
+/// tells the estimator that the sample holds the categories of a categorical
+/// distribution, and the categorical estimator has to be called explicitly
+/// otherwise.
 
 ///|
 /// Whether the matrix holds probability vectors.
@@ -201,8 +203,15 @@ pub fn estimate_kl_divergence_continuous_knn(
 ///
 /// The upstream code shuffles the folds of its cross validation with the global
 /// numpy random state. The port draws them with the generator it is given, so
-/// that the result is reproducible, and it fits the classifier without a
-/// penalty, because the estimate of a divergence is the maximum likelihood one.
+/// that the result is reproducible, and it fits the classifier with the
+/// penalty of the upstream, which is the `L2` penalty of
+/// `sklearn.linear_model.LogisticRegression` with its default `C = 1.0`.
+///
+/// The penalty is not a detail: the one-hot encoding of a categorical column
+/// and the intercept are collinear, and the design of such a sample is rank
+/// deficient. The penalty of the upstream lifts that degeneracy, while an
+/// unpenalised fit has to solve a singular weighted normal equation, and the
+/// pseudo inverse of it is then dominated by its noise.
 ///
 /// The probabilities are clipped at `epsilon` and `1 - epsilon`, like the
 /// upstream code does.
@@ -243,9 +252,9 @@ pub fn estimate_kl_divergence_continuous_clf(
       }
       labels.push(1.0)
     }
-    // The penalty of the fit is `1 / c`, so a large `c` is the unpenalised fit:
-    // the term it adds to the Hessian is far below its precision.
-    let fit = @utils.logistic_fit(design, labels, 1.0e300, 10000, 1.0e-10)
+    // The penalty of the fit is the one of the upstream, which fits its
+    // classifier with the default `C = 1.0` of scikit-learn.
+    let fit = @utils.logistic_fit(design, labels, 1.0, 10000, 1.0e-10)
     let held_out = @utils.Matrix::zeros(
       held_out_p.length(),
       samples_p.ncols() + 1,
@@ -288,16 +297,25 @@ pub fn estimate_kl_divergence_continuous_clf(
 ///
 /// This is the port of `dowhy.gcm.divergence.auto_estimate_kl_divergence`. The
 /// upstream code detects a categorical input from the dtype of its numpy array,
-/// which a matrix of numbers cannot show, so the port dispatches on the shape of
-/// the matrix alone: a probability matrix goes to the probability estimator, a
-/// matrix with one column goes to the nearest neighbour estimator and a matrix
-/// with more than one column goes to the classifier estimator. The categorical
-/// estimator has to be called explicitly.
+/// which a matrix of numbers cannot show, so the port asks the caller for it:
+/// the flag `categorical` tells the estimator that the sample holds the
+/// categories of a categorical distribution, the way the dtype of the upstream
+/// tells it. The flag is false by default, and a sample that holds no
+/// categorical column is a continuous one.
+///
+/// The remaining dispatch is the one of the upstream: a matrix of probabilities
+/// goes to the probability estimator, a matrix with more than one column goes
+/// to the classifier estimator and a matrix with one column goes to the
+/// nearest neighbour estimator.
 pub fn auto_estimate_kl_divergence(
   x : @utils.Matrix,
   y : @utils.Matrix,
   rng : @utils.Random,
+  categorical~ : Bool = false,
 ) -> Double {
+  if categorical {
+    return estimate_kl_divergence_categorical(x, y)
+  }
   if is_probability_matrix(x) {
     return estimate_kl_divergence_of_probabilities(x, y)
   }
