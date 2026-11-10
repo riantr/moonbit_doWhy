@@ -4,9 +4,9 @@
 /// The expectations are the ones of the upstream tests of
 /// `dowhy.gcm.stochastic_models`, which are in
 /// `tests/gcm/test_stochastic_models.py`. Six of the eight tests of the
-/// upstream have a counterpart here. The upstream
-/// `BayesianGaussianMixtureDistribution` is not part of the port, so the two
-/// tests of the upstream that use it have no counterpart here.
+/// upstream have a counterpart here. The two that have none use the upstream
+/// `BayesianGaussianMixtureDistribution`, which is a class of its own there;
+/// the port has it as well, and its two cases are in `mixture_test.mbt`.
 ///
 /// The fixtures are drawn with the deterministic generator of the `utils`
 /// package, and the expected numbers are the ones the upstream

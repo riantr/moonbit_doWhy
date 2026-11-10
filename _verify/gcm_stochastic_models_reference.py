@@ -11,8 +11,11 @@ samples of the upstream and of the port are different numbers. The script
 therefore prints the samples of the port, which the replica reproduces, and the
 samples of the upstream for the record.
 
-The upstream `BayesianGaussianMixtureDistribution` is not part of the port, so
-the two tests of the upstream that use it have no counterpart here.
+The upstream `BayesianGaussianMixtureDistribution` draws the centres of the
+components of its mixture at random and does not seed its generator, so its
+numbers are not reproducible. The section of the mixture below therefore prints
+the number of the components and the shape of the samples, which are the two
+things the cases of the upstream assert.
 
 Usage:
     python _verify/gcm_stochastic_models_reference.py
@@ -244,6 +247,27 @@ def main() -> None:
     print(f"  upstream_distribution = {detected.scipy_distribution.name}")
     print(f"  upstream_loc = {detected.parameters['loc']:.12f}")
     print(f"  upstream_scale = {detected.parameters['scale']:.12f}")
+
+
+    # ------------------------------------------------------------------
+    # The Bayesian Gaussian mixture distribution.
+    # ------------------------------------------------------------------
+    mixture_rows = np.array([[0.0, 0.0], [0.0, 0.0], [1.0, 2.0], [1.0, 2.0]])
+    print("BAYESIAN_GAUSSIAN_MIXTURE")
+    print(
+        "  optimal_components = "
+        f"{models.BayesianGaussianMixtureDistribution._get_optimal_number_of_components(mixture_rows)}"
+    )
+    mixture = models.BayesianGaussianMixtureDistribution()
+    mixture.fit(mixture_rows)
+    mixture_samples = mixture.draw_samples(5)
+    print(f"  components = {mixture._gmm_model.n_components}")
+    print(f"  shape = {mixture_samples.shape}")
+    try:
+        models.BayesianGaussianMixtureDistribution().draw_samples(5)
+        print("  unfitted_error = none")
+    except Exception as error:
+        print(f"  unfitted_error = {type(error).__name__}: {error}")
 
 
 if __name__ == "__main__":

@@ -3164,3 +3164,54 @@ The categorical noise dependent function.
   counterpart, because the nodes of the port are named with strings.
 
 [0.0.61]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.61
+
+## [0.0.62] - 2026-11-10
+
+The Bayesian Gaussian mixture distribution.
+
+### Added
+
+- the Bayesian Gaussian mixture distribution of the `gcm` package, in the new
+  file `src/gcm/mixture.mbt`: the new public struct
+  `BayesianGaussianMixtureDistribution` is the port of
+  `dowhy.gcm.stochastic_models.BayesianGaussianMixtureDistribution`. The
+  number of the components of the mixture is the one of the upstream: it is
+  the number of the clusters of the k-means of the samples whose silhouette
+  score is the best one, and the samples are drawn from the components with
+  their weights.
+- three cases in the new file `src/gcm/mixture_test.mbt`: the samples of a
+  fitted mixture have the shape of the samples of the upstream, the copy of a
+  fitted mixture is not fitted either, and the number of the components of a
+  mixture of two clusters is two. Every case of the upstream test file
+  `tests/gcm/test_stochastic_models.py` has a counterpart now.
+- the numbers of the upstream on the fixtures of the port in
+  `_verify/gcm_stochastic_models_reference.py`: the new section runs the
+  upstream on the very rows of the port and shows that the number of the
+  components and the shape of the samples are the ones the port gives.
+
+### Notes
+
+- The upstream fits its mixture with the variational inference of
+  `sklearn.mixture.BayesianGaussianMixture`, which draws the centres of the
+  components at random and does not seed its generator, so the fit of the
+  upstream is not reproducible. The port fits the same model with the mean
+  field variational update of the density estimator of the package, whose
+  centres are the samples of the data that are the farthest apart, so the fit
+  of the port is. The case of the upstream asserts the shape of the samples
+  and not their values, and the port asserts the same shape.
+- The upstream draws a random subsample of five thousand rows when it computes
+  the silhouette score of a clustering; the port draws a random subsample of a
+  thousand rows, because the score costs a quadratic number of distance
+  computations and the search over the number of the components is a long one.
+- The upstream raises a `RuntimeError` when the samples of an unfitted
+  distribution are drawn. MoonBit cannot catch the abort of a method, so the
+  check that tells whether the distribution is fitted is public.
+- The distribution of the port is a struct of its own and not a kind of the
+  `StochasticModel` of the package, where the upstream has it as one. The
+  samples of a mixture are multivariate, and the samples of the
+  `StochasticModel` of the package are one number per row, so a node of a
+  causal model of the port cannot hold a mixture. The cases of the upstream
+  that use the mixture use it as a distribution of its own, and so does the
+  port.
+
+[0.0.62]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.62

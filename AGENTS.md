@@ -294,6 +294,25 @@ statsmodels / scikit-learn conventions are deliberate:
   factorisation of the upstream. The upstream draws its randomness from the
   global generator of numpy, so the p-value of the port and the p-value of the
   upstream are different numbers that agree on the decision the tests assert.
+- The Bayesian Gaussian mixture distribution of the `gcm` package is the port of
+  `dowhy.gcm.stochastic_models.BayesianGaussianMixtureDistribution`. The
+  **number of the components** is chosen the way the upstream chooses it: the
+  candidates are the numbers of the clusters of a k-means of the samples, the
+  score of a candidate is the **silhouette score** of its clustering, and the
+  search keeps the candidate with the best score and stops after three
+  candidates in a row that do not improve it. The upstream draws the centres
+  of its k-means at random and does not seed its generator, so the number of
+  the components of the upstream is not reproducible; the port draws the
+  centres from the samples that are the farthest apart, so the number of the
+  components of the port is. The **fit** is the mean field variational update
+  of the density estimator of the package, which is the model of the upstream:
+  the upstream fits it with the variational inference of
+  `sklearn.mixture.BayesianGaussianMixture`, whose centres it draws at random.
+  The **samples** are drawn from the components with their weights, and the
+  sample of a component is its mean plus the factor of the component applied to
+  a standard normal vector; the factor is the product of the eigenvectors of
+  the precision of the component with the inverse of the square roots of its
+  eigenvalues, which is the square root of the covariance of the component.
 - The stochastic models of the `gcm` package are the port of the distributions of
   `dowhy.gcm.stochastic_models`. The fit of the **beta** distribution takes the
   support of the samples -- the smallest and the largest of them -- and estimates
