@@ -792,6 +792,16 @@ statsmodels / scikit-learn conventions are deliberate:
   - **the days of the shopping events are drawn without replacement**, so every
     day of the range holds at most one event.
 
+- The Gaussian mixture of the `gcm` package is fitted with the mean field
+  variational update of Bishop: the responsibilities of the components use the
+  expectations of the log weights, of the log determinant of the precisions and
+  of the quadratic form of the precisions, and the parameters of the components
+  use the responsibilities. The upstream fits the same model with the
+  variational inference of `sklearn.mixture.BayesianGaussianMixture`, whose
+  centres it draws at random, so the numbers of the upstream are not
+  reproducible: the numbers of the port are the ones of the same model and not
+  the ones of the upstream's fit.
+
 ## Package layout
 
 | Package | Ports |
@@ -836,6 +846,15 @@ README makes, so they are tracked in the repository:
   tests of the `datasets` package compare against. It prints the draws of the
   upstream as well, so that the sampler of the port can be checked against the
   ones of SciPy.
+- `gcm_density_estimators_reference.py` runs the upstream
+  `dowhy.gcm.density_estimators` on the fixtures of the tests of the port and
+  prints the numbers it produces -- the densities of the Gaussian mixture of the
+  upstream for five seeds, the densities of the kernel based estimator of one
+  dimension and the error of the upstream when the mixture is given more
+  components than samples. It is the evidence for the density estimators of the
+  `gcm` package: the fit of the upstream draws the centres of the components at
+  random and does not seed its generator, so its own numbers move from one seed
+  to the other.
 - `check_dataset_columns.py` prints the columns of the upstream
   `linear_dataset`, which is how the column count of the `datasets` package
   was pinned.

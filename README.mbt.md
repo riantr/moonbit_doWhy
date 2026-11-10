@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.47.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.48.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -365,6 +365,16 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   - **the days of the shopping events are drawn without replacement**, so every
     day of the range holds at most one event.
 
+- The Gaussian mixture of the `gcm` package is the port of
+  `dowhy.gcm.density_estimators.GaussianMixtureDensityEstimator`, whose fit is
+  a variational Bayesian Gaussian mixture. The port fits the same model with
+  the mean field variational update, so a component of the mixture has the same
+  meaning on both sides: a weight, a mean and a covariance. The numbers are not
+  the same numbers: the upstream draws the centres of the components at random
+  and does not seed its generator, so its own fit is not reproducible and its
+  case asserts the length of the result and not its values. The port draws the
+  centres from the data, so its fit is reproducible.
+
 ## Deliberate differences from upstream
 
 Seven behaviours of the core differ on purpose, and each one is a case where
@@ -624,9 +634,11 @@ following ways:
   divergence, and `auto_estimate_kl_divergence` dispatches to it when the
   caller sets its flag `categorical`. The flag carries the information the
   dtype of the upstream would carry.
-  The `GaussianMixtureDensityEstimator` is **not ported**, because upstream
-  uses the variational inference of `sklearn.mixture.BayesianGaussianMixture`;
-  the kernel density estimator is ported exactly.
+  The `GaussianMixtureDensityEstimator` of the `gcm` package is the port of the
+  estimator of the upstream, which fits a variational Bayesian mixture; the
+  port fits the same model with the mean field variational update and draws
+  the centres of the components from the data, where the upstream draws them
+  at random. The kernel density estimator is ported exactly.
 - `gcm` draws the folds of the regression based independence test with its
   own generator instead of numpy's shuffled `KFold`, so its p-value differs
   from the upstream's on the same rows, and it regresses on the conditioning
@@ -834,9 +846,10 @@ following ways:
   writes them with two decimals and with one decimal.
 - `gcm` estimates the density of the inverse density scorer with the kernel
   density estimator of the upstream. Upstream uses the Bayesian Gaussian mixture
-  of the upstream by default, which needs the variational inference of
-  `sklearn.mixture.BayesianGaussianMixture` and is **not ported**; the scorer of
-  the port takes the kernel based estimator.
+  of the upstream by default, whose fit is not reproducible because the
+  upstream draws the centres of its components at random; the scorer of the
+  port takes the kernel based estimator, whose numbers it can pin down. The
+  mixture itself is ported, in `GaussianMixtureDensityEstimator`.
 - `gcm` builds its anomaly scorers with a constructor per scorer instead of a
   class per scorer, because MoonBit has no inheritance. The information
   theoretic scorer of the port takes the scorer it wraps, like the upstream

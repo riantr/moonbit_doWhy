@@ -2403,3 +2403,41 @@ The case of the refuters of the upstream.
   -- and the p-value of the draw of the port, 0.9936.
 
 [0.0.47]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.47
+
+## [0.0.48] - 2026-11-10
+
+The Gaussian mixture of the upstream.
+
+### Added
+
+- the Gaussian mixture density estimator of the upstream,
+  `dowhy.gcm.density_estimators.GaussianMixtureDensityEstimator`, in the
+  `gcm` package: the variational Bayesian mixture of the upstream, fitted with
+  the mean field variational update.
+- the cases of the upstream test file `tests/gcm/test_density_estimators.py` in
+  `src/gcm/density_estimators_test.mbt`: the densities of the mixture of the
+  fixture of the upstream, the number of the components and the refusal of a
+  mixture with more components than samples.
+- the numbers of the upstream in `_verify/gcm_density_estimators_reference.py`,
+  which runs the upstream and prints them.
+
+### Notes
+
+- The header of the test file of the density estimators names the upstream test
+  file it mirrors now, and the counter of `_verify/upstream_test_coverage.py`
+  counts 68 of the 74 test files of the upstream.
+- The upstream draws the centres of the components of its mixture at random
+  and does not seed its generator, so its own fit is not reproducible and its
+  case asserts the length of the result and not its values. The port draws the
+  centres from the data, so its fit is reproducible, and the numbers of the
+  port are the ones of the same model and not the ones of the upstream's fit.
+- The upstream refuses a mixture with more components than samples with a
+  `ValueError`; the port refuses it as well, and the check that tells whether
+  the data is supported is public, because MoonBit cannot catch the abort of a
+  method.
+- The inverse density scorer of the anomaly layer of the `gcm` package still
+  takes the kernel based estimator of the upstream. The upstream takes the
+  Gaussian mixture there, whose fit is not reproducible, so the port keeps the
+  estimator whose numbers it can pin down.
+
+[0.0.48]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.48

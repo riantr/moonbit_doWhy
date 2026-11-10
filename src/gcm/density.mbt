@@ -3,8 +3,8 @@
 ///
 /// This is the port of `dowhy.gcm.density_estimators`. The upstream has a
 /// kernel based estimator for one dimensional data and a Bayesian Gaussian
-/// mixture; the port has the kernel based one, because the mixture is a
-/// variational model whose numbers the port does not reproduce.
+/// mixture; the port has both of them, the mixture in the file of the density
+/// estimators of the package.
 
 ///|
 /// A density estimator of a one dimensional distribution.
