@@ -381,6 +381,16 @@ statsmodels / scikit-learn conventions are deliberate:
   `auto_estimate_kl_divergence`. The upstream detects it from the dtype of its
   numpy array, and a matrix of the port holds numbers only, so the flag
   carries the information the dtype would carry.
+- The geometric median of the `gcm` package is the one of the Weiszfeld
+  iteration, while the upstream minimises the sum of the distances with
+  `scipy.optimize.minimize`. The two reach the same optimum, but not to the
+  last digit: on the fixture of the upstream test file `tests/gcm/test_stats.py`
+  they agree to `5e-6`, where the upstream asserts a tolerance of `0.5`.
+- The marginal expectation of a classifier of the `gcm` package compares the
+  probability of the second class, where the upstream compares the sum of the
+  differences of the two classes. The logistic regression of the port and the
+  one of scikit-learn reach the same coefficients to `1e-2` on that quantity,
+  where the upstream asserts a tolerance of one.
 - The bins of the discretised entropy of the `gcm` package follow the
   convention of `numpy.histogram`: every bin but the last one is half open, so
   a value that sits exactly on an edge belongs to the bin on its right, and the
@@ -834,6 +844,14 @@ README makes, so they are tracked in the repository:
   fixture of `gen_validation_testdata.py` cannot be used for that: the
   automatic assignment of the port always fits a linear regressor and therefore
   cannot capture a non-linear relation.
+- `gcm_stats_reference.py` computes the numbers of the statistics -- the
+  merging of the p-values with the three methods, the p-value of the F-test,
+  the marginal expectation of a linear model and of a classifier and the
+  geometric median -- with the upstream `dowhy.gcm.stats` code, which is where
+  the expectations of the tests of the statistics come from. The fixtures of
+  the script are drawn with the generator of the `utils` package of the port,
+  and the script reproduces that generator in Python, so that the fixtures of
+  the port and the fixtures of the script are the same numbers.
 - `gcm_divergence_reference.py` computes the numbers of the divergence
   estimators -- the nearest neighbour estimator, the categorical estimator, the
   estimator of the probabilities, the classifier based estimator and the

@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.44.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.45.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -694,7 +694,10 @@ following ways:
   logistic regression. Upstream wraps the whole zoo of the scikit-learn
   estimators and picks one of them by cross validation, so the mechanism that
   is fitted can be a random forest or a support vector machine; the port fits
-  the model the kind of the target asks for.
+  the model the kind of the target asks for. The two cases of the upstream test
+  file `tests/gcm/test_stats.py` that fit a histogram gradient boost model are
+  mirrored with the polynomial models of the port, whose relation is the square
+  of the upstream fixture, and the tolerances of the two upstream cases hold.
 - `gcm` draws the randomness of a causal model from an explicit generator
   instead of the global generator of numpy, so the samples of a model are
   reproducible.

@@ -2290,3 +2290,37 @@ The test files of the `gcm` package of the upstream that the port mirrors.
 - The `non-parametric-partial-R2` analyzer of the upstream is not ported yet.
 
 [0.0.44]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.44
+
+## [0.0.45] - 2026-11-10
+
+The remaining cases of the statistics of the upstream.
+
+### Added
+
+- the four cases of the upstream test file `tests/gcm/test_stats.py` that the
+  port did not have, in `src/gcm/stats_test.mbt`: the geometric median of the
+  samples of two dimensions, the marginal expectation of a classifier of a
+  linear relation, the marginal expectation of a non-linear model and the
+  marginal expectation of a non-linear classifier.
+- the numbers of the four cases in `_verify/gcm_stats_reference.py`, which runs
+  the upstream on the rows of the port and prints them.
+
+### Notes
+
+- The header of the test file of the statistics names the upstream test file it
+  mirrors now, and the counter of `_verify/upstream_test_coverage.py` counts 65
+  of the 74 test files of the upstream.
+- Two of the four new cases fit a histogram gradient boost model, which the
+  port does not have. The port fits the polynomial models instead, the relation
+  of the two fixtures is a square, and the two upstream cases assert a
+  tolerance of a hundred and a tolerance of one, which the numbers of the port
+  satisfy.
+- The geometric median of the port is the one of the Weiszfeld iteration, and
+  the upstream minimises the sum of the distances with a general purpose
+  optimiser. The two reach the same optimum to `1e-4` on the fixture of the
+  upstream test, where the upstream asserts a tolerance of `0.5`.
+- The marginal expectation of a classifier of the port compares the
+  probability of the second class, where the upstream compares the sum of the
+  differences of the two classes. The logistic regression of the port and the
+  one of scikit-learn reach the same coefficients to `1e-2` on that quantity,
+  where the upstream asserts a tolerance of one.

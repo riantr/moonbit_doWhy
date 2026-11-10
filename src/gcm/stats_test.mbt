@@ -5,6 +5,13 @@
 /// package, and the expected numbers are the ones the upstream
 /// `dowhy.gcm.stats` produces on the very same rows, which
 /// `_verify/gcm_stats_reference.py` prints.
+///
+/// The nineteen cases of the upstream test file `tests/gcm/test_stats.py` are
+/// among the cases of this file. Two of them fit a histogram gradient boost
+/// model, which the port does not have: the port fits the polynomial models
+/// instead, the relation of their fixtures is a square, and the two upstream
+/// cases assert a tolerance of a hundred and a tolerance of one, which the
+/// numbers of the port satisfy.
 
 ///|
 /// The seed of the fixture of the F-test.
@@ -45,6 +52,19 @@ const STATS_SHAPE_BASELINE_ROWS : Int32 = 34
 
 ///|
 const STATS_SHAPE_FEATURE_ROWS : Int32 = 123
+
+///|
+/// The seed of the fixture of the geometric median.
+const STATS_SEED_GEOMETRIC : UInt64 = 2026UL
+
+///|
+/// The seed of the fixture of the marginal expectation of a non-linear model.
+const STATS_SEED_MARGINAL_NONLINEAR : UInt64 = 2027UL
+
+///|
+/// The number of the samples of the two dimensions of the geometric median:
+/// a hundred samples around ten and twenty samples around ten thousand.
+const STATS_GEOMETRIC_ROWS : Int32 = 120
 
 ///|
 /// Whether two numbers agree to the tolerance of the comparison.
@@ -261,6 +281,78 @@ fn marginal_fixture() -> (@utils.Matrix, Array[Double]) {
     y.push(3.0 * x.get(i, 0) + 2.0 * x.get(i, 1) - x.get(i, 2))
   }
   (x, y)
+}
+
+///|
+/// The fixture of the geometric median of the samples of two dimensions.
+///
+/// The first column holds a hundred samples around ten and twenty samples
+/// around ten thousand, the second one a hundred samples around minus five
+/// and twenty samples around minus ten thousand.
+fn geometric_median_fixture() -> @utils.Matrix {
+  let rng = @utils.Random::new(STATS_SEED_GEOMETRIC)
+  let rows : Array[Array[Double]] = []
+  for _ in 0..<(STATS_GEOMETRIC_ROWS - 20) {
+    rows.push([10.0 + rng.next_normal(), -5.0 + rng.next_normal()])
+  }
+  for _ in 0..<20 {
+    rows.push([10000.0 + rng.next_normal(), -10000.0 + rng.next_normal()])
+  }
+  @utils.Matrix::from_rows(rows)
+}
+
+///|
+/// The fixture of the marginal expectation of a classifier.
+///
+/// The features are the ones of the linear fixture and the target is the sign
+/// of the target of that fixture, like the target of the upstream test.
+fn marginal_categorical_fixture() -> (@utils.Matrix, Array[String]) {
+  let (x, y) = marginal_fixture()
+  let labels : Array[String] = []
+  for value in y {
+    labels.push(if value <= 0.0 { "false" } else { "true" })
+  }
+  (x, labels)
+}
+
+///|
+/// The fixture of the marginal expectation of a non-linear model.
+///
+/// The features are standard normal and the target is the square of a
+/// combination of the two first features plus the third one, like the target of
+/// the upstream test.
+fn marginal_nonlinear_fixture() -> (@utils.Matrix, Array[Double]) {
+  let rng = @utils.Random::new(STATS_SEED_MARGINAL_NONLINEAR)
+  let rows : Array[Array[Double]] = []
+  for _ in 0..<STATS_MARGINAL_ROWS {
+    let row : Array[Double] = []
+    for _ in 0..<3 {
+      row.push(rng.next_normal())
+    }
+    rows.push(row)
+  }
+  let x = @utils.Matrix::from_rows(rows)
+  let y : Array[Double] = []
+  for i = 0; i < STATS_MARGINAL_ROWS; i = i + 1 {
+    let combination = 2.0 * x.get(i, 0) + x.get(i, 1)
+    y.push(combination * combination + x.get(i, 2))
+  }
+  (x, y)
+}
+
+///|
+/// The labels of the non-linear fixture, split at the mean of its target.
+fn marginal_nonlinear_labels(y : Array[Double]) -> Array[String] {
+  let mut total = 0.0
+  for value in y {
+    total = total + value
+  }
+  let mean = total / y.length().to_double()
+  let labels : Array[String] = []
+  for value in y {
+    labels.push(if value <= mean { "false" } else { "true" })
+  }
+  labels
 }
 
 ///|
@@ -547,6 +639,163 @@ test "the marginal expectation of a linear model matches the one feature model" 
   }
   difference = difference / STATS_MARGINAL_ROWS.to_double()
   assert_true(stats_near(difference, 0.134247379414))
+}
+
+///|
+/// test "the geometric median of the samples of two dimensions is the middle of the samples"
+///
+/// The upstream asserts that the geometric median of the samples is the vector
+/// `(10, -5)` within `0.5`. The expected numbers are the ones the upstream
+/// computes on the very same rows, which the reference script prints under
+/// `GEOMETRIC_MEDIAN`.
+///
+/// The two numbers are not the same to the last digit: the upstream minimises
+/// the sum of the distances with a general purpose optimiser, while the port
+/// uses the Weiszfeld iteration, and the two reach the same optimum to
+/// `1e-4`.
+test "the geometric median of the samples of two dimensions is the middle of the samples" {
+  let median = @gcm.estimate_geometric_median(geometric_median_fixture())
+  assert_eq(median.length(), 2)
+  assert_true((median[0] - 10.031155314101).abs() < 1.0e-4)
+  assert_true((median[1] + 5.176860453255).abs() < 1.0e-4)
+}
+
+///|
+/// test "the marginal expectation of a classifier matches the one feature classifier"
+///
+/// The upstream compares the probabilities of the classifier that uses the one
+/// feature with the marginal expectation of the classifier that uses every
+/// feature, and expects the mean of the differences of the two classes to be
+/// about `0.2`. The expected number is the one the upstream computes on the
+/// very same rows, which the reference script prints under
+/// `MARGINAL_EXPECTATION_CLASSIFIER`; the port compares the probability of the
+/// second class, which is the class the upstream compares as well.
+///
+/// The two numbers are not the same to the last digit: the port fits its
+/// logistic regression with an iteration of its own, while the upstream fits
+/// the one of scikit-learn, and the two reach the same coefficients to `1e-2`
+/// on this quantity, where the upstream asserts a tolerance of one.
+test "the marginal expectation of a classifier matches the one feature classifier" {
+  let (x, labels) = marginal_categorical_fixture()
+  let model = @gcm.ClassificationModel::logistic().fit(x, labels)
+  let probability = fn(samples : @utils.Matrix) -> Array[Double] {
+    let probabilities = model.predict_probabilities(samples)
+    let out : Array[Double] = []
+    for row in probabilities {
+      out.push(row[1])
+    }
+    out
+  }
+  let expectation = @gcm.marginal_expectation(
+    probability,
+    x,
+    x,
+    [0],
+    true,
+    @gcm.FeaturePerturbation::independently(),
+    @utils.Random::new(STATS_SEED_MARGINAL),
+  )
+  assert_eq(expectation.nrows(), STATS_MARGINAL_ROWS)
+  assert_eq(expectation.ncols(), 1)
+  // The classifier that uses the first feature alone.
+  let first = @gcm.column_vector(x.col(0))
+  let model_first = @gcm.ClassificationModel::logistic().fit(first, labels)
+  let probabilities = model_first.predict_probabilities(first)
+  let mut difference = 0.0
+  for i = 0; i < STATS_MARGINAL_ROWS; i = i + 1 {
+    difference = difference +
+      (probabilities[i][1] - expectation.get(i, 0)).abs()
+  }
+  difference = difference / STATS_MARGINAL_ROWS.to_double()
+  assert_true((difference - 0.021470711546).abs() < 1.0e-2)
+}
+
+///|
+/// test "the marginal expectation of a non-linear model matches the one feature model"
+///
+/// The upstream fits a histogram gradient boost model, which the port does not
+/// have, and asserts that the mean of the differences of the two models is
+/// zero within `100`. The port fits the polynomial model of the degree two,
+/// the relation of the fixture is a square, and the expected number is the one
+/// the upstream computes on the very same rows, which the reference script
+/// prints under `MARGINAL_EXPECTATION_NONLINEAR`.
+test "the marginal expectation of a non-linear model matches the one feature model" {
+  let (x, y) = marginal_nonlinear_fixture()
+  let model = @gcm.PredictionModel::polynomial(degree=2).fit(x, y)
+  let prediction = fn(samples : @utils.Matrix) -> Array[Double] {
+    model.predict(samples)
+  }
+  let expectation = @gcm.marginal_expectation(
+    prediction,
+    x,
+    x,
+    [0],
+    true,
+    @gcm.FeaturePerturbation::independently(),
+    @utils.Random::new(STATS_SEED_MARGINAL_NONLINEAR),
+  )
+  assert_eq(expectation.nrows(), STATS_MARGINAL_ROWS)
+  assert_eq(expectation.ncols(), 1)
+  // The model that uses the first feature alone.
+  let first = @gcm.column_vector(x.col(0))
+  let model_first = @gcm.PredictionModel::polynomial(degree=2).fit(first, y)
+  let predictions = model_first.predict(first)
+  let mut difference = 0.0
+  for i = 0; i < STATS_MARGINAL_ROWS; i = i + 1 {
+    difference = difference + (predictions[i] - expectation.get(i, 0)).abs()
+  }
+  difference = difference / STATS_MARGINAL_ROWS.to_double()
+  // The tolerance of the upstream is a hundred.
+  assert_true(difference < 100.0)
+  assert_true((difference - 0.723808692709).abs() < 100.0)
+}
+
+///|
+/// test "the marginal expectation of a non-linear classifier matches the one feature classifier"
+///
+/// The upstream fits a histogram gradient boost classifier, which the port does
+/// not have, and asserts that the sum of the means of the differences of the
+/// two classes is about `0.2` within `1`. The port fits the polynomial
+/// classifier, and the expected number is the one the upstream computes on the
+/// very same rows, which the reference script prints under
+/// `MARGINAL_EXPECTATION_NONLINEAR_CLASSIFIER`.
+test "the marginal expectation of a non-linear classifier matches the one feature classifier" {
+  let (x, y) = marginal_nonlinear_fixture()
+  let labels = marginal_nonlinear_labels(y)
+  let model = @gcm.ClassificationModel::polynomial(degree=3).fit(x, labels)
+  let probability = fn(samples : @utils.Matrix) -> Array[Double] {
+    let probabilities = model.predict_probabilities(samples)
+    let out : Array[Double] = []
+    for row in probabilities {
+      out.push(row[1])
+    }
+    out
+  }
+  let expectation = @gcm.marginal_expectation(
+    probability,
+    x,
+    x,
+    [0],
+    true,
+    @gcm.FeaturePerturbation::independently(),
+    @utils.Random::new(STATS_SEED_MARGINAL_NONLINEAR),
+  )
+  assert_eq(expectation.nrows(), STATS_MARGINAL_ROWS)
+  assert_eq(expectation.ncols(), 1)
+  // The classifier that uses the first feature alone.
+  let first = @gcm.column_vector(x.col(0))
+  let model_first = @gcm.ClassificationModel::polynomial(degree=3).fit(
+    first, labels,
+  )
+  let probabilities = model_first.predict_probabilities(first)
+  let mut difference = 0.0
+  for i = 0; i < STATS_MARGINAL_ROWS; i = i + 1 {
+    difference = difference +
+      (probabilities[i][1] - expectation.get(i, 0)).abs()
+  }
+  difference = difference / STATS_MARGINAL_ROWS.to_double()
+  // The tolerance of the upstream is one.
+  assert_true((difference - 0.051746379539).abs() < 1.0)
 }
 
 ///|

@@ -61,6 +61,8 @@ class Xorshift:
 # The seed of the fixtures, the same as the one of the MoonBit tests.
 SEED_FTEST = 2024
 SEED_MARGINAL = 2025
+SEED_GEOMETRIC = 2026
+SEED_MARGINAL_NONLINEAR = 2027
 
 # The number of rows of the fixtures.
 FTEST_ROWS = 200
@@ -69,6 +71,11 @@ MARGINAL_ROWS = 200
 # The number of rows of the samples of the marginal expectation.
 SHAPE_BASELINE_ROWS = 34
 SHAPE_FEATURE_ROWS = 123
+
+# The number of rows of the samples of the two dimensions of the geometric
+# median: a hundred samples around ten and twenty samples around ten
+# thousand.
+GEOMETRIC_ROWS = 120
 
 # The size of the noise of the F-test fixtures.
 #
@@ -169,6 +176,43 @@ def marginal_fixture() -> tuple[np.ndarray, np.ndarray]:
     x = np.array(rows)
     y = 3.0 * x[:, 0] + 2.0 * x[:, 1] - x[:, 2]
     return x, y
+
+
+def marginal_categorical_fixture() -> tuple[np.ndarray, np.ndarray]:
+    """The fixture of the marginal expectation of a classifier.
+
+    The features are the ones of the linear fixture and the target is the sign
+    of its target, like the target of the upstream test.
+    """
+    x, y = marginal_fixture()
+    return x, (y <= 0).astype(str)
+
+
+def marginal_nonlinear_fixture() -> tuple[np.ndarray, np.ndarray]:
+    """The fixture of the marginal expectation of a non-linear model.
+
+    The features are standard normal and the target is the square of a
+    combination of the two first features plus the third one, like the target
+    of the upstream test.
+    """
+    rng = Xorshift(SEED_MARGINAL_NONLINEAR)
+    rows = [[rng.next_normal() for _ in range(3)] for _ in range(MARGINAL_ROWS)]
+    x = np.array(rows)
+    y = (2.0 * x[:, 0] + x[:, 1]) ** 2 + x[:, 2]
+    return x, y
+
+
+def geometric_median_fixture() -> np.ndarray:
+    """The fixture of the geometric median of the samples of two dimensions.
+
+    The first column holds a hundred samples around ten and twenty samples
+    around ten thousand, the second one a hundred samples around minus five
+    and twenty samples around minus ten thousand.
+    """
+    rng = Xorshift(SEED_GEOMETRIC)
+    rows = [[10.0 + rng.next_normal(), -5.0 + rng.next_normal()] for _ in range(100)]
+    rows += [[10000.0 + rng.next_normal(), -10000.0 + rng.next_normal()] for _ in range(20)]
+    return np.array(rows)
 
 
 def shape_fixture() -> tuple[np.ndarray, np.ndarray]:
@@ -310,6 +354,91 @@ def main() -> None:
         print(f"  baseline[0][{index}] = {baseline[0, index]:.12f}")
     for index in range(3):
         print(f"  features[0][{index}] = {features[0, index]:.12f}")
+
+    # The geometric median of the samples of two dimensions.
+    general = load("dowhy.gcm.util.general")
+    median = general.geometric_median(geometric_median_fixture())
+    print("GEOMETRIC_MEDIAN")
+    print(f"  median[0] = {float(median[0]):.12f}")
+    print(f"  median[1] = {float(median[1]):.12f}")
+
+    # The marginal expectation of a classifier of a linear relation, compared to
+    # the classifier that uses the one feature alone.
+    #
+    # The upstream fits its classifier with the default of scikit-learn, which
+    # is the one of the port.
+    from sklearn.linear_model import LogisticRegression
+
+    x, labels = marginal_categorical_fixture()
+    x0 = x[:, 0].reshape(-1, 1)
+    model_all_features = LogisticRegression().fit(x, labels)
+    model_feature_0 = LogisticRegression().fit(x0, labels)
+    np.random.seed(SEED_MARGINAL)
+    expectation = np.asarray(
+        stats.marginal_expectation(
+            model_all_features.predict_proba,
+            x,
+            x,
+            [0],
+            return_averaged_results=True,
+            feature_perturbation="randomize_columns_independently",
+        )
+    )
+    difference = np.mean(np.abs(model_feature_0.predict_proba(x0) - expectation), axis=0)
+    print("MARGINAL_EXPECTATION_CLASSIFIER")
+    print(f"  difference[0] = {float(difference[0]):.12f}")
+    print(f"  difference[1] = {float(difference[1]):.12f}")
+    print(f"  sum = {float(difference.sum()):.12f}")
+
+    # The same with the non-linear relation of the upstream test. The upstream
+    # fits a histogram gradient boost model, which the port does not have.
+    regression = load("dowhy.gcm.ml.regression")
+    classification = load("dowhy.gcm.ml.classification")
+    x, y = marginal_nonlinear_fixture()
+    x0 = x[:, 0].reshape(-1, 1)
+    model_all_features = regression.create_hist_gradient_boost_regressor()
+    model_all_features.fit(x, y)
+    model_feature_0 = regression.create_hist_gradient_boost_regressor()
+    model_feature_0.fit(x0, y)
+    np.random.seed(SEED_MARGINAL_NONLINEAR)
+    expectation = np.asarray(
+        stats.marginal_expectation(
+            model_all_features.predict,
+            x,
+            x,
+            [0],
+            return_averaged_results=True,
+            feature_perturbation="randomize_columns_independently",
+        )
+    ).reshape(-1)
+    difference = float(np.mean(np.abs(model_feature_0.predict(x0).reshape(-1) - expectation)))
+    print("MARGINAL_EXPECTATION_NONLINEAR")
+    print(f"  mean_abs_difference = {difference:.12f}")
+
+    # The same with the non-linear relation and a classifier.
+    x, y = marginal_nonlinear_fixture()
+    labels = (y <= float(np.mean(y))).astype(str)
+    x0 = x[:, 0].reshape(-1, 1)
+    model_all_features = classification.create_hist_gradient_boost_classifier()
+    model_all_features.fit(x, labels)
+    model_feature_0 = classification.create_hist_gradient_boost_classifier()
+    model_feature_0.fit(x0, labels)
+    np.random.seed(SEED_MARGINAL_NONLINEAR)
+    expectation = np.asarray(
+        stats.marginal_expectation(
+            model_all_features.predict_probabilities,
+            x,
+            x,
+            [0],
+            return_averaged_results=True,
+            feature_perturbation="randomize_columns_independently",
+        )
+    )
+    difference = np.mean(np.abs(model_feature_0.predict_probabilities(x0) - expectation), axis=0)
+    print("MARGINAL_EXPECTATION_NONLINEAR_CLASSIFIER")
+    print(f"  difference[0] = {float(difference[0]):.12f}")
+    print(f"  difference[1] = {float(difference[1]):.12f}")
+    print(f"  sum = {float(difference.sum()):.12f}")
 
     # The confidence interval of a counter.
     counter = {"value": 0.0}
