@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.38.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.39.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -18,7 +18,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators) |
 | Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
-| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome and its two branches --, random common cause, unobserved common cause, the **significance test** of the refutations, and the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules) |
+| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis** --, the **significance test** of the refutations, and the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset` and the fixtures the upstream tests use) |
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
 | Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
@@ -102,7 +102,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
 | `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
-| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter, of the data subset refuter, of the dummy outcome refuter and of the unobserved common cause refuter |
+| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter, of the data subset refuter, of the dummy outcome refuter, of the unobserved common cause refuter and of the linear sensitivity analysis |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
 The root package `riantr/moonbit_dowhy` holds `CausalModel`, the entry point
@@ -526,7 +526,23 @@ The `refuters` package differs from upstream in the following ways:
   the upstream test file are therefore not mirrored either, because they pass a
   list of strengths and draw a matrix of refutations for a plot. The sensitivity
   analyzers of the same upstream module (`linear-partial-R2`,
-  `non-parametric-partial-R2` and `e-value`) are not ported.
+  `non-parametric-partial-R2` and `e-value`) are not ported yet.
+- The **linear sensitivity analysis** of an unobserved confounder is ported, and
+  it is a method of the model, `refute_linear_sensitivity`, because the upstream
+  returns the analyzer of the analysis from its `refute_estimate` while the
+  port's `refute_estimate` returns a refutation of the estimate. The analysis
+  reports the partial R2 of the confounder with the treatment and with the
+  outcome, the robustness value of the estimate and the bias adjusted estimate.
+- The upstream builds its analyzer without the flag of its refuter, so the flag
+  `confounder_increases_estimate` of the linear analysis is always `True` there
+  and the bias always moves the estimate toward zero. The port reproduces that:
+  the flag is an optional argument of the analysis that defaults to `true`.
+- The upstream overwrites the effect under the null hypothesis of the analysis
+  with the share of the estimate the confounder has to remove, so the value the
+  caller gives it never survives. The port does the same.
+- The `datasets` package takes the two noise parameters of the upstream,
+  `stddev_treatment_noise` and `stddev_outcome_noise`. Their defaults are the
+  values the port already used, so the fixtures of the port keep their rows.
 
 The `overrule` package differs from upstream in the following ways:
 

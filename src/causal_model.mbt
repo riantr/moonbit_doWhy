@@ -705,6 +705,51 @@ pub fn CausalModel::refute_assess_overlap(
 }
 
 ///|
+/// The linear sensitivity analysis of the estimate.
+///
+/// This is the port of the `linear-partial-R2` simulation method of the
+/// upstream. The upstream returns the analyzer of the sensitivity from its
+/// `refute_estimate`, and the port returns it from a method of its own, because
+/// the analysis is not a refutation of the estimate.
+///
+/// `benchmark_common_causes` names the common causes whose strength bounds the
+/// strength of the confounder, `frac_strength_treatment` holds the fractions of
+/// that strength to analyse, one per row of the results, and
+/// `frac_strength_outcome` the fractions on the outcome. When the outcome's
+/// fractions are not given, the treatment's ones are used, which is what the
+/// upstream does when the caller does not give a strength for the outcome.
+///
+/// `percent_change_estimate` is the share of the estimate the confounder has to
+/// remove to change the conclusion, `significance_level` the level of the
+/// interval of the bias adjusted estimate, and `confounder_increases_estimate`
+/// whether the confounder moves the estimate away from zero or toward it. The
+/// confounder moves the estimate away from zero unless the caller says
+/// otherwise, because the upstream builds its analyzer without the flag of its
+/// refuter.
+pub fn CausalModel::refute_linear_sensitivity(
+  self : CausalModel,
+  estimator : @estimators.CausalEstimator,
+  benchmark_common_causes : Array[String],
+  frac_strength_treatment : Array[Double],
+  frac_strength_outcome : Array[Double]?,
+  percent_change_estimate : Double,
+  significance_level : Double,
+  confounder_increases_estimate~ : Bool = true,
+) -> @refuters.LinearSensitivityAnalyzer {
+  @refuters.linear_sensitivity_analyzer(
+    estimator,
+    self.data,
+    self.treatment[0],
+    benchmark_common_causes,
+    frac_strength_treatment,
+    frac_strength_outcome,
+    percent_change_estimate,
+    significance_level,
+    confounder_increases_estimate~,
+  )
+}
+
+///|
 /// The first segment of a dotted name.
 fn first_segment(name : String) -> String {
   let parts = name.split(".")

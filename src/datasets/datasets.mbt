@@ -331,6 +331,10 @@ pub struct LinearConfig {
   treatment_is_category : Bool
   /// Whether the outcome is binary.
   outcome_is_binary : Bool
+  /// The standard deviation of the noise of the treatment.
+  stddev_treatment_noise : Double
+  /// The standard deviation of the noise of the outcome.
+  stddev_outcome_noise : Double
 }
 
 ///|
@@ -356,6 +360,8 @@ pub fn LinearConfig::new(
   treatment_is_binary~ : Bool = true,
   treatment_is_category~ : Bool = false,
   outcome_is_binary~ : Bool = false,
+  stddev_treatment_noise~ : Double = 1.0,
+  stddev_outcome_noise~ : Double = 0.01,
 ) -> LinearConfig {
   {
     beta,
@@ -369,6 +375,8 @@ pub fn LinearConfig::new(
     treatment_is_binary,
     treatment_is_category,
     outcome_is_binary,
+    stddev_treatment_noise,
+    stddev_outcome_noise,
   }
 }
 
@@ -387,6 +395,8 @@ pub fn LinearConfig::confounded() -> LinearConfig {
     treatment_is_binary: true,
     treatment_is_category: false,
     outcome_is_binary: false,
+    stddev_treatment_noise: 1.0,
+    stddev_outcome_noise: 0.01,
   }
 }
 
@@ -407,6 +417,8 @@ pub fn LinearConfig::binary_outcome() -> LinearConfig {
     treatment_is_binary: true,
     treatment_is_category: false,
     outcome_is_binary: true,
+    stddev_treatment_noise: 1.0,
+    stddev_outcome_noise: 0.01,
   }
 }
 
@@ -425,6 +437,8 @@ pub fn LinearConfig::no_confounding_binary_outcome() -> LinearConfig {
     treatment_is_binary: true,
     treatment_is_category: false,
     outcome_is_binary: true,
+    stddev_treatment_noise: 1.0,
+    stddev_outcome_noise: 0.01,
   }
 }
 
@@ -443,6 +457,8 @@ pub fn LinearConfig::two_common_causes() -> LinearConfig {
     treatment_is_binary: true,
     treatment_is_category: false,
     outcome_is_binary: false,
+    stddev_treatment_noise: 1.0,
+    stddev_outcome_noise: 0.01,
   }
 }
 
@@ -461,6 +477,8 @@ pub fn LinearConfig::no_confounding() -> LinearConfig {
     treatment_is_binary: true,
     treatment_is_category: false,
     outcome_is_binary: false,
+    stddev_treatment_noise: 1.0,
+    stddev_outcome_noise: 0.01,
   }
 }
 
@@ -479,6 +497,8 @@ pub fn LinearConfig::effect_modifier() -> LinearConfig {
     treatment_is_binary: true,
     treatment_is_category: false,
     outcome_is_binary: false,
+    stddev_treatment_noise: 1.0,
+    stddev_outcome_noise: 0.01,
   }
 }
 
@@ -497,6 +517,8 @@ pub fn LinearConfig::instrumental_variable() -> LinearConfig {
     treatment_is_binary: true,
     treatment_is_category: false,
     outcome_is_binary: false,
+    stddev_treatment_noise: 1.0,
+    stddev_outcome_noise: 0.01,
   }
 }
 
@@ -519,6 +541,8 @@ pub fn LinearConfig::five_common_causes_one_instrument() -> LinearConfig {
     treatment_is_binary: true,
     treatment_is_category: false,
     outcome_is_binary: false,
+    stddev_treatment_noise: 1.0,
+    stddev_outcome_noise: 0.01,
   }
 }
 
@@ -541,6 +565,8 @@ pub fn LinearConfig::five_common_causes_no_instrument() -> LinearConfig {
     treatment_is_binary: true,
     treatment_is_category: false,
     outcome_is_binary: false,
+    stddev_treatment_noise: 1.0,
+    stddev_outcome_noise: 0.01,
   }
 }
 
@@ -559,6 +585,8 @@ pub fn LinearConfig::frontdoor() -> LinearConfig {
     treatment_is_binary: true,
     treatment_is_category: false,
     outcome_is_binary: false,
+    stddev_treatment_noise: 1.0,
+    stddev_outcome_noise: 0.01,
   }
 }
 
@@ -578,6 +606,8 @@ pub fn LinearConfig::discrete_common_causes() -> LinearConfig {
     treatment_is_binary: true,
     treatment_is_category: false,
     outcome_is_binary: false,
+    stddev_treatment_noise: 1.0,
+    stddev_outcome_noise: 0.01,
   }
 }
 
@@ -692,6 +722,7 @@ priv struct Equation {
   num_effect_modifiers : Int32
   num_frontdoor_variables : Int32
   outcome_is_binary : Bool
+  stddev_outcome_noise : Double
 }
 
 ///|
@@ -703,7 +734,7 @@ fn outcome_at(rng : Rng, eq : Equation, treatment : Double) -> Array[Double] {
   let mut i = 0
   while i < eq.n {
     // The outcome noise of the original fixture.
-    let mut value = rng.normal() * 0.01
+    let mut value = rng.normal() * eq.stddev_outcome_noise
     if eq.num_frontdoor_variables > 0 {
       let mut f = 0
       while f < eq.num_frontdoor_variables {
@@ -904,7 +935,7 @@ pub fn linear_dataset(
     let row : Array[Double] = []
     let mut k = 0
     while k < num_treatments {
-      row.push(rng.normal())
+      row.push(config.stddev_treatment_noise * rng.normal())
       k = k + 1
     }
     if num_cc > 0 {
@@ -1021,7 +1052,7 @@ pub fn linear_dataset(
   let y : Array[Double] = []
   let mut i = 0
   while i < rows {
-    let mut value = rng.normal() * 0.01
+    let mut value = rng.normal() * config.stddev_outcome_noise
     if num_fd > 0 {
       let mut f = 0
       while f < num_fd {
@@ -1080,6 +1111,7 @@ pub fn linear_dataset(
     num_effect_modifiers: num_em,
     num_frontdoor_variables: num_fd,
     outcome_is_binary: config.outcome_is_binary,
+    stddev_outcome_noise: config.stddev_outcome_noise,
   }
   let mut ate = 0.0
   {

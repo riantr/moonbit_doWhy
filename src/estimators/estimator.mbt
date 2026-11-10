@@ -370,6 +370,31 @@ pub fn CausalEstimator::estimator_kind(self : CausalEstimator) -> EstimatorKind 
 }
 
 ///|
+/// The fitted model of a regression based estimator.
+///
+/// The sensitivity analysis of the `refuters` package needs the coefficients,
+/// the standard errors, the t statistics and the degrees of freedom of the fit,
+/// which are the numbers the upstream reads from the model of its
+/// `LinearRegressionEstimator`.
+pub fn CausalEstimator::regression_model(
+  self : CausalEstimator,
+) -> @utils.OlsFit {
+  self.model
+}
+
+///|
+/// The columns of the design matrix of a regression based estimator, in order.
+///
+/// The first column is the column of ones of the intercept, the next one is the
+/// treatment and the last ones are the adjustment variables and the effect
+/// modifiers, the way `build_design_matrix` builds them.
+pub fn CausalEstimator::design_features(
+  self : CausalEstimator,
+) -> Array[String] {
+  self.features.copy()
+}
+
+///|
 /// The treatment column the estimator uses.
 pub fn CausalEstimator::treatment(self : CausalEstimator) -> String {
   self.treatment_name

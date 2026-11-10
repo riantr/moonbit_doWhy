@@ -1134,4 +1134,36 @@ README makes, so they are tracked in the repository:
   mean of a loop: the upstream `sensitivity_simulation` draws one confounder,
   refits once and returns, so there is no interval to report and the port sets
   the two bounds of the refutation to the refuted effect.
+- The linear sensitivity analysis of the upstream has three quirks that the port
+  reproduces, and all three are **not** visible in the signature of the upstream:
+  1. `sensitivity_linear_partial_r2` builds the analyzer **without** the
+     `confounder_increases_estimate` flag of its refuter, so the analyzer keeps
+     its own default of `True` and the bias always moves the estimate toward
+     zero. The port's flag is an optional argument that defaults to `true`.
+  2. The analyzer **overwrites** the effect under the null hypothesis with
+     `estimate * (1 - percent_change_estimate)` (or `1 +` when the confounder
+     does not increase the estimate), so the value the caller gives it never
+     survives.
+  3. The interval of the bias adjusted estimate takes the **lower** quantile of
+     the Student distribution at half the significance level, which is negative,
+     and swaps the two bounds with it: `lower_CI = adjusted + num_se * se` and
+     `upper_CI = adjusted - num_se * se`. The port keeps the arithmetic and the
+     names of the upstream.
+- The partial R2 of a coefficient of the upstream analyzer is the scalar branch
+  of `partial_r2_func`, `t^2 / (t^2 + df_resid)`. The group branch, which the
+  upstream uses for a group of covariates, is not ported: the benchmark of the
+  upstream is a single common cause.
+- The upstream caps the partial R2 of the confounder with the outcome at one and
+  warns about it, and the port caps it the same way. The cap is reached easily:
+  on the fixture of the upstream file the value is one for every strength, so
+  the standard error of the bias adjusted estimate is zero and its t statistic
+  is infinite.
+- The upstream's fixture of the linear sensitivity cases cannot be generated
+  through `dowhy.datasets.linear_dataset` on numpy 2.5.1, because the
+  `np.vectorize(convert_to_binary)` of that branch builds a one element array
+  per row. The reference script therefore builds the frame by hand with the
+  shape of the fixture of the port. The two noise parameters of the upstream
+  (`stddev_treatment_noise` and `stddev_outcome_noise`) were added to
+  `datasets.LinearConfig` for the port's own fixture; their defaults are the
+  values the port already used, so every other fixture keeps its rows.
 

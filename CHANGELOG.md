@@ -1921,3 +1921,71 @@ The refuter that adds an unobserved common cause, ported from the upstream
   upstream as mirrored.
 
 [0.0.38]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.38
+
+## [0.0.39] - 2026-11-10
+
+The linear sensitivity analysis of an unobserved confounder.
+
+### Added
+
+- `refuters.linear_sensitivity_analyzer`, the port of
+  `dowhy.causal_refuters.linear_sensitivity_analyzer.LinearSensitivityAnalyzer`,
+  which answers how strong an unobserved confounder has to be to move the
+  estimate of the data. It reports the partial R2 of the confounder with the
+  treatment and with the outcome, the robustness value of the estimate and the
+  bias adjusted estimate with its standard error, its t statistic and its
+  interval.
+- `refuters.compute_bias_adjusted`, the port of `compute_bias_adjusted` of the
+  upstream, which the upstream test calls with two sets of partial R2 of its
+  own.
+- `CausalModel::refute_linear_sensitivity`, the entry point of the analysis.
+  The upstream returns the analyzer from its `refute_estimate`; the port returns
+  it from a method of its own, because the analysis is not a refutation of the
+  estimate, the way `refute_assess_overlap` returns the analyzer of the rules.
+- `CausalEstimator::regression_model` and `CausalEstimator::design_features`,
+  which give the analysis the fit of the estimator and the columns of its
+  design matrix.
+- the port of the three linear cases of
+  `tests/causal_refuters/test_add_unobserved_common_cause.py` as
+  `src/tests/linear_sensitivity.mbt`.
+- `_verify/linear_sensitivity_reference.py`, which runs the analyzer of the
+  upstream on a fixture of the same shape and prints its numbers.
+
+### Changed
+
+- `datasets.LinearConfig` takes the two noise parameters of the upstream,
+  `stddev_treatment_noise` and `stddev_outcome_noise`. Their defaults are the
+  values the port already used, so every other fixture of the port keeps its
+  rows: the eighteen tests of the `datasets` package and the numbers of the
+  examples are unchanged.
+
+### Notes
+
+- The upstream builds its analyzer without the flag of its refuter:
+  `sensitivity_linear_partial_r2` never passes `confounder_increases_estimate`,
+  so the analyzer keeps its own default of `True` and the bias always moves the
+  estimate toward zero. The port reproduces that, and its flag is an optional
+  argument that defaults to `true` for the same reason.
+- The upstream overwrites the effect under the null hypothesis with the share of
+  the estimate the confounder has to remove, so the value the caller gives it
+  never survives. The port does the same.
+- The upstream takes the lower quantile of the Student distribution at half the
+  significance level, which is negative, and swaps the two bounds with it. The
+  port keeps the arithmetic and the names of the upstream.
+- The upstream caps the partial R2 of the confounder with the outcome at one and
+  warns about it, and the port caps it the same way.
+- The upstream's fixture cannot be generated through `dowhy.datasets.linear_dataset`
+  on numpy 2.5.1, because the `np.vectorize(convert_to_binary)` of that branch
+  builds a one element array per row. The reference script therefore builds the
+  frame by hand with the shape of the fixture of the port. On it the upstream
+  reports the degrees of freedom `492`, the partial R2 of the treatment
+  `0.9456`, the robustness value `0.9483` and the robustness value at the level
+  of the analysis `0.9462`, and the partial R2 of the confounder with the
+  treatment `[0.0194, 0.0389, 0.0583]` for the three strengths of the upstream.
+- The plot of the upstream is not ported, so the assertion of the upstream tests
+  that a figure was drawn has no counterpart here.
+- The `non-parametric-partial-R2` and the `e-value` analyzers of the upstream are
+  not ported, and neither is the `percent_change_of_confounder` argument that
+  infers the strengths of the confounder from the observed common causes.
+
+[0.0.39]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.39
