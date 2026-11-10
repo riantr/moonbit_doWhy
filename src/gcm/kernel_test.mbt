@@ -3,9 +3,15 @@
 ///
 /// The cases mirror the upstream test file
 /// `tests/gcm/independence_test/test_kernel.py`: the marginal and the
-/// conditional test of independent and of dependent data, the tests that only
-/// approximate the null distribution, the determinism of the test for a given
-/// seed, and the constant inputs, which the test removes before it runs.
+/// conditional test of independent and of dependent data, the tests of the
+/// categorical data, the determinism of the test for a given seed, the
+/// constant inputs, which the test removes before it runs, and the almost
+/// constant ones.
+///
+/// The cases the port does not mirror are the ones of the approximate test of
+/// the upstream, which is the randomised independence test of Strobl et al.
+/// and which the port does not have, and the one of the data of a numpy dtype
+/// of an object, which the frame of the port does not hold.
 ///
 /// The expectations are the numbers the upstream `dowhy.gcm` computes on the
 /// very fixtures of this file, with the kernel conditional independence test
@@ -434,4 +440,303 @@ test "the test tells a dependent pair of variables from an independent one" {
   )
   assert_true(independent > dependent)
   assert_true(independent > 1.0e-3)
+}
+
+///|
+/// The mean of the p-values of the runs of the bootstrap.
+///
+/// This is the adjustment of the upstream test file, which merges the p-values
+/// of the runs of its bootstrap with the mean of numpy.
+fn kernel_mean_p_value(p_values : Array[Double]) -> Double {
+  let mut total = 0.0
+  for p_value in p_values {
+    total = total + p_value
+  }
+  total / p_values.length().to_double()
+}
+
+///|
+/// The column of the frame as a matrix, with the encoding of the upstream.
+///
+/// The upstream encodes every matrix of its test on its own, with the one-hot
+/// encoder of a column that holds categories, and the port does the same.
+fn kernel_encoded_column(
+  frame : @api.DataFrame,
+  name : String,
+) -> @utils.Matrix {
+  if frame.is_discrete(name) {
+    @gcm.one_hot_encode_frame(frame.select([name]))
+  } else {
+    kernel_column(frame, name)
+  }
+}
+
+///|
+/// The p-value of the test of two columns, with an optional conditioning
+/// variable.
+///
+/// The columns that hold categories are encoded with the one-hot encoder, the
+/// way the upstream encodes the data of its test.
+fn kernel_encoded(
+  frame : @api.DataFrame,
+  first : String,
+  second : String,
+  conditioning : String?,
+) -> Double {
+  let x = kernel_encoded_column(frame, first)
+  let y = kernel_encoded_column(frame, second)
+  let z = match conditioning {
+    Some(name) => Some(kernel_encoded_column(frame, name))
+    None => None
+  }
+  @gcm.kernel_based(
+    x,
+    y,
+    z,
+    false,
+    1,
+    2000,
+    kernel_first_p_value,
+    @utils.Random::new(KERNEL_SEED),
+  )
+}
+
+///|
+/// A categorical conditioning variable does not hide the independence of the
+/// other two columns.
+///
+/// This is the case of the upstream
+/// `test_given_categorical_conditionally_independent_data_when_perform_kernel_based_test_then_not_reject`.
+test "a categorical conditioning variable does not hide the independence of the other two columns" {
+  let frame = @gcm.kernel_categorical_frame()
+  let p_value = kernel_encoded(frame, "X", "Y", Some("Z"))
+  assert_true(kernel_same(p_value, 6.78864398589645e-01))
+  assert_true(p_value > 0.05)
+}
+
+///|
+/// A categorical column is dependent on the column that gives its class.
+///
+/// This is the case of the upstream
+/// `test_given_categorical_conditionally_dependent_data_when_perform_kernel_based_test_then_reject`.
+test "a categorical column is dependent on the column that gives its class" {
+  let frame = @gcm.kernel_categorical_frame()
+  let p_value = kernel_encoded(frame, "X", "Z", Some("Y"))
+  assert_true(p_value < 0.05)
+}
+
+///|
+/// A categorical column that does not depend on the other one is independent of
+/// it.
+///
+/// This is the case of the upstream
+/// `test_given_categorical_independent_data_when_perform_kernel_based_test_then_not_reject`.
+test "a categorical column that does not depend on the other one is independent of it" {
+  let frame = @gcm.kernel_categorical_frame()
+  let p_value = kernel_encoded(frame, "X", "R", None)
+  assert_true(kernel_same(p_value, 7.793246146472628e-01))
+  assert_true(p_value > 0.05)
+}
+
+///|
+/// A categorical column that holds the class of the sign of the other one is
+/// dependent on it.
+///
+/// This is the case of the upstream
+/// `test_given_categorical_dependent_data_when_perform_kernel_based_test_then_reject`.
+test "a categorical column that holds the class of the sign of the other one is dependent on it" {
+  let frame = @gcm.kernel_categorical_frame()
+  let p_value = kernel_encoded(frame, "X", "Z", None)
+  assert_true(p_value < 0.05)
+}
+
+///|
+/// The test of the same data with the same seed gives the same p-value.
+///
+/// This is the case of the upstream
+/// `test_given_random_seed_when_perform_pairwise_kernel_based_test_then_return_deterministic_result`,
+/// which asserts that two runs of the generator of the upstream with the same
+/// seed give the same p-value. The number of the p-value is not a number of
+/// the upstream, because the upstream draws the rows of its sample with the
+/// global generator of numpy, which is not seeded when it draws the fixture.
+test "the test of the same data with the same seed gives the same p-value" {
+  let frame = @gcm.kernel_determinism_frame()
+  let x = kernel_column(frame, "X")
+  let y = kernel_column(frame, "Y")
+  let first = @gcm.kernel_based(
+    x,
+    y,
+    None,
+    true,
+    2,
+    10,
+    kernel_mean_p_value,
+    @utils.Random::new(KERNEL_SEED),
+  )
+  let second = @gcm.kernel_based(
+    x,
+    y,
+    None,
+    true,
+    2,
+    10,
+    kernel_mean_p_value,
+    @utils.Random::new(KERNEL_SEED),
+  )
+  assert_eq(first, second)
+}
+
+///|
+/// The test of the same data with another seed gives another p-value.
+///
+/// This is the case of the upstream
+/// `test_given_random_seed_when_perform_pairwise_kernel_based_test_then_return_deterministic_result`,
+/// which asserts that two runs of the generator of the upstream without a seed
+/// give different p-values.
+test "the test of the same data with another seed gives another p-value" {
+  let frame = @gcm.kernel_determinism_frame()
+  let x = kernel_column(frame, "X")
+  let y = kernel_column(frame, "Y")
+  let first = @gcm.kernel_based(
+    x,
+    y,
+    None,
+    true,
+    2,
+    10,
+    kernel_mean_p_value,
+    @utils.Random::new(KERNEL_SEED),
+  )
+  let second = @gcm.kernel_based(
+    x,
+    y,
+    None,
+    true,
+    2,
+    10,
+    kernel_mean_p_value,
+    @utils.Random::new(KERNEL_SEED + 1UL),
+  )
+  assert_true(first != second)
+}
+
+///|
+/// The test of the same data with the same seed gives the same p-value, with a
+/// conditioning variable.
+///
+/// This is the case of the upstream
+/// `test_given_random_seed_when_perform_conditional_kernel_based_test_then_return_deterministic_result`.
+test "the test of the same data with the same seed gives the same p-value, with a conditioning variable" {
+  let frame = @gcm.kernel_conditional_determinism_frame()
+  let x = kernel_column(frame, "X")
+  let y = kernel_column(frame, "Y")
+  let z = kernel_column(frame, "Z")
+  let first = @gcm.kernel_based(
+    x,
+    z,
+    Some(y),
+    true,
+    2,
+    5,
+    kernel_mean_p_value,
+    @utils.Random::new(KERNEL_SEED),
+  )
+  let second = @gcm.kernel_based(
+    x,
+    z,
+    Some(y),
+    true,
+    2,
+    5,
+    kernel_mean_p_value,
+    @utils.Random::new(KERNEL_SEED),
+  )
+  assert_eq(first, second)
+}
+
+///|
+/// The test of the same data with another seed gives another p-value, with a
+/// conditioning variable.
+///
+/// This is the case of the upstream
+/// `test_given_random_seed_when_perform_conditional_kernel_based_test_then_return_deterministic_result`,
+/// which asserts that two runs of the generator of the upstream without a seed
+/// give different p-values.
+test "the test of the same data with another seed gives another p-value, with a conditioning variable" {
+  let frame = @gcm.kernel_conditional_determinism_frame()
+  let x = kernel_column(frame, "X")
+  let y = kernel_column(frame, "Y")
+  let z = kernel_column(frame, "Z")
+  let first = @gcm.kernel_based(
+    x,
+    z,
+    Some(y),
+    true,
+    2,
+    5,
+    kernel_mean_p_value,
+    @utils.Random::new(KERNEL_SEED),
+  )
+  let second = @gcm.kernel_based(
+    x,
+    z,
+    Some(y),
+    true,
+    2,
+    5,
+    kernel_mean_p_value,
+    @utils.Random::new(KERNEL_SEED + 1UL),
+  )
+  assert_true(first != second)
+}
+
+///|
+/// An almost constant column does not make the test return a number that is
+/// not a number.
+///
+/// This is the case of the upstream
+/// `test_given_almost_constant_data_when_perform_kernel_based_test_then_does_not_return_nans`.
+///
+/// The upstream draws ten of the hundred rows of its sample, and the port
+/// draws another ten of them, so the two p-values are not the same numbers.
+/// Only the property the upstream asserts is mirrored here.
+test "an almost constant column does not make the test return a number that is not a number" {
+  let frame = @gcm.kernel_almost_constant_frame()
+  let constant = kernel_column(frame, "C")
+  let noise = kernel_column(frame, "N")
+  let other = kernel_column(frame, "M")
+  let pair = @gcm.kernel_based(
+    constant,
+    noise,
+    None,
+    false,
+    1,
+    10,
+    kernel_first_p_value,
+    @utils.Random::new(KERNEL_SEED),
+  )
+  let conditional = @gcm.kernel_based(
+    constant,
+    noise,
+    Some(other),
+    false,
+    1,
+    10,
+    kernel_first_p_value,
+    @utils.Random::new(KERNEL_SEED),
+  )
+  let conditioning = @gcm.kernel_based(
+    noise,
+    other,
+    Some(constant),
+    false,
+    1,
+    10,
+    kernel_first_p_value,
+    @utils.Random::new(KERNEL_SEED),
+  )
+  // A number that is not a number is the only value that differs from itself.
+  assert_false(pair != pair)
+  assert_false(conditional != conditional)
+  assert_false(conditioning != conditioning)
 }

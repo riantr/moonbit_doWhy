@@ -97,6 +97,47 @@ pub fn CatBoostEncoder::transform(
 }
 
 ///|
+/// The encoded values of the given categories, with the target of the rows.
+///
+/// This is the port of the `transform` of the upstream that is given a target:
+/// the value of a row is the mean of the target of the rows of its category
+/// that come before it, smoothed with the mean of the target of the whole
+/// column. The row itself is not part of the mean, which is the equation (1)
+/// of the CatBoost paper.
+pub fn CatBoostEncoder::transform_with_target(
+  self : CatBoostEncoder,
+  x : Array[String],
+  y : Array[Double],
+) -> Array[Double] {
+  if !self.fitted {
+    abort("the encoder has not been fitted")
+  }
+  let out : Array[Double] = []
+  for _ in x {
+    out.push(0.0)
+  }
+  for category in sorted_distinct_labels(x) {
+    let mut sum = 0.0
+    let mut count = 0
+    for i in 0..<x.length() {
+      if i >= y.length() {
+        break
+      }
+      if x[i] != category {
+        continue
+      }
+      sum = sum + y[i]
+      count = count + 1
+      // The sum and the count hold the row itself, so the row is taken out of
+      // the sum and the count is the number of the rows before it.
+      out[i] = (sum - y[i] + self.alpha * self.p) /
+        (count.to_double() + self.p - 1.0)
+    }
+  }
+  out
+}
+
+///|
 /// The CatBoost encoders of the categorical columns of a frame.
 ///
 /// This is the port of the map of the encoders that
@@ -154,6 +195,66 @@ pub fn CatBoostEncoders::design_matrix(
     return @utils.Matrix::zeros(data.nrows(), 0)
   }
   @utils.Matrix::from_columns(out)
+}
+
+///|
+/// The design matrix of the given frame, with the encoded categorical columns
+/// and the target of the rows.
+///
+/// This is the port of the `apply_catboost_encoding` of the upstream that is
+/// given a target: the categorical columns are encoded with the target of the
+/// rows and the numeric columns keep their values.
+pub fn CatBoostEncoders::design_matrix_with_target(
+  self : CatBoostEncoders,
+  data : @api.DataFrame,
+  columns : Array[String],
+  target : Array[Double],
+) -> @utils.Matrix {
+  let out : Array[Array[Double]] = []
+  for column in columns {
+    if self.columns.contains(column) {
+      match self.encoders.get(column) {
+        Some(encoder) =>
+          out.push(encoder.transform_with_target(data.discrete(column), target))
+        None => ()
+      }
+    } else {
+      out.push(data.numeric(column))
+    }
+  }
+  if out.length() == 0 {
+    return @utils.Matrix::zeros(data.nrows(), 0)
+  }
+  @utils.Matrix::from_columns(out)
+}
+
+///|
+/// The design matrix of the given frame, with the encoder the upstream picks.
+///
+/// This is the port of `dowhy.gcm.util.general.auto_fit_encoders` and of
+/// `dowhy.gcm.util.general.auto_apply_encoders`: the one-hot encoder is used
+/// when the data holds at most `catboost_threshold` categories and the
+/// CatBoost encoder is used otherwise. The CatBoost encoder is applied with
+/// the target of the rows and the one-hot encoder without it, the way the
+/// upstream applies them.
+pub fn auto_encode(
+  data : @api.DataFrame,
+  columns : Array[String],
+  target : Array[Double],
+  catboost_threshold~ : Int32 = CATBOOST_THRESHOLD,
+) -> @utils.Matrix {
+  let discrete : Array[String] = []
+  for column in columns {
+    if data.is_discrete(column) {
+      discrete.push(column)
+    }
+  }
+  if number_of_categories(data, discrete) > catboost_threshold {
+    let encoders = CatBoostEncoders::fit(data, discrete, target)
+    return encoders.design_matrix_with_target(data, columns, target)
+  }
+  let encoder = ParentEncoder::fit(data, columns)
+  encoder.design_matrix(data, columns)
 }
 
 ///|

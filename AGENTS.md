@@ -840,6 +840,24 @@ statsmodels / scikit-learn conventions are deliberate:
   the mean of the target of its rows and the mean of the target of the whole
   column, and a category that holds a single row takes the mean of the whole
   column.
+- The CatBoost encoder of the `gcm` package has two forms, and they are not
+  the same number. The encoding without the target is the mean of the target of
+  the rows of the category, smoothed with the mean of the target of the whole
+  column, and a category that holds a single row takes the mean of the whole
+  column. The encoding with the target leaves the row itself out of the mean of
+  its category: the value of a row is the mean of the target of the rows of its
+  category that come before it, smoothed with the mean of the target of the
+  whole column. That is the equation (1) of the CatBoost paper, the way
+  `dowhy.gcm.util.catboost_encoder.CatBoostEncoder` computes it with a
+  cumulative sum over the rows of the category.
+- The categorical data of the kernel based independence test of the `gcm`
+  package is encoded with the one-hot encoder of
+  `sklearn.preprocessing.OneHotEncoder`, the way the upstream encodes every
+  matrix of its test on its own: the categories of a column are in
+  lexicographic order and every category becomes a column of its own. The
+  matrices of the port hold numbers only, so the encoding happens at the call
+  site of the test. The p-values of the port and of the upstream differ by less than
+  `5e-12` on the categorical fixture of the test.
 - The summary of the automatic assignment of the `gcm` package reproduces the
   text of `dowhy.gcm.auto.AutoAssignmentSummary.__str__` character for
   character: the name of the distribution of a root node is `Empirical
@@ -871,7 +889,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations |
 | `overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the automatic assignment of the mechanisms with the selection of the model by cross validation and the test of a linear relationship, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the **CatBoost encoder** of the categorical columns, the prediction models, the causal mechanisms, the automatic assignment of the mechanisms with the selection of the model by cross validation and the test of a linear relationship, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -901,6 +919,13 @@ README makes, so they are tracked in the repository:
   tests of the `datasets` package compare against. It prints the draws of the
   upstream as well, so that the sampler of the port can be checked against the
   ones of SciPy.
+- `gcm_general_reference.py` runs the upstream `dowhy.gcm.util.general` on the
+  fixtures of the tests of the port and prints the numbers it produces -- the
+  geometric median, the set difference of the rows, the scaling of the columns
+  and the differences of the means -- and the numbers of the CatBoost encoder
+  of the categorical columns, with and without the target of the rows, with a
+  categorical target and with the automatic encoder of the upstream, which is
+  where the expectations of the tests of the encoder come from.
 - `gcm_density_estimators_reference.py` runs the upstream
   `dowhy.gcm.density_estimators` on the fixtures of the tests of the port and
   prints the numbers it produces -- the densities of the Gaussian mixture of the
@@ -989,7 +1014,9 @@ README makes, so they are tracked in the repository:
   outcome and the summary of the validation of the causal structure and the
   outcome of the validation of the invertible model -- with the upstream
   `dowhy.gcm` code, which is where the expectations of the tests of the
-  validation layer come from. The upstream needs the `causal-learn` package
+  validation layer come from. It computes the p-values of the categorical
+  fixture of the kernel based test as well, which is where the expectations of
+  the categorical cases of that test come from. The upstream needs the `causal-learn` package
   for its kernel based test, and its bootstrap runs have to be kept in one
   process (`dowhy.gcm.config.set_default_n_jobs(1)`), because the workers of a
   process pool cannot import the upstream package when it is read from its

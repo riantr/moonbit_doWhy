@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.50.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.51.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -26,7 +26,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph, its readers of a CSV and of a DOT, and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure and the **kernel based** one), the prediction models -- the linear one and the **polynomial** ones --, the causal mechanisms, the stochastic models, the noise of a causal model, the **feature relevance**, the **intrinsic causal influence**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, **with the selection of the model of a node by cross validation** and the **test of a linear relationship**, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution), the **unit change** layer, the **uncertainty** estimates, the **distribution change** layer -- the plain one and the **multiply-robust** one -- and the **arrow strength** layer are ported |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the **CatBoost encoder** of the categorical columns, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure and the **kernel based** one, **with categorical data**), the prediction models -- the linear one and the **polynomial** ones --, the causal mechanisms, the stochastic models, the noise of a causal model, the **feature relevance**, the **intrinsic causal influence**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, **with the selection of the model of a node by cross validation** and the **test of a linear relationship**, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution), the **unit change** layer, the **uncertainty** estimates, the **distribution change** layer -- the plain one and the **multiply-robust** one -- and the **arrow strength** layer are ported |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
@@ -101,7 +101,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
-| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the automatic assignment of the mechanisms with the selection of the model of a node by cross validation and the test of a linear relationship, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
+| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the **CatBoost encoder** of the categorical columns, the prediction models, the causal mechanisms, the automatic assignment of the mechanisms with the selection of the model of a node by cross validation and the test of a linear relationship, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
 | `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter, of the data subset refuter, of the dummy outcome refuter, of the unobserved common cause refuter, of the linear sensitivity analysis, of the E-value analysis and of the default strength of the confounder |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
@@ -374,6 +374,30 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   and does not seed its generator, so its own fit is not reproducible and its
   case asserts the length of the result and not its values. The port draws the
   centres from the data, so its fit is reproducible.
+
+- The CatBoost encoder of the `gcm` package is the port of
+  `dowhy.gcm.util.catboost_encoder.CatBoostEncoder`, and the automatic encoder
+  of the categorical columns is the port of
+  `dowhy.gcm.util.general.auto_fit_encoders` and of
+  `dowhy.gcm.util.general.auto_apply_encoders`. Two conventions decide whether
+  the port reproduces its numbers:
+  - **the value of a category is the mean of the target of its rows and the mean
+    of the target of the whole column**, and a category that holds a single row
+    takes the mean of the whole column. This is the equation (1) of the CatBoost
+    paper, which is the equation the upstream implements.
+  - **the encoding with the target of the rows leaves the row itself out of the
+    mean of its category**: the value of a row is the mean of the target of the
+    rows of its category that come before it, smoothed with the mean of the
+    target of the whole column. The upstream computes the same number with a
+    cumulative sum over the rows of the category.
+
+- The categorical data of the kernel based independence test of the `gcm`
+  package is encoded with the one-hot encoder of
+  `sklearn.preprocessing.OneHotEncoder`, the way the upstream encodes every
+  matrix of its test on its own: the categories of a column are in
+  lexicographic order and every category becomes a column of its own. The
+  p-values of the port and of the upstream differ by less than `5e-12` on the categorical
+  fixture of the test.
 
 ## Deliberate differences from upstream
 
@@ -648,9 +672,10 @@ following ways:
   categorical data, because a matrix of the port holds numbers only, and it
   one-hot encodes every discrete column of it. Upstream takes an array and
   encodes the columns whose values are strings. Upstream switches to the
-  CatBoost encoder when the data holds more than seven categories; the port
-  always uses the one-hot encoder, which is the encoder the upstream uses for
-  the fixtures of its own tests.
+  CatBoost encoder when the data holds more than seven categories; the port has
+  the CatBoost encoder and the rule of the upstream now, in `gcm.auto_encode`,
+  but the regression based test keeps the one-hot encoder, which is the
+  encoder the upstream uses for the fixtures of its own tests.
 - The upstream marks its categorical independence tests as flaky, because the
   two models of the F-test have residual sums of squares of the same order in
   the folds of the case that has to find no dependence, so the decision of
@@ -671,9 +696,11 @@ following ways:
   after another and draws their randomness from the generator it is given.
   Upstream runs them in a process pool with `joblib` and draws from the global
   generator of numpy, and its `bootstrap_n_jobs` parameter has no counterpart.
-- `gcm` encodes nothing for the kernel based independence test, because the
-  matrices of the port hold numbers only. Upstream one-hot encodes the
-  categorical data it is given, which the port cannot represent.
+- `gcm` encodes the categorical data of the kernel based independence test at
+  the call site, because the matrices of the port hold numbers only. Upstream
+  one-hot encodes every matrix of its test on its own, with the same encoder,
+  and the p-values of the port and of the upstream differ by less than `5e-12` on the
+  categorical fixture of the test.
 - `gcm` estimates the Shapley values of the feature relevance of every sample of
   the baseline on its own, and it compares the predictions of a randomized
   subset with the predictions of the baseline repeated for every sample of the

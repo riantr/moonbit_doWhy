@@ -2576,3 +2576,66 @@ The test of a linear relationship and the rest of the automatic assignment.
   file records the difference.
 
 [0.0.50]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.50
+
+## [0.0.51] - 2026-11-12
+
+The categorical data of the `gcm` package: the CatBoost encoder and the
+categorical cases of the kernel based independence test.
+
+### Added
+
+- the CatBoost encoding of a column with the target of its rows in the `gcm`
+  package, the port of the `transform` of
+  `dowhy.gcm.util.catboost_encoder.CatBoostEncoder` that is given a target: the
+  value of a row is the mean of the target of the rows of its category that
+  come before it, smoothed with the mean of the target of the whole column.
+- the automatic encoder of the categorical columns of the `gcm` package, the
+  port of `dowhy.gcm.util.general.auto_fit_encoders` and of
+  `dowhy.gcm.util.general.auto_apply_encoders`: the one-hot encoder when the
+  data holds at most seven categories and the CatBoost encoder otherwise.
+- the cases of the upstream test file `tests/gcm/util/test_general.py` in
+  `src/gcm/catboost_encoder_test.mbt`: the CatBoost encoding of a column with
+  and without the target, the encoding of a categorical column with a numeric
+  column among them, the encoding of a categorical target and the choice of
+  the encoder of the automatic assignment above and below its threshold.
+- the cases of the upstream test file
+  `tests/gcm/independence_test/test_kernel.py` that the port did not mirror
+  yet, in `src/gcm/kernel_test.mbt`: the test of the categorical data, the
+  determinism of the test for a given seed, with and without a conditioning
+  variable, and the almost constant data.
+- the fixtures of the cases of the kernel test in
+  `src/gcm/kernel_testdata.mbt`.
+- the p-values of the upstream on the categorical fixture of the kernel test
+  in `_verify/gcm_validation_reference.py`, and the numbers of the upstream
+  CatBoost encoder in `_verify/gcm_general_reference.py`.
+
+### Changed
+
+- the header of the test file of the general helpers of the `gcm` package
+  records that the CatBoost encoder is ported now, and that the cases of the
+  encoder are the ones of `catboost_encoder_test.mbt`.
+- the header of the test file of the kernel based independence test records the
+  cases the port does not mirror: the approximate test of the upstream, which
+  is the randomised independence test of Strobl et al., and the data of a
+  numpy dtype of an object, which the frame of the port does not hold.
+
+### Notes
+
+- The upstream encodes every matrix of its kernel based test on its own, with
+  the one-hot encoder of the columns that hold categories. The matrices of the
+  port hold numbers only, so the test of the port encodes the categorical
+  columns at the call site, with the same encoder. The p-values of the port
+  and of the upstream differ by less than `5e-12` on the categorical
+  fixture.
+- The upstream draws the rows of its sample with the global generator of numpy
+  and the port draws them with the generator it is given, so the two draw
+  different subsets of the rows of the almost constant case. Only the property
+  the upstream asserts -- the p-value is not a number that is not a number --
+  is mirrored there.
+- The p-values of the determinism cases are not numbers of the upstream: the
+  upstream draws its fixture with the global generator of numpy, which is not
+  seeded, so its own runs are not reproducible either. The port mirrors the
+  property the upstream asserts: two runs with the same seed give the same
+  p-value, and two runs with another seed give another one.
+
+[0.0.51]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.51

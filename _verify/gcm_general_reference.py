@@ -122,6 +122,54 @@ def main() -> None:
     print(f"  mean[1] = {scaled[:, 1].mean():.12f}")
     print(f"  std[1] = {scaled[:, 1].std():.12f}")
 
+    # The CatBoost encoder of the categorical columns, with and without the
+    # target of the rows, and the choice of the automatic encoder.
+    catboost_x = np.array(["A", "B", "A", "D", "C", "C", "C", "A"])
+    catboost_y = np.array([1.0, 2.0, 3.0, 4.0, 2.0, 3.0, 4.0, 2.0])
+    with_target = np.asarray(
+        general.apply_catboost_encoding(
+            catboost_x, general.fit_catboost_encoders(catboost_x, catboost_y), catboost_y
+        )
+    ).reshape(-1)
+    without_target = np.asarray(
+        general.apply_catboost_encoding(catboost_x, general.fit_catboost_encoders(catboost_x, catboost_y))
+    ).reshape(-1)
+    print("CATBOOST")
+    for value in with_target:
+        print(f"  with_target = {value:.12f}")
+    for value in without_target:
+        print(f"  without_target = {value:.12f}")
+
+    # The CatBoost encoder of a categorical target, whose labels the upstream
+    # encodes with the numbers zero to n.
+    labels_x = np.array(["A", "B", "A", "C", "A"])
+    labels_y = np.array(["C1", "C1", "C1", "C2", "C1"])
+    labels = np.asarray(
+        general.apply_catboost_encoding(labels_x, general.fit_catboost_encoders(labels_x, labels_y), labels_y)
+    ).reshape(-1)
+    print("CATBOOST_LABELS")
+    for value in labels:
+        print(f"  label = {value:.12f}")
+
+    # The automatic encoder picks the CatBoost encoder above the threshold and
+    # the one-hot encoder below it.
+    automatic = np.asarray(
+        general.auto_apply_encoders(
+            catboost_x, general.auto_fit_encoders(catboost_x, catboost_y, catboost_threshold=3), catboost_y
+        )
+    ).reshape(-1)
+    print("CATBOOST_AUTO")
+    for value in automatic:
+        print(f"  automatic = {value:.12f}")
+    one_hot = np.asarray(
+        general.auto_apply_encoders(
+            catboost_x, general.auto_fit_encoders(catboost_x, catboost_y, catboost_threshold=5), catboost_y
+        )
+    )
+    print("CATBOOST_AUTO_ONE_HOT")
+    for row in one_hot:
+        print("  " + " ".join(f"{value:.12f}" for value in row))
+
     # The differences of the means and the variances of the deviations.
     randomized = np.array([1.0, 2.0, 3.0, 4.0])
     baseline = np.array([2.0, 2.0, 2.0, 2.0])

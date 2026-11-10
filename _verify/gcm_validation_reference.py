@@ -64,6 +64,7 @@ Usage:
 
 from __future__ import annotations
 
+import math
 import os
 import sys
 import types
@@ -189,6 +190,63 @@ def upstream_non_linear_data(num_rows: int) -> pd.DataFrame:
     y = x**2 + np.random.normal(loc=0, scale=1, size=num_rows)
     z = np.exp(-y) + np.random.normal(loc=0, scale=1, size=num_rows)
     return pd.DataFrame(data=dict(X=x, Y=y, Z=z))
+
+
+KERNEL_CATEGORICAL_SEED = 20240201
+KERNEL_CATEGORICAL_ROWS = 200
+MASK64 = (1 << 64) - 1
+
+
+class PortRandom:
+    """The generator of the `utils` package of the port."""
+
+    def __init__(self, seed: int) -> None:
+        self.state = seed if seed != 0 else 0x9E3779B97F4A7C15
+
+    def next_u64(self) -> int:
+        x = self.state
+        x ^= (x << 13) & MASK64
+        x ^= x >> 7
+        x ^= (x << 17) & MASK64
+        self.state = x
+        return x
+
+    def next_double(self) -> float:
+        return (self.next_u64() >> 11) / 9007199254740992.0
+
+    def next_normal(self) -> float:
+        u1 = self.next_double()
+        u2 = self.next_double()
+        u1 = u1 if u1 >= 1e-12 else 1e-12
+        return math.sqrt(-2.0 * math.log(u1)) * math.cos(2.0 * math.pi * u2)
+
+
+def categorical_kernel_fixture() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """The categorical fixture of the kernel test of the port.
+
+    The fixture is the one of the upstream test file: `X` is a column of
+    normal deviates, `Z` holds the class of the sign of `X`, `Y` holds the
+    number of the class of `Z` with a noise and `R` holds a class that does not
+    depend on `X`.
+    """
+    rng = PortRandom(KERNEL_CATEGORICAL_SEED)
+    x: list[float] = []
+    y: list[float] = []
+    z: list[str] = []
+    r: list[str] = []
+    for _ in range(KERNEL_CATEGORICAL_ROWS):
+        value = rng.next_normal()
+        klass = 0.0 if value > 0.0 else 1.0
+        x.append(value)
+        y.append(klass + rng.next_normal())
+        z.append("Class 1" if value > 0.0 else "Class 2")
+        r.append("Class 1" if rng.next_double() < 0.5 else "Class 2")
+    return (
+        np.array(x).reshape(-1, 1),
+        np.array(y).reshape(-1, 1),
+        np.array(z),
+        np.array(r),
+    )
 
 
 def print_validation_summary(summary: dict) -> None:
@@ -368,6 +426,19 @@ def main() -> None:
         show("p(X,Y|Z)", kernel_based(x, y, z))
         show("p(X,Z|Y)", kernel_based(x, z, y))
         show("p(Y,Z|X)", kernel_based(y, z, x))
+
+    # ------------------------------------------------------------------
+    # E. The p-values of the kernel based independence test of the
+    # categorical fixture of the port, whose conditioning variable and whose
+    # target hold categories.
+    # ------------------------------------------------------------------
+    np.random.seed(SEED)
+    x, y, z, r = categorical_kernel_fixture()
+    print("KERNEL_BASED_TEST categorical")
+    show("p(X,Y|Z)", kernel_based(x, y, z))
+    show("p(X,Z|Y)", kernel_based(x, z, y))
+    show("p(X,R)", kernel_based(x, r))
+    show("p(X,Z)", kernel_based(x, z))
 
 
 if __name__ == "__main__":
