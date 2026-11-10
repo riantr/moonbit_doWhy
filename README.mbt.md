@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.67.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.68.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -18,7 +18,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators) |
 | Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
-| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome, **with its random forest and its neural network**, and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis**, its **E-value analysis** and the **default strength** it infers for its confounder --, the **significance test** of the refutations, and the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules) |
+| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome, **with its random forest, its neural network and its support vector regressor**, and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis**, its **E-value analysis** and the **default strength** it infers for its confounder --, the **significance test** of the refutations, and the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset`, the **sales data set** and the fixtures the upstream tests use) |
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
 | Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
@@ -602,8 +602,8 @@ The `refuters` package differs from upstream in the following ways:
   another category and leaves the rows it does not change alone.
 - The dummy outcome refuter takes the list of transformations of the outcome
   as `Transformation` values: `zero`, `noise`, `permute`, `linear_regression`,
-  the k nearest neighbours, a random forest, a neural network and a model the
-  caller gives. The default list is
+  the k nearest neighbours, a random forest, a neural network, a support vector
+  regressor and a model the caller gives. The default list is
   `[zero, noise(1)]`, the `DEFAULT_TRANSFORMATION` of the upstream, so the
   simulated outcome of the default refutation is zero followed by a normal
   noise, and not the uniform draw of `[0, 1]` the port used before 0.0.37.
@@ -621,10 +621,22 @@ The `refuters` package differs from upstream in the following ways:
   treatment lies at or below the first edge takes part in no bucket. A frame
   whose ranges do not increase makes the port abort with the message of
   `pandas.cut`, `bins must increase monotonically.`
-- `svm` needs the estimator the port does not have, so `Transformation` has no
-  variant for it and a list that names it cannot be built. The `random_forest`
-  of the upstream is the `RandomForestRegressor` of scikit-learn; the port has
-  a random forest of its own, in the file
+- The `svm` of the upstream is the `SVR` of scikit-learn; the port has a support
+  vector regressor of its own, in the file
+  `src/refuters/dummy_outcome_svm.mbt`, with the radial basis kernel, the
+  penalty `C` and the width of the tube of the epsilon insensitive loss of the
+  upstream. Its solver is the one of libsvm, the library scikit-learn uses: the
+  rows are duplicated with the labels +1 and -1, the matrix of the kernel is
+  signed, and two variables are updated at a time until the spread of the signed
+  gradient of the copies falls below the tolerance of scikit-learn. The kernel
+  is computed row by row and never held in memory, so a fit needs the memory of
+  the rows and not the memory of their matrix. The dual of the epsilon
+  insensitive loss is not strictly convex, so two solvers of the same tolerance
+  reach a nearby but not identical point of the tube: the port and scikit-learn
+  agree to `6.9e-8` on the fixture of the reference script
+  `_verify/support_vector_machine_reference.py`.
+- The `random_forest` of the upstream is the `RandomForestRegressor` of
+  scikit-learn; the port has a random forest of its own, in the file
   `src/refuters/dummy_outcome_models.mbt`, with the hundred trees, the sample
   of the training rows with replacement and the square root of the number of
   the features at every split of scikit-learn.

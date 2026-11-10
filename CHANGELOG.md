@@ -3165,6 +3165,63 @@ The categorical noise dependent function.
 
 [0.0.61]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.61
 
+## [0.0.68] - 2026-11-11
+
+The support vector regressor of the dummy outcome refuter.
+
+### Added
+
+- the support vector regressor of the `refuters` package, in the new file
+  `src/refuters/dummy_outcome_svm.mbt`: the port of the `SVR` of scikit-learn,
+  which the upstream builds when the transformation list of the dummy outcome
+  refuter names the `svm` estimator. The regressor has the radial basis kernel
+  of scikit-learn, whose width is the inverse of the number of the features
+  times the variance of the training data, the penalty `C` and the width of the
+  tube of the epsilon insensitive loss of the caller.
+- the variant `Transformation::support_vector_machine` of the `refuters` package
+  and the case of the upstream test
+  `test_refutation_dummy_outcome_refuter_internal_svm_continuous_treatment`
+  in the file `src/tests/dummy_outcome_refuter.mbt`. The port mirrors 13 of the
+  20 cases of the upstream test file
+  `tests/causal_refuters/test_dummy_outcome_refuter.py` now.
+- the predictions of scikit-learn in the new reference script
+  `_verify/support_vector_machine_reference.py`, which fits the `SVR` of
+  scikit-learn on the fixture of the port and prints its predictions next to the
+  ones of the port. The two agree to `6.9e-8` and the bias to `2.7e-9`.
+- the case of the support vector regressor in the reference script
+  `_verify/dummy_outcome_reference.py`, which runs the upstream on the ten
+  thousand rows of its own case and prints the refuted effects of every bucket.
+  The upstream gives the refuted effects 0.000249, -0.003245 and -0.000599, and
+  the port gives -0.000419, 0.001377 and -0.000430. Both are inside the
+  tolerance of one hundredth of the case.
+
+### Notes
+
+- The solver of the port is the one of libsvm, the library scikit-learn uses:
+  the rows are duplicated, the first copy of every row carries the label +1 and
+  the second one the label -1, the matrix of the kernel is signed, the linear
+  term of the copy with the label +1 is `epsilon - y` and the one of the copy
+  with the label -1 is `epsilon + y`, and the solver updates two variables at a
+  time until the spread of the signed gradient of the copies falls below its
+  tolerance, which is the tolerance of scikit-learn. The kernel is computed row
+  by row and never held in memory, so a fit needs the memory of the rows and not
+  the memory of their matrix.
+- The dual of the epsilon insensitive loss is not strictly convex, so two
+  solvers of the same tolerance reach a nearby but not identical point of the
+  tube. The port and scikit-learn therefore agree to the tolerance of the
+  solver.
+- The case of the upstream runs on the ten thousand rows of its fixture and not
+  on the twenty thousand rows of the other continuous cases of the port: the
+  regressor is fitted once per bucket and per simulation, and a fit costs about
+  a third of a second on the rows of the upstream case.
+- The transformation list of the upstream replaces the outcome by zero right
+  after the estimator, so the prediction of the estimator is discarded and the
+  dummy outcome is a white noise. The refuted effect is therefore the sampling
+  error of the estimator, and it does not depend on the model that the list
+  names.
+
+[0.0.68]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.68
+
 ## [0.0.67] - 2026-11-11
 
 The neural network of the dummy outcome refuter.

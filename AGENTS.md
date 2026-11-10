@@ -1102,6 +1102,24 @@ statsmodels / scikit-learn conventions are deliberate:
   seed; the port draws it with its own generator, so a network of the port is
   the same network on every run.
 
+- The **support vector regressor** of the `refuters` package is the port of the
+  `SVR` of scikit-learn: the radial basis kernel, whose width is the inverse of
+  the number of the features times the variance of the training data with
+  `ddof = 0`, the penalty `C` and the width of the tube of the epsilon
+  insensitive loss of the caller. The solver is the one of libsvm, the library
+  scikit-learn uses: the rows are duplicated, the first copy of every row
+  carries the label +1 and the second one the label -1, the matrix of the kernel
+  is signed, the linear term of the copy with the label +1 is `epsilon - y` and
+  the one of the copy with the label -1 is `epsilon + y`, and the solver updates
+  two variables at a time until the spread of the signed gradient of the copies
+  falls below its tolerance, which is the tolerance of scikit-learn. The kernel
+  is computed row by row and never held in memory, so a fit needs the memory of
+  the rows and not the memory of their matrix. The dual of the epsilon
+  insensitive loss is not strictly convex, so two solvers of the same tolerance
+  reach a nearby but not identical point of the tube; the port and scikit-learn
+  agree to `6.9e-8` on the fixture of
+  `_verify/support_vector_machine_reference.py`.
+
 ## Package layout
 
 | Package | Ports |

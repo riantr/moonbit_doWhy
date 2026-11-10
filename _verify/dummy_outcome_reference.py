@@ -30,9 +30,18 @@ import dowhy.datasets
 from dowhy import CausalModel
 
 # The cases of the upstream file whose transformation list the port can build:
-# (label, tolerance, estimator, transformation list, num_simulations, binary).
+# (label, tolerance, estimator, transformation list, num_simulations, binary,
+# num_samples).
 CASES = [
-    ("default_continuous_treatment", 0.03, "iv.instrumental_variable", None, 2, False),
+    (
+        "default_continuous_treatment",
+        0.03,
+        "iv.instrumental_variable",
+        None,
+        2,
+        False,
+        20000,
+    ),
     (
         "randomly_generated_continuous_treatment",
         0.05,
@@ -40,6 +49,7 @@ CASES = [
         [("zero", ""), ("noise", {"std_dev": 1})],
         2,
         False,
+        20000,
     ),
     (
         "permute_data_continuous_treatment",
@@ -48,6 +58,7 @@ CASES = [
         [("permute", {"permute_fraction": 1})],
         2,
         False,
+        20000,
     ),
     (
         "internal_linear_regression_continuous_treatment",
@@ -56,6 +67,7 @@ CASES = [
         [("linear_regression", {}), ("zero", ""), ("noise", {"std_dev": 1})],
         2,
         False,
+        20000,
     ),
     (
         "internal_knn_continuous_treatment",
@@ -64,6 +76,7 @@ CASES = [
         [("knn", {"n_neighbors": 5}), ("zero", ""), ("noise", {"std_dev": 1})],
         2,
         False,
+        20000,
     ),
     (
         "internal_random_forest_continuous_treatment",
@@ -76,6 +89,7 @@ CASES = [
         ],
         2,
         False,
+        20000,
     ),
     (
         "internal_neural_network_continuous_treatment",
@@ -91,6 +105,16 @@ CASES = [
         ],
         2,
         False,
+        20000,
+    ),
+    (
+        "internal_svm_continuous_treatment",
+        0.01,
+        "iv.instrumental_variable",
+        [("svm", {"C": 1, "epsilon": 0.2}), ("zero", ""), ("noise", {"std_dev": 1})],
+        2,
+        False,
+        10000,
     ),
 ]
 
@@ -101,13 +125,21 @@ def simple_linear_outcome_model(x_train, output_train):
     return lambda x: x[:, 0] + 2 * x[:, 1] + 3
 
 
-def run(label, tolerance, estimator_method, transformations, num_simulations, binary):
+def run(
+    label,
+    tolerance,
+    estimator_method,
+    transformations,
+    num_simulations,
+    binary,
+    num_samples=20000,
+):
     try:
         data = dowhy.datasets.linear_dataset(
             beta=10,
             num_common_causes=1,
             num_instruments=1,
-            num_samples=20000,
+            num_samples=num_samples,
             treatment_is_binary=binary,
         )
     except Exception as exc:  # noqa: BLE001
@@ -156,6 +188,8 @@ def run(label, tolerance, estimator_method, transformations, num_simulations, bi
 
 print("=" * 78)
 print("the upstream cases the port mirrors, on 20000 rows")
+print("the case of the support vector regressor runs on the ten thousand rows of the")
+print("upstream case, because the regressor is fitted once per bucket and per simulation")
 print("=" * 78)
 for case in CASES:
     run(*case)

@@ -166,7 +166,7 @@ fn network_initial(sizes : Array[Int32], rng : @utils.Random) -> Array[Double] {
 ///|
 /// The covariates of the frame as the rows of a flat array, the number of the
 /// rows and the number of the columns.
-fn network_matrix(x : @api.DataFrame) -> (Array[Double], Int32, Int32) {
+fn covariate_matrix(x : @api.DataFrame) -> (Array[Double], Int32, Int32) {
   let columns : Array[Array[Double]] = []
   for name in x.numeric_column_names() {
     columns.push(x.numeric(name))
@@ -458,7 +458,7 @@ fn network_fit(
       " rows",
     )
   }
-  let (flat, rows, features) = network_matrix(x)
+  let (flat, rows, features) = covariate_matrix(x)
   let sizes = network_sizes(features, hidden)
   let mut parameters = network_initial(sizes, rng)
   let (initial_value, initial_gradient) = network_loss_and_gradient(
@@ -569,7 +569,7 @@ fn network_predict(
   network : NeuralNetwork,
   x : @api.DataFrame,
 ) -> Array[Double] {
-  let (flat, rows, _) = network_matrix(x)
+  let (flat, rows, _) = covariate_matrix(x)
   let activations = network_forward(
     flat,
     rows,

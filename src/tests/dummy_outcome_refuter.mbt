@@ -40,11 +40,17 @@
 ///   `[neural_network([5, 2], 1e-5), zero, noise(1)]`, the instrumental variable
 ///   estimator, tolerance 0.01. The list carries an estimator, so the refuter
 ///   buckets the treatment and reports one refutation per bucket.
+/// * `internal_svm_continuous_treatment` — `[support_vector_machine(1, 0.2),
+///   zero, noise(1)]`, the instrumental variable estimator, tolerance 0.01. The
+///   list carries an estimator, so the refuter buckets the treatment and
+///   reports one refutation per bucket. The case runs on the ten thousand rows
+///   of the upstream case, because the regressor is expensive.
 ///
 /// The cases that are not mirrored:
 ///
-/// * The two whose transformation list names an estimator the port does not have
-///   — `svm`, one treatment each.
+/// * `internal_svm_binary_treatment`, whose transformation list names the support
+///   vector regressor and whose treatment is binary, so it fails for the reason
+///   of the binary cases below.
 /// * `custom_function_linear_regression_with_noise_binary_treatment` and
 ///   `custom_function_linear_regression_with_permute_binary_treatment`, which the
 ///   upstream marks `xfail` itself.
@@ -391,6 +397,43 @@ test "the inner neural network reports one refutation per bucket of the treatmen
     dummy_outcome_iv(dataset),
     transformations,
     32UL,
+  )
+  assert_eq(refutations.length(), 3)
+  for refutation in refutations {
+    assert_true(refutation.new_effect().abs() < 0.01)
+  }
+}
+
+///|
+/// test "the inner support vector regressor reports one refutation per bucket
+/// of the treatment"
+///
+/// This is the port of the upstream test
+/// `test_refutation_dummy_outcome_refuter_internal_svm_continuous_treatment`.
+///
+/// The regressor has the penalty and the width of the tube of the upstream
+/// case, which gives them to scikit-learn. The assertion is the tolerance of
+/// the upstream case, which is one hundredth: the transformation list of the
+/// upstream replaces the outcome by zero right after the regressor, so the
+/// dummy outcome is a white noise and the refuted effect is the sampling error
+/// of the estimator.
+///
+/// The case runs on the ten thousand rows of the upstream case and not on the
+/// rows of the other continuous cases, which are twenty thousand: the
+/// regressor is fitted once per bucket and per simulation, and the fit of the
+/// port costs about a third of a second on the rows of the upstream case.
+test "the inner support vector regressor reports one refutation per bucket of the treatment" {
+  let dataset = dummy_outcome_dataset(true, 10000)
+  let transformations = [
+    @refuters.Transformation::support_vector_machine(1.0, 0.2),
+    @refuters.Transformation::zero(),
+    @refuters.Transformation::noise(1.0),
+  ]
+  let refutations = dummy_outcome_refute(
+    dataset,
+    dummy_outcome_iv(dataset),
+    transformations,
+    33UL,
   )
   assert_eq(refutations.length(), 3)
   for refutation in refutations {

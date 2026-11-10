@@ -16,6 +16,8 @@
 ///   their prediction from the covariates,
 /// * `random_forest` and `neural_network` replace the outcome by the
 ///   prediction of a forest or of a network,
+/// * `support_vector_machine` replaces the outcome by the prediction of a
+///   support vector regressor,
 /// * `estimate` replaces the outcome by the prediction of a model the caller
 ///   gives.
 ///
@@ -70,6 +72,13 @@ pub enum Transformation {
   /// The number is the depth of the trees of the forest, the way the upstream
   /// gives the depth of its forest to scikit-learn.
   RandomForest(Int32)
+  /// The outcome is estimated from the covariates with a support vector
+  /// regressor.
+  ///
+  /// The first number is the penalty of the regressor and the second one the
+  /// width of the tube of its epsilon insensitive loss, the way the upstream
+  /// gives them to scikit-learn.
+  SupportVectorMachine(Double, Double)
   /// The outcome is estimated from the covariates with a neural network.
   ///
   /// The array holds the sizes of the hidden layers of the network and the
@@ -140,6 +149,19 @@ pub fn Transformation::random_forest(max_depth : Int32) -> Transformation {
 }
 
 ///|
+/// A transformation that estimates the outcome with a support vector regressor.
+///
+/// The penalty of the regressor and the width of the tube of its epsilon
+/// insensitive loss are the ones the caller gives, the way the upstream gives
+/// them to scikit-learn.
+pub fn Transformation::support_vector_machine(
+  c : Double,
+  epsilon : Double,
+) -> Transformation {
+  SupportVectorMachine(c, epsilon)
+}
+
+///|
 /// A transformation that estimates the outcome with a neural network.
 ///
 /// The hidden layers of the network have the given sizes and the penalty of its
@@ -181,6 +203,7 @@ fn has_estimator(transformations : Array[Transformation]) -> Bool {
       Zero | Noise(_) | Permute(_) => ()
       LinearRegression | NearestNeighbour(_) | RandomForest(_) => return true
       NeuralNetwork(_, _) => return true
+      SupportVectorMachine(_, _) => return true
       Estimate(_) => return true
     }
   }
@@ -747,6 +770,15 @@ fn process_transformations(
           train = Some(forest_predict(forest, x))
         }
         validation = forest_predict(forest, x_validation)
+      }
+      SupportVectorMachine(c, epsilon) => {
+        let x = require_training_frame(x_train, "support_vector_machine")
+        let y = require_training_outcome(train, "support_vector_machine")
+        let model = svm_fit(x, y, c, epsilon)
+        if train is Some(_) {
+          train = Some(svm_predict(model, x))
+        }
+        validation = svm_predict(model, x_validation)
       }
       NeuralNetwork(hidden, alpha) => {
         let x = require_training_frame(x_train, "neural_network")
