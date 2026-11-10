@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.46.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.47.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -268,7 +268,10 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   the test of the normal distribution below that. The bootstrap test counts the
   estimates that are above the estimate and the half of the ones that are equal
   to it, and the normal test takes the z-score of the estimate against the mean
-  and the standard deviation of the simulations, with `ddof = 0`.
+  and the standard deviation of the simulations, with `ddof = 0`. The two tests
+  are public, because the upstream exposes them as the methods
+  `perform_bootstrap_test` and `perform_normal_distribution_test` of the base
+  class of its refuters.
 - The bootstrap refuter resamples the rows of the data **with** replacement and
   perturbs the variables of interest, the way the upstream does: a numeric
   column gets a Gaussian noise whose standard deviation is the given fraction

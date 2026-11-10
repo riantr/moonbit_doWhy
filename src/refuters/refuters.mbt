@@ -179,11 +179,16 @@ pub fn test_significance(
 ///|
 /// The two sided percentile p-value of the bootstrap test.
 ///
+/// This is the port of `perform_bootstrap_test` of `dowhy.causal_refuter`: the
+/// p-value is two times the smaller of the share of the simulations that are
+/// above the estimate and the share of the ones that are below it, where a
+/// simulation that is equal to the estimate counts as a half.
+///
 /// A refuter that ran no simulation has no distribution to test the estimate
 /// against, so the p-value is one.  The upstream computes the mean and the
 /// standard deviation of the simulations with numpy, which returns `nan` for an
 /// empty array, so its p-value is `nan` in that case.
-fn bootstrap_significance(
+pub fn bootstrap_significance(
   estimate : Double,
   simulations : Array[Double],
 ) -> Double {
@@ -209,7 +214,11 @@ fn bootstrap_significance(
 
 ///|
 /// The p-value of the test of the normal distribution.
-fn normal_significance(
+///
+/// This is the port of `perform_normal_distribution_test` of
+/// `dowhy.causal_refuter`: the estimate is tested against the mean and the
+/// standard deviation of the simulations with the normal distribution.
+pub fn normal_significance(
   estimate : Double,
   simulations : Array[Double],
 ) -> Double {

@@ -2366,3 +2366,40 @@ The sales data set of the upstream.
 
 [0.0.45]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.45
 [0.0.46]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.46
+
+## [0.0.47] - 2026-11-10
+
+The case of the refuters of the upstream.
+
+### Added
+
+- the case of the upstream test file `tests/test_causal_refuter.py` in
+  `src/tests/significance_test.mbt`: the percentile test of the bootstrap on
+  five thousand standard normal deviates, which the upstream asserts to be above
+  0.95.
+- the numbers of that case in `_verify/significance_reference.py`, which
+  reproduces the generator of the port and computes the p-value of its draw
+  without running the toolchain.
+
+### Changed
+
+- The two significance tests of the `refuters` package, `bootstrap_significance`
+  and `normal_significance`, are public now. They are the ports of
+  `perform_bootstrap_test` and of `perform_normal_distribution_test` of
+  `dowhy.causal_refuter`, which the upstream exposes on the base class of its
+  refuters.
+
+### Notes
+
+- The header of the test file of the significance test names the upstream test
+  file it mirrors now, and the counter of `_verify/upstream_test_coverage.py`
+  counts 67 of the 74 test files of the upstream.
+- The other case of the upstream test file checks that the placeholder method of
+  the base class of the refuters raises, and it has no counterpart in the port:
+  the port has no base class whose refutation is a placeholder.
+- The upstream draws the deviates of its case with the global generator of numpy
+  and does not seed it, so its p-value is not a fixed number. The reference
+  script prints the p-values of two seeds of the upstream -- 0.9864 and 0.9788
+  -- and the p-value of the draw of the port, 0.9936.
+
+[0.0.47]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.47

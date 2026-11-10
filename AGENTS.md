@@ -1178,7 +1178,12 @@ README makes, so they are tracked in the repository:
 - `significance_reference.py` computes the p-values of the two kinds of the
   significance test of the refutations with the formulas of the upstream, so
   that the expectations of the tests of the port are written down and not
-  transcribed.
+  transcribed. It also reproduces the generator of the port -- the xorshift64 of
+  `utils.Random` and its Box-Muller transform -- so that the p-value of the case
+  of the upstream test file `tests/test_causal_refuter.py` is computed here
+  independently of the toolchain, and it runs the function of the upstream
+  itself, which gives 0.9864 on the draw of the upstream and 0.9936 on the draw
+  of the port.
 - The tests of the bootstrap refuter and of the data subset refuter assert the
   **property** the upstream tests assert, that the effect of a resample and the
   effect of a subset stay close to the effect of the data, and not the numbers
