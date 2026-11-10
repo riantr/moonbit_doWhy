@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.72.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.73.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -15,7 +15,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Area | Upstream | This port |
 | --- | --- | --- |
 | Causal graph, d-separation | `dowhy.graph`, `dowhy.causal_graph` | ported (the graph, the d-separation, the backdoor and the frontdoor paths, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site) |
-| Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators, the **refutation of the graph** and the **do operator**) |
+| Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators, the **refutation of the graph**, the **do operator**, the **view of the graph** and the **interpretation** of an estimate) |
 | Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
 | Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome, **with its random forest, its neural network and its support vector regressor**, and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis**, its **E-value analysis** and the **default strength** it infers for its confounder --, the **significance test** of the refutations, the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules, and the **graph refutation**, which tests the conditional independences the graph entails against the data) |
@@ -94,6 +94,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `graph` | `riantr/moonbit_dowhy/graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
 | `identifiers` | `riantr/moonbit_dowhy/identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `riantr/moonbit_dowhy/model` | `dowhy.causal_estimator` (the estimate objects) |
+| `interpreters` | `riantr/moonbit_dowhy/interpreters` | `dowhy.interpreters`: the sentence that reads an estimate |
 | `estimators` | `riantr/moonbit_dowhy/estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand and the **do operator** |
 | `refuters` | `riantr/moonbit_dowhy/refuters` | `dowhy.causal_refuters`, with the **graph refutation** |
 | `overrule` | `riantr/moonbit_dowhy/overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
@@ -1284,6 +1285,17 @@ following ways:
   of a method, and it raises a `NameError`; the port takes the name of the
   method. The upstream documents the do operator of the model as an estimate
   object and returns a number, and the port returns the number.
+- The interpreter of the upstream writes the name of the outcome as the list it
+  holds it in, so its sentence holds `[['y']]`. The port holds one name, so its
+  sentence holds `[y]`.
+- The upstream passes the model to the interpreter of an estimate, which reads
+  the estimate from the model, and the model of the upstream holds no estimate,
+  so the upstream raises an `AttributeError`. The port takes the estimate of
+  the caller.
+- Python writes a number with the shortest text that reads it back, and the
+  toolchain writes seventeen digits, so the sentence of the port holds
+  `1.9999297752808973` where the sentence of the upstream holds
+  `1.9999297752809`. The two are the same number.
 
 ## Development
 

@@ -556,6 +556,49 @@ pub fn CausalModel::estimate_effect(
 }
 
 ///|
+/// The document that draws the causal graph of the model.
+///
+/// This is the port of `dowhy.causal_model.CausalModel.view_model`, which
+/// writes a picture of the graph with Graphviz. The port writes the Graphviz
+/// DOT document of the graph, which Graphviz reads and draws.
+pub fn CausalModel::view_model(self : CausalModel) -> String {
+  let plot = @plotting.graphviz_plot(
+    self.graph.directed_graph(),
+    true,
+    None,
+    None,
+    None,
+  )
+  plot.to_dot()
+}
+
+///|
+/// The interpretation of the model.
+///
+/// This is the port of `dowhy.causal_model.CausalModel.interpret`.
+///
+/// The upstream prints the summary of the model and shows the picture of its
+/// graph when the caller names no interpreter, and the port returns the
+/// summary and the document of the graph.
+///
+/// The upstream passes the model to the named interpreter, which reads the
+/// estimate from the model, and the model of the upstream holds no estimate,
+/// so the upstream raises an `AttributeError`. The port takes the estimate of
+/// the caller.
+///
+/// The text is `None` when the treatment of the estimate is a category, which
+/// is the case the upstream refuses with a `NotImplementedError`.
+pub fn CausalModel::interpret(
+  self : CausalModel,
+  estimate : @model.CausalEstimate?,
+) -> String? {
+  match estimate {
+    Some(value) => @interpreters.textual_effect_interpretation(value, self.data)
+    None => Some(self.summary() + "\n" + self.view_model())
+  }
+}
+
+///|
 /// The value of the outcome when the treatment is intervened on.
 ///
 /// This is the port of `dowhy.causal_model.CausalModel.do`.

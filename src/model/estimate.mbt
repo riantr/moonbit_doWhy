@@ -68,6 +68,30 @@ pub fn CausalEstimate::estimate(self : CausalEstimate) -> Double {
 }
 
 ///|
+/// The name of the treatment of the estimate.
+pub fn CausalEstimate::treatment_name(self : CausalEstimate) -> String {
+  self.treatment_name
+}
+
+///|
+/// The name of the outcome of the estimate.
+pub fn CausalEstimate::outcome_name(self : CausalEstimate) -> String {
+  self.outcome_name
+}
+
+///|
+/// The value of the control arm.
+pub fn CausalEstimate::control_value(self : CausalEstimate) -> Double {
+  self.control_value
+}
+
+///|
+/// The value of the treated arm.
+pub fn CausalEstimate::treatment_value(self : CausalEstimate) -> Double {
+  self.treatment_value
+}
+
+///|
 /// The lower bound of the confidence interval.
 pub fn CausalEstimate::confidence_interval_lower(
   self : CausalEstimate,

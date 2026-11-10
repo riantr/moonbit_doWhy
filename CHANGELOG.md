@@ -42,7 +42,6 @@ graph, identification, estimation, refutation.
 - `tests` -- the cross-package integration tests.
 
 [0.0.1]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.1
-
 ## [0.0.2] - 2026-10-31
 
 ### Fixed
@@ -70,7 +69,6 @@ graph, identification, estimation, refutation.
   discovery package.
 
 [0.0.2]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.2
-
 ## [0.0.3] - 2026-10-31
 
 ### Added
@@ -110,7 +108,6 @@ graph, identification, estimation, refutation.
   different rows up.
 
 [0.0.3]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.3
-
 ## [0.0.4] - 2026-11-01
 
 ### Added
@@ -171,7 +168,6 @@ graph, identification, estimation, refutation.
   itself rather than from a reading of it.
 
 [0.0.4]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.4
-
 ## [0.0.5] - 2026-11-01
 
 ### Added
@@ -215,7 +211,6 @@ graph, identification, estimation, refutation.
   `StochasticModel::with_estimated_parameters`.
 
 [0.0.5]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.5
-
 ## [0.0.6] - 2026-11-01
 
 ### Added
@@ -254,7 +249,6 @@ graph, identification, estimation, refutation.
   it holds.
 
 [0.0.6]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.6
-
 ## [0.0.7] - 2026-11-01
 
 ### Added
@@ -310,7 +304,6 @@ graph, identification, estimation, refutation.
   it from the generator it is given, which makes its p-values reproducible.
 
 [0.0.7]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.7
-
 ## [0.0.8] - 2026-11-01
 
 ### Added
@@ -368,7 +361,6 @@ graph, identification, estimation, refutation.
   the normal distribution amplifies the difference between the two fits.
 
 [0.0.8]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.8
-
 ## [0.0.9] - 2026-11-01
 
 ### Added
@@ -433,7 +425,6 @@ graph, identification, estimation, refutation.
   than one parent needs `kernel_independence_test`.
 
 [0.0.9]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.9
-
 ## [0.0.10] - 2026-11-01
 
 ### Added
@@ -482,7 +473,6 @@ graph, identification, estimation, refutation.
   computes the values of one set function at a time.
 
 [0.0.10]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.10
-
 ## [0.0.11] - 2026-11-01
 
 ### Added
@@ -522,7 +512,6 @@ graph, identification, estimation, refutation.
   one dimensional samples.
 
 [0.0.11]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.11
-
 ## [0.0.12] - 2026-11-01
 
 ### Added
@@ -566,7 +555,6 @@ graph, identification, estimation, refutation.
   evaluates the same subsets of the players in both.
 
 [0.0.12]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.12
-
 ## [0.0.13] - 2026-11-01
 
 ### Added
@@ -612,7 +600,6 @@ graph, identification, estimation, refutation.
   backend of the toolchain.
 
 [0.0.13]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.13
-
 ## [0.0.14] - 2026-11-01
 
 ### Added
@@ -666,7 +653,6 @@ graph, identification, estimation, refutation.
   is **not ported**.
 
 [0.0.14]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.14
-
 ## [0.0.15] - 2026-11-01
 
 ### Changed
@@ -699,7 +685,6 @@ graph, identification, estimation, refutation.
   divergence of `auto_estimate_kl_divergence` when the caller does not give one.
 
 [0.0.15]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.15
-
 ## [0.0.16] - 2026-11-01
 
 ### Added
@@ -735,7 +720,6 @@ graph, identification, estimation, refutation.
 - The **intrinsic causal influence** of the upstream is **not ported**.
 
 [0.0.16]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.16
-
 ## [0.0.17] - 2026-11-01
 
 ### Added
@@ -801,7 +785,6 @@ graph, identification, estimation, refutation.
   the upstream.
 
 [0.0.17]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.17
-
 ## [0.0.18] - 2026-11-01
 
 ### Added
@@ -837,7 +820,6 @@ graph, identification, estimation, refutation.
   else.
 
 [0.0.18]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.18
-
 ## [0.0.19] - 2026-11-01
 
 ### Added
@@ -872,7 +854,6 @@ graph, identification, estimation, refutation.
   estimand of another kind for it.
 
 [0.0.19]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.19
-
 ## [0.0.20] - 2026-11-01
 
 ### Added
@@ -921,7 +902,6 @@ graph, identification, estimation, refutation.
   record.
 
 [0.0.20]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.20
-
 ## [0.0.21] - 2026-11-01
 
 ### Added
@@ -965,7 +945,6 @@ graph, identification, estimation, refutation.
   of a relevance that the smaller fixture estimates less precisely.
 
 [0.0.21]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.21
-
 ## [0.0.22] - 2026-11-01
 
 ### Added
@@ -1009,7 +988,6 @@ graph, identification, estimation, refutation.
   probability per class -- have no counterpart here.
 
 [0.0.22]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.22
-
 ## [0.0.23] - 2026-11-01
 
 ### Added
@@ -1046,7 +1024,47 @@ graph, identification, estimation, refutation.
   normal distribution.
 
 [0.0.23]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.23
+## [0.0.24] - 2026-11-01
 
+### Added
+
+- `gcm` -- the categorical variants of the regression based independence test,
+  the port of `dowhy.gcm.independence_test.regression` for data that holds
+  categories:
+  - `regression_based_with_categorical`, which takes a frame for the two
+    variables and the optional conditioning variable, one-hot encodes every
+    discrete column of them and runs the test on the encoded data;
+  - `one_hot_encode` and `one_hot_encode_frame`, the encoding of the discrete
+    columns of the `gcm` package;
+  - `estimate_ftest_pvalue_of_targets`, the F-test of `dowhy.gcm.stats` for a
+    target with more than one column, which is what a categorical target
+    becomes when it is one-hot encoded. The single target variant of the test
+    delegates to it.
+- `_verify/gcm_categorical_independence_reference.py` -- the upstream reference
+  of the categorical independence test. It runs the upstream on the very rows
+  the port works on and prints the p-value of the upstream next to the decision
+  the upstream test asserts, so that the two can be compared.
+
+### Notes
+
+- The upstream draws its folds and its basis points with the global generator of
+  numpy, so its p-value and the p-value of the port are different numbers. What
+  the two share is the decision the upstream test asserts. On the fixture of
+  the reference script the upstream finds a p-value of `1.0` for the two cases
+  that have to find no dependence and a p-value of `0.0` for the two cases that
+  have to find a dependence, and so does the port.
+- The upstream marks its categorical independence tests as flaky, because the
+  two models of the F-test have residual sums of squares of the same order in
+  the folds of the case that has to find no dependence: with a thousand samples
+  the upstream finds a dependence in half of the seeds of that case. The
+  fixture of the port therefore holds the 5000 samples of the fixture of the
+  upstream, at which both make the same decision on every seed.
+- The upstream switches to the CatBoost encoder when the data of the regression
+  based independence test holds more than seven categories; the port always
+  uses the one-hot encoder, which is the encoder the upstream uses for the
+  fixtures of its own tests.
+
+[0.0.24]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.24
 ## [0.0.25] - 2026-11-02
 
 The entry point of the upstream, `dowhy.causal_model`, and the readers of the
@@ -1130,7 +1148,6 @@ graphs it accepts.
   warning system, so it reports them instead.
 
 [0.0.25]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.25
-
 ## [0.0.26] - 2026-11-02
 
 The mediation identification of the upstream and its two stage regression
@@ -1201,7 +1218,6 @@ Discovery in Python".
   the two agree to `5e-14`.
 
 [0.0.26]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.26
-
 ## [0.0.27] - 2026-11-02
 
 The test file of the two stage regression estimator of the upstream, with the
@@ -1263,7 +1279,6 @@ two cases it holds.
   anything about their values.
 
 [0.0.27]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.27
-
 ## [0.0.28] - 2026-11-02
 
 The placebo treatment refuter of the upstream and the significance test of the
@@ -1335,117 +1350,6 @@ refutations, with the test file of the upstream.
   p-value is `nan`.
 
 [0.0.28]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.28
-
-## [0.0.24] - 2026-11-01
-
-### Added
-
-- `gcm` -- the categorical variants of the regression based independence test,
-  the port of `dowhy.gcm.independence_test.regression` for data that holds
-  categories:
-  - `regression_based_with_categorical`, which takes a frame for the two
-    variables and the optional conditioning variable, one-hot encodes every
-    discrete column of them and runs the test on the encoded data;
-  - `one_hot_encode` and `one_hot_encode_frame`, the encoding of the discrete
-    columns of the `gcm` package;
-  - `estimate_ftest_pvalue_of_targets`, the F-test of `dowhy.gcm.stats` for a
-    target with more than one column, which is what a categorical target
-    becomes when it is one-hot encoded. The single target variant of the test
-    delegates to it.
-- `_verify/gcm_categorical_independence_reference.py` -- the upstream reference
-  of the categorical independence test. It runs the upstream on the very rows
-  the port works on and prints the p-value of the upstream next to the decision
-  the upstream test asserts, so that the two can be compared.
-
-### Notes
-
-- The upstream draws its folds and its basis points with the global generator of
-  numpy, so its p-value and the p-value of the port are different numbers. What
-  the two share is the decision the upstream test asserts. On the fixture of
-  the reference script the upstream finds a p-value of `1.0` for the two cases
-  that have to find no dependence and a p-value of `0.0` for the two cases that
-  have to find a dependence, and so does the port.
-- The upstream marks its categorical independence tests as flaky, because the
-  two models of the F-test have residual sums of squares of the same order in
-  the folds of the case that has to find no dependence: with a thousand samples
-  the upstream finds a dependence in half of the seeds of that case. The
-  fixture of the port therefore holds the 5000 samples of the fixture of the
-  upstream, at which both make the same decision on every seed.
-- The upstream switches to the CatBoost encoder when the data of the regression
-  based independence test holds more than seven categories; the port always
-  uses the one-hot encoder, which is the encoder the upstream uses for the
-  fixtures of its own tests.
-
-[0.0.24]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.24
-
-## [0.0.30] - 2026-11-02
-
-The test suites of the four propensity score estimators of the upstream, and
-the two fixes of the estimators they found.
-
-### Added
-
-- the tests of the upstream files `tests/causal_estimators/test_propensity_score_matching_estimator.py`,
-  `test_propensity_score_weighting_estimator.py`,
-  `test_propensity_score_stratification_estimator.py` and
-  `test_doubly_robust_estimator.py`: the eighteen cases they hold, on the
-  hundred thousand rows of the upstream test suite, with the tolerance the
-  upstream test file allows for each of its estimators and with the two
-  identifiers the upstream uses for them.
-- `_verify/estimator_suite_reference.py` -- the upstream runs on the very rows
-  the port works on, for the eighteen cases of the suite. The port and the
-  upstream agree on every case: the matching estimator and the stratification
-  estimator agree to `1e-14` on one common cause, the weighting estimator
-  agrees to `3e-4` and the doubly robust estimator to `5e-7`.
-
-### Fixed
-
-- **The propensity score estimators trimmed the scores of the data, and the
-  upstream trims them in two of the four of them.** The inverse propensity
-  score weighting estimator trims the scores to `0.05` and `0.95` and the
-  doubly robust estimator trims them to `0.01` and `0.99`, while the matching
-  estimator and the stratification estimator use the raw scores. The trimming
-  of the port moved the matches of the matching estimator and the strata of
-  the stratification estimator: on the hundred thousand rows of the upstream
-  estimator test suite the estimate of the stratification estimator was
-  `10.308` with the trimmed scores and `10.0001` with the raw ones, and the
-  upstream gives `10.0001`. The two estimators that trim them trim them
-  themselves now, and the doubly robust estimator trims the scores of the two
-  arms separately, the way the upstream does.
-- **The propensity score stratification estimator always used five strata.** The
-  upstream searches for the number of strata when it is not given: the search
-  starts with `0.5 * rows / clipping_threshold` strata and halves the number
-  until at least half of the strata hold more than `clipping_threshold` units
-  of both arms. The upstream test file uses the search, and it is what makes
-  the estimate of the estimator agree with the upstream. The number of strata
-  is an enumeration now, `NumStrata`, with a case for a given number of strata
-  and a case for the number of strata the upstream searches for.
-
-### Notes
-
-- The rows of the test suites of the upstream are drawn with the global
-  generator of numpy, so the upstream runs its estimator and refuter test
-  suites on a random draw of the rows. The rows of the port are fixed, and the
-  seed of every suite is the one for which the **upstream** stays inside the
-  tolerances of its own test files on the very same rows. Two of the
-  eighteen cases of the estimator suite are decided by the draw: the inverse
-  propensity score weighting estimator with two common causes and the doubly
-  robust estimator with two common causes and a binary outcome are outside the
-  tolerance of the upstream on the rows of the seed 42, and the upstream is
-  outside it as well.
-- The estimator test suite of the port asserts the estimates only. The
-  upstream test files also ask for the confidence intervals and for the
-  significance of the estimate, with ten bootstrap simulations for the
-  stratification and the doubly robust estimator; the upstream asserts none of
-  those numbers, and ten simulations of a bootstrap over a hundred thousand
-  rows would multiply the runtime of the suite by an order of magnitude.
-- The bootstrap refuter test suite of the port draws its own rows, with the
-  seed 43. The rows of the seed 42 put the refuted effect of the binary
-  treatment with three variables outside the tolerance of the upstream test
-  file, and the rows of the seed 43 do not.
-
-[0.0.30]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.30
-
 ## [0.0.29] - 2026-11-02
 
 The bootstrap refuter and the data subset refuter of the upstream, with their
@@ -1515,7 +1419,73 @@ test files.
   the effect of a bootstrap sample stay close to the effect of the data.
 
 [0.0.29]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.29
+## [0.0.30] - 2026-11-02
 
+The test suites of the four propensity score estimators of the upstream, and
+the two fixes of the estimators they found.
+
+### Added
+
+- the tests of the upstream files `tests/causal_estimators/test_propensity_score_matching_estimator.py`,
+  `test_propensity_score_weighting_estimator.py`,
+  `test_propensity_score_stratification_estimator.py` and
+  `test_doubly_robust_estimator.py`: the eighteen cases they hold, on the
+  hundred thousand rows of the upstream test suite, with the tolerance the
+  upstream test file allows for each of its estimators and with the two
+  identifiers the upstream uses for them.
+- `_verify/estimator_suite_reference.py` -- the upstream runs on the very rows
+  the port works on, for the eighteen cases of the suite. The port and the
+  upstream agree on every case: the matching estimator and the stratification
+  estimator agree to `1e-14` on one common cause, the weighting estimator
+  agrees to `3e-4` and the doubly robust estimator to `5e-7`.
+
+### Fixed
+
+- **The propensity score estimators trimmed the scores of the data, and the
+  upstream trims them in two of the four of them.** The inverse propensity
+  score weighting estimator trims the scores to `0.05` and `0.95` and the
+  doubly robust estimator trims them to `0.01` and `0.99`, while the matching
+  estimator and the stratification estimator use the raw scores. The trimming
+  of the port moved the matches of the matching estimator and the strata of
+  the stratification estimator: on the hundred thousand rows of the upstream
+  estimator test suite the estimate of the stratification estimator was
+  `10.308` with the trimmed scores and `10.0001` with the raw ones, and the
+  upstream gives `10.0001`. The two estimators that trim them trim them
+  themselves now, and the doubly robust estimator trims the scores of the two
+  arms separately, the way the upstream does.
+- **The propensity score stratification estimator always used five strata.** The
+  upstream searches for the number of strata when it is not given: the search
+  starts with `0.5 * rows / clipping_threshold` strata and halves the number
+  until at least half of the strata hold more than `clipping_threshold` units
+  of both arms. The upstream test file uses the search, and it is what makes
+  the estimate of the estimator agree with the upstream. The number of strata
+  is an enumeration now, `NumStrata`, with a case for a given number of strata
+  and a case for the number of strata the upstream searches for.
+
+### Notes
+
+- The rows of the test suites of the upstream are drawn with the global
+  generator of numpy, so the upstream runs its estimator and refuter test
+  suites on a random draw of the rows. The rows of the port are fixed, and the
+  seed of every suite is the one for which the **upstream** stays inside the
+  tolerances of its own test files on the very same rows. Two of the
+  eighteen cases of the estimator suite are decided by the draw: the inverse
+  propensity score weighting estimator with two common causes and the doubly
+  robust estimator with two common causes and a binary outcome are outside the
+  tolerance of the upstream on the rows of the seed 42, and the upstream is
+  outside it as well.
+- The estimator test suite of the port asserts the estimates only. The
+  upstream test files also ask for the confidence intervals and for the
+  significance of the estimate, with ten bootstrap simulations for the
+  stratification and the doubly robust estimator; the upstream asserts none of
+  those numbers, and ten simulations of a bootstrap over a hundred thousand
+  rows would multiply the runtime of the suite by an order of magnitude.
+- The bootstrap refuter test suite of the port draws its own rows, with the
+  seed 43. The rows of the seed 42 put the refuted effect of the binary
+  treatment with three variables outside the tolerance of the upstream test
+  file, and the rows of the seed 43 do not.
+
+[0.0.30]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.30
 ## [0.0.31] - 2026-11-02
 
 The multiply-robust causal change attribution of the upstream, with the test
@@ -1586,7 +1556,6 @@ file of the upstream and the two bugs the test file found.
   needed a Shapley configuration with a single job.
 
 [0.0.31]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.31
-
 ## [0.0.32] - 2026-11-02
 
 The cases of the upstream test file of the automatic identification and of the
@@ -1631,7 +1600,6 @@ run with the numpy of today.
   least squares of `linearmodels`.
 
 [0.0.32]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.32
-
 ## [0.0.33] - 2026-11-03
 
 The refuter that assesses the support and the overlap of the covariates with
@@ -1678,7 +1646,6 @@ boolean rules, the port of the `assess_overlap` refuter of the upstream.
   zero.
 
 [0.0.33]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.33
-
 ## [0.0.34] - 2026-11-09
 
 The tests of the graph operations of the upstream, the tests of the model
@@ -1722,7 +1689,6 @@ toolchain.
   warning, and a warning is a failure of the gate.
 
 [0.0.34]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.34
-
 ## [0.0.35] - 2026-11-09
 
 The encoding cases of the upstream general utilities, and the two checks of
@@ -1756,7 +1722,6 @@ whether a column of a frame is categorical.
   upstream as mirrored.
 
 [0.0.35]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.35
-
 ## [0.0.36] - 2026-11-09
 
 The categorical conditioning variable of the generalised covariance measure.
@@ -1794,7 +1759,6 @@ The categorical conditioning variable of the generalised covariance measure.
   fixture is fixed.
 
 [0.0.36]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.36
-
 ## [0.0.37] - 2026-11-09
 
 The transformation list of the dummy outcome refuter, and the two branches it
@@ -1866,7 +1830,6 @@ chooses between.
   upstream as mirrored.
 
 [0.0.37]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.37
-
 ## [0.0.38] - 2026-11-09
 
 The refuter that adds an unobserved common cause, ported from the upstream
@@ -1921,7 +1884,6 @@ The refuter that adds an unobserved common cause, ported from the upstream
   upstream as mirrored.
 
 [0.0.38]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.38
-
 ## [0.0.39] - 2026-11-10
 
 The linear sensitivity analysis of an unobserved confounder.
@@ -1989,7 +1951,6 @@ The linear sensitivity analysis of an unobserved confounder.
   infers the strengths of the confounder from the observed common causes.
 
 [0.0.39]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.39
-
 ## [0.0.40] - 2026-11-10
 
 The polynomial models of the graphical causal models.
@@ -2052,7 +2013,6 @@ The polynomial models of the graphical causal models.
   upstream as mirrored.
 
 [0.0.40]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.40
-
 ## [0.0.41] - 2026-11-10
 
 The E-value analysis of an unmeasured confounder.
@@ -2114,7 +2074,6 @@ The E-value analysis of an unmeasured confounder.
   strengths of the confounder from the observed common causes.
 
 [0.0.41]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.41
-
 ## [0.0.42] - 2026-11-10
 
 The default strength of the confounder that the unobserved common cause refuter
@@ -2170,7 +2129,6 @@ infers from the observed common causes.
 - The `non-parametric-partial-R2` analyzer of the upstream is not ported yet.
 
 [0.0.42]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.42
-
 ## [0.0.43] - 2026-11-10
 
 The readers of the temporal graphs of the upstream.
@@ -2223,7 +2181,6 @@ The readers of the temporal graphs of the upstream.
 - The `non-parametric-partial-R2` analyzer of the upstream is not ported yet.
 
 [0.0.43]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.43
-
 ## [0.0.44] - 2026-11-10
 
 The test files of the `gcm` package of the upstream that the port mirrors.
@@ -2290,7 +2247,6 @@ The test files of the `gcm` package of the upstream that the port mirrors.
 - The `non-parametric-partial-R2` analyzer of the upstream is not ported yet.
 
 [0.0.44]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.44
-
 ## [0.0.45] - 2026-11-10
 
 The remaining cases of the statistics of the upstream.
@@ -2325,6 +2281,7 @@ The remaining cases of the statistics of the upstream.
   one of scikit-learn reach the same coefficients to `1e-2` on that quantity,
   where the upstream asserts a tolerance of one.
 
+[0.0.45]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.45
 ## [0.0.46] - 2026-11-10
 
 The sales data set of the upstream.
@@ -2364,9 +2321,7 @@ The sales data set of the upstream.
   replacement.
 - The link of the release 0.0.45 was missing in this file.
 
-[0.0.45]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.45
 [0.0.46]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.46
-
 ## [0.0.47] - 2026-11-10
 
 The case of the refuters of the upstream.
@@ -2403,7 +2358,6 @@ The case of the refuters of the upstream.
   -- and the p-value of the draw of the port, 0.9936.
 
 [0.0.47]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.47
-
 ## [0.0.48] - 2026-11-10
 
 The Gaussian mixture of the upstream.
@@ -2576,7 +2530,6 @@ The test of a linear relationship and the rest of the automatic assignment.
   file records the difference.
 
 [0.0.50]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.50
-
 ## [0.0.51] - 2026-11-12
 
 The categorical data of the `gcm` package: the CatBoost encoder and the
@@ -2639,7 +2592,6 @@ categorical cases of the kernel based independence test.
   p-value, and two runs with another seed give another one.
 
 [0.0.51]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.51
-
 ## [0.0.52] - 2026-11-12
 
 The attribution of the anomalies with a non-linear mechanism.
@@ -2681,7 +2633,6 @@ The attribution of the anomalies with a non-linear mechanism.
   the global generator of numpy.
 
 [0.0.52]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.52
-
 ## [0.0.53] - 2026-11-12
 
 The attribution of the anomalies without a causal model.
@@ -2724,7 +2675,6 @@ The attribution of the anomalies without a causal model.
   port do satisfy it.
 
 [0.0.53]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.53
-
 ## [0.0.54] - 2026-11-12
 
 The what-if queries with the categorical variables and with the discrete data.
@@ -2763,7 +2713,6 @@ The what-if queries with the categorical variables and with the discrete data.
   `-1.9943` on the side of the upstream and `-1.9974` on the side of the port.
 
 [0.0.54]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.54
-
 ## [0.0.55] - 2026-11-12
 
 The remaining cases of the upstream test files of the `gcm` package, and the
@@ -2843,7 +2792,6 @@ uniform distribution of the package.
   files that expect one are ported as predicates.
 
 [0.0.55]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.55
-
 ## [0.0.56] - 2026-11-12
 
 The randomised independence tests of the `gcm` package.
@@ -2898,7 +2846,6 @@ The randomised independence tests of the `gcm` package.
   the gate of the port needs on every backend.
 
 [0.0.56]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.56
-
 ## [0.0.57] - 2026-11-12
 
 The beta distribution and the automatic selection of the family of a
@@ -2969,7 +2916,6 @@ distribution.
   rows of the fixture of the port, and so does the port.
 
 [0.0.57]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.57
-
 ## [0.0.58] - 2026-11-12
 
 The function that gives the value of a target node from the noise of its
@@ -3029,7 +2975,6 @@ ancestors.
   with strings.
 
 [0.0.58]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.58
-
 ## [0.0.59] - 2026-11-10
 
 The dispatcher of the unit change layer.
@@ -3060,7 +3005,6 @@ The dispatcher of the unit change layer.
   non-linear model of the port.
 
 [0.0.59]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.59
-
 ## [0.0.60] - 2026-11-10
 
 The categorical intrinsic causal influence.
@@ -3125,7 +3069,6 @@ The categorical intrinsic causal influence.
   so that case has no counterpart.
 
 [0.0.60]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.60
-
 ## [0.0.61] - 2026-11-10
 
 The categorical noise dependent function.
@@ -3164,7 +3107,97 @@ The categorical noise dependent function.
   counterpart, because the nodes of the port are named with strings.
 
 [0.0.61]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.61
+## [0.0.73] - 2026-11-11
 
+The interpretation of an estimate.
+
+### Added
+
+- the `interpreters` package, in the new directory `src/interpreters/`: the
+  port of `dowhy.interpreters`. The public function
+  `textual_effect_interpretation` is the port of
+  `dowhy.interpreters.textual_effect_interpreter`: it writes the sentence
+  that says how much a unit change of the treatment moves the expected value
+  of the outcome.
+- the view of the model, in `src/causal_model.mbt`: the port of
+  `dowhy.causal_model.CausalModel.view_model`. The upstream writes a picture
+  of the graph with Graphviz, and the port writes the Graphviz DOT document of
+  the graph, which Graphviz reads and draws.
+- the interpretation of the model, in `src/causal_model.mbt`: the port of
+  `dowhy.causal_model.CausalModel.interpret`. The upstream prints the summary
+  of the model and shows the picture of its graph when the caller names no
+  interpreter, and the port returns the summary and the document of the graph.
+- two cases in the new file `src/interpreters/textual_test.mbt` and three
+  cases in `src/tests/causal_model.mbt`: the sentence of the upstream, the
+  refusal of a categorical treatment, the document of the graph, the summary
+  with the document and the sentence of the estimate of the model.
+- the text of the upstream on the fixture of the port in
+  `_verify/interpreter_reference.py`: the script runs the upstream
+  `TextualEffectInterpreter` on the very rows of the port and prints the
+  sentence and the value of the estimate it holds.
+- the accessors of the names and of the values of an estimate, in
+  `src/model/estimate.mbt`: the treatment, the outcome, the value of the
+  control arm and the value of the treated arm.
+
+### Notes
+
+- The interpreter of the upstream writes the name of the outcome as the list
+  it holds it in, so its sentence holds `[['y']]`. The port holds one name, so
+  its sentence holds `[y]`.
+- The upstream passes the model to the interpreter of an estimate, which reads
+  the estimate from the model, and the model of the upstream holds no estimate,
+  so the upstream raises an `AttributeError`. The port takes the estimate of
+  the caller.
+- The upstream refuses a categorical treatment with a `NotImplementedError`, and
+  the port returns `None`.
+- Python writes a number with the shortest text that reads it back, and the
+  toolchain writes seventeen digits, so the sentence of the port holds
+  `1.9999297752808973` where the sentence of the upstream holds
+  `1.9999297752809`. The two are the same number.
+
+[0.0.73]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.73
+## [0.0.72] - 2026-11-11
+
+The do operator.
+
+### Added
+
+- the do operator of the estimator, in `src/estimators/fit.mbt`: the port of
+  `dowhy.causal_estimator.CausalEstimator.do`. It returns the mean of the
+  interventional outcomes of the data, which is the value of the outcome when
+  the treatment is set to a value and not the difference between the two arms.
+- the do operator of the model, in `src/causal_model.mbt`: the port of
+  `dowhy.causal_model.CausalModel.do`. It builds the estimator of the given
+  method with the estimand of the caller, it fits it on the data of the model
+  and it returns the value of the outcome under the intervention.
+- four cases in `src/tests/estimators.mbt`: the value of the do operator of the
+  model is the number of the upstream, the value of the do operator of the
+  estimator does not move when the rows of the data are permuted, it moves when
+  the values of the encoded columns move, and the do operator of the model is
+  the value of the outcome under the intervention. The first two assertions
+  are the ones of the second test of the base class of the upstream estimator
+  tests.
+- the numbers of the upstream on the fixture of the port in
+  `_verify/do_operator_reference.py`: the script runs the upstream
+  `LinearRegressionEstimator` on the very rows of the port and prints the value
+  of its do operator, on the rows in their order and on the rows in another
+  order.
+
+### Notes
+
+- The name of the upstream is `do`, and `do` is a reserved word of the
+  toolchain, so the port calls the method `do_operator`.
+- The upstream reads the identifier of the estimator before it is bound when
+  the caller gives no name of a method, and it raises a `NameError`. The port
+  takes the name of the method.
+- The upstream documents the do operator of the model as an estimate object and
+  returns the number of the interventional outcomes. The port returns the
+  number.
+- The upstream keeps the data it was fitted on in its estimator and reads it
+  when the caller gives none. The port keeps no data in the estimator, so the
+  data is an argument of the do operator.
+
+[0.0.72]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.72
 ## [0.0.71] - 2026-11-11
 
 The graph refutation.
@@ -3248,50 +3281,6 @@ The graph refutation.
   is binary and a column of numbers is continuous.
 
 [0.0.71]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.71
-
-## [0.0.72] - 2026-11-11
-
-The do operator.
-
-### Added
-
-- the do operator of the estimator, in `src/estimators/fit.mbt`: the port of
-  `dowhy.causal_estimator.CausalEstimator.do`. It returns the mean of the
-  interventional outcomes of the data, which is the value of the outcome when
-  the treatment is set to a value and not the difference between the two arms.
-- the do operator of the model, in `src/causal_model.mbt`: the port of
-  `dowhy.causal_model.CausalModel.do`. It builds the estimator of the given
-  method with the estimand of the caller, it fits it on the data of the model
-  and it returns the value of the outcome under the intervention.
-- four cases in `src/tests/estimators.mbt`: the value of the do operator of the
-  model is the number of the upstream, the value of the do operator of the
-  estimator does not move when the rows of the data are permuted, it moves when
-  the values of the encoded columns move, and the do operator of the model is
-  the value of the outcome under the intervention. The first two assertions
-  are the ones of the second test of the base class of the upstream estimator
-  tests.
-- the numbers of the upstream on the fixture of the port in
-  `_verify/do_operator_reference.py`: the script runs the upstream
-  `LinearRegressionEstimator` on the very rows of the port and prints the value
-  of its do operator, on the rows in their order and on the rows in another
-  order.
-
-### Notes
-
-- The name of the upstream is `do`, and `do` is a reserved word of the
-  toolchain, so the port calls the method `do_operator`.
-- The upstream reads the identifier of the estimator before it is bound when
-  the caller gives no name of a method, and it raises a `NameError`. The port
-  takes the name of the method.
-- The upstream documents the do operator of the model as an estimate object and
-  returns the number of the interventional outcomes. The port returns the
-  number.
-- The upstream keeps the data it was fitted on in its estimator and reads it
-  when the caller gives none. The port keeps no data in the estimator, so the
-  data is an argument of the do operator.
-
-[0.0.72]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.72
-
 ## [0.0.70] - 2026-11-11
 
 The plotting layer.
@@ -3358,7 +3347,6 @@ The plotting layer.
   the pairs of the layer and of the count. The port does the same.
 
 [0.0.70]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.70
-
 ## [0.0.69] - 2026-11-11
 
 The decision tree classifier of the graphical causal models.
@@ -3408,7 +3396,6 @@ The decision tree classifier of the graphical causal models.
   entropy of the upstream.
 
 [0.0.69]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.69
-
 ## [0.0.68] - 2026-11-11
 
 The support vector regressor of the dummy outcome refuter.
@@ -3465,7 +3452,6 @@ The support vector regressor of the dummy outcome refuter.
   names.
 
 [0.0.68]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.68
-
 ## [0.0.67] - 2026-11-11
 
 The neural network of the dummy outcome refuter.
@@ -3522,7 +3508,6 @@ The neural network of the dummy outcome refuter.
   bucket and per simulation, the way the upstream fits it.
 
 [0.0.67]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.67
-
 ## [0.0.66] - 2026-11-10
 
 The random forest of the dummy outcome refuter.
@@ -3564,7 +3549,6 @@ The random forest of the dummy outcome refuter.
   last bucket is of the order of the tolerance.
 
 [0.0.66]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.66
-
 ## [0.0.65] - 2026-11-10
 
 The missing values of the automatic assignment.
@@ -3612,7 +3596,6 @@ The missing values of the automatic assignment.
   missing value, the way the upstream fits its empirical distribution.
 
 [0.0.65]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.65
-
 ## [0.0.64] - 2026-11-10
 
 The fully categorical intrinsic causal influence.
@@ -3652,7 +3635,6 @@ The fully categorical intrinsic causal influence.
   the case records the numbers of the port.
 
 [0.0.64]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.64
-
 ## [0.0.63] - 2026-11-10
 
 The categorical falsification.
@@ -3692,7 +3674,6 @@ The categorical falsification.
   the kernel test of the package, which is `1e-10` relative.
 
 [0.0.63]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.63
-
 ## [0.0.62] - 2026-11-10
 
 The Bayesian Gaussian mixture distribution.

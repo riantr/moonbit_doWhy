@@ -1192,6 +1192,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
 | `identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `dowhy.causal_estimator` (the estimate objects) |
+| `interpreters` | `dowhy.interpreters` (the sentence that reads an estimate) |
 | `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand and the do operator |
 | `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations and the graph refutation |
 | `overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
@@ -1279,6 +1280,10 @@ README makes, so they are tracked in the repository:
   cannot store the one element array that its `convert_to_binary` returns in
   the output of a scalar, so the script restores the behaviour of NumPy 1 for
   it.
+- `interpreter_reference.py` runs the upstream `TextualEffectInterpreter` on
+  the rows of the fixture of the tests of the port and prints the sentence it
+  writes and the value of the estimate it holds. It is the evidence for the
+  interpretation of the port.
 - `do_operator_reference.py` runs the upstream `LinearRegressionEstimator` on
   the rows of the fixture of the tests of the port and prints the value of its
   do operator, on the rows in their order and on the rows in another order. It
