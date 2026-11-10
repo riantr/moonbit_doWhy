@@ -620,7 +620,7 @@ pub fn CausalModel::do_operator(
   estimand : @identifiers.IdentifiedEstimand,
   method_name : String,
   fit_estimator~ : Bool = true,
-) -> Double {
+) -> Double? {
   let identifier = first_segment(method_name)
   if !self.estimand.has_estimand(identifier) {
     let _ = self.identify_effect(identifier)

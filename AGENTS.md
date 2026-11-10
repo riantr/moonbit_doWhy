@@ -1227,13 +1227,13 @@ statsmodels / scikit-learn conventions are deliberate:
 | `identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `dowhy.causal_estimator` (the estimate objects) |
 | `interpreters` | `dowhy.interpreters` (the sentence that reads an estimate) |
-| `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand and the do operator |
+| `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand, the do operator and the base estimator of the upstream |
 | `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations and the graph refutation |
 | `overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
 | `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the **CatBoost encoder** of the categorical columns, the prediction models, the causal mechanisms, the automatic assignment of the mechanisms with the selection of the model by cross validation and the test of a linear relationship, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
 | `datasets` | `dowhy.datasets` (the random graph data set), the **data generating processes** of `dowhy.utils.dgp` and of `dowhy.utils.dgps`, and the deterministic test fixtures |
-| `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
+| `data_transformers` | `dowhy.data_transformers` (the PCA reducer and the base reducer of the upstream) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `plotting` | `dowhy.utils.plotting`, `dowhy.utils.graphviz_plotting` and `dowhy.utils.networkx_plotting` (the width of the arrows, the label and the colour of the nodes and of the edges, the layer of every node, the error bars of a bar plot and the graph of an adjacency matrix) |
@@ -1277,6 +1277,12 @@ README makes, so they are tracked in the repository:
   one of them, the data of the process with a binary treatment and the numbers
   of the deterministic conversion of the treatment. It is the evidence for the
   data generating processes of the `datasets` package.
+- `abstract_bases_reference.py` runs the base classes of the upstream -- the class
+  `CausalEstimator` and the class `DimensionalityReducer` -- and prints the
+  messages of the `NotImplementedError` they raise, and it walks the classes of
+  the upstream to tell which ones implement the do operator and which ones
+  implement the symbolic estimator. It is the evidence for the predicates of
+  the base estimator and of the base reducer.
 - `gcm_general_reference.py` runs the upstream `dowhy.gcm.util.general` on the
   fixtures of the tests of the port and prints the numbers it produces -- the
   geometric median, the set difference of the rows, the scaling of the columns

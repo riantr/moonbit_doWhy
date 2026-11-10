@@ -3230,6 +3230,66 @@ The data generating processes of the upstream.
 
 [0.0.75]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.75
 
+## [0.0.76] - 2026-11-11
+
+The abstract bases of the upstream.
+
+### Added
+
+- the base estimator of the upstream, in the `estimators` package: the
+  `EstimatorKind::Base` variant and the constructor `CausalEstimator::base`,
+  which build the port of the base class `CausalEstimator` of the upstream,
+  whose placeholder methods raise a `NotImplementedError`.
+- the two predicates of the estimator: `supports_do_operator` and
+  `supports_symbolic_estimator`, which tell whether the upstream implements the
+  do operator and the symbolic estimator for the estimator. The base estimator
+  of the upstream implements neither, and the estimators of the upstream that
+  derive from the regression estimator or from the doubly robust estimator
+  implement the do operator.
+- the message of the upstream for a method it does not implement, in
+  `default_not_implemented_error_message`: the port of
+  `DEFAULT_NOTIMPLEMENTEDERROR_MSG` of the upstream.
+- the base reducer of the upstream, in the `data_transformers` package: the
+  `ReducerKind::Base` variant, the constructor `DimensionalityReducer::base`
+  and the predicate `supports_reduction`.
+- the five cases of the new file `src/tests/causal_estimator.mbt`: the base
+  estimator of the upstream has no do operator and no symbolic estimator, the
+  do operator of the upstream is the one of the regression estimator and of the
+  doubly robust estimator, every estimator of the upstream but the base has a
+  symbolic estimator, and the message of the upstream for a method it does not
+  implement is the one of the upstream.
+- the case of the base reducer in `src/data_transformers/reducer_test.mbt`.
+- the placeholders of the upstream in `_verify/abstract_bases_reference.py`:
+  the script prints the messages of the upstream and the estimators that
+  implement the two placeholder methods of the estimator.
+
+### Changed
+
+- `CausalEstimator::do_operator` and `CausalModel::do_operator` give `None`
+  for the base estimator of the upstream, which does not implement the do
+  operator.
+- `DimensionalityReducer::reduce` gives `None` for the base reducer of the
+  upstream, which does not implement the reduction.
+
+### Notes
+
+- The upstream raises a `NotImplementedError` for a method its base class does
+  not implement. MoonBit cannot catch the abort of a method, so the port
+  reports the placeholders with a predicate and with a `None` return.
+- The upstream implements the do operator in the class of the regression
+  estimator and in the class of the doubly robust estimator, and every other
+  estimator inherits the placeholder of the base. The port computes the do
+  operator for every estimator that has a model, so the predicate tells what
+  the upstream does and not what the port does.
+- The upstream builds its symbolic estimators with the sympy of the upstream,
+  and the port does not build them.
+- The upstream test files `tests/test_causal_estimator.py` and
+  `tests/test_data_transformer.py` are the two placeholder test files of the
+  upstream, and the port covers them now, so the port names 72 of the 74 test
+  files of the upstream. The two that are left are `gcm/ml/test_autogluon.py`,
+  which needs the autogluon of the upstream, and `test_notebooks.py`, which
+  runs the notebooks of the upstream.
+
 ## [0.0.73] - 2026-11-11
 
 The interpretation of an estimate.

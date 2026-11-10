@@ -7,6 +7,12 @@
 /// uniform distribution on `[-1, 1]`. The upstream assertion is that the
 /// reduction preserves the distance of every row from the centre of the
 /// data.
+///
+/// The upstream test file `tests/test_data_transformer.py` builds a mock
+/// reducer that derives from the base class `DimensionalityReducer` of the
+/// upstream, and it checks that its reduction raises a `NotImplementedError`.
+/// The port reports it with the predicate `supports_reduction` and with a
+/// `None` return, because MoonBit cannot catch the abort of a method.
 fn feature_matrix(rows : Int32, seed : UInt64) -> @utils.Matrix {
   let rng = @utils.Random::new(seed)
   let mean0 = -1.0 + 2.0 * rng.next_double()
@@ -46,10 +52,24 @@ fn squared_distance(matrix : @utils.Matrix) -> Array[Double] {
 }
 
 ///|
+/// The reduction of the reducer.
+///
+/// The base reducer of the upstream does not reduce the data, so its
+/// reduction is `None`.
+fn reduced_matrix(
+  reducer : @data_transformers.DimensionalityReducer,
+) -> @utils.Matrix {
+  match reducer.reduce() {
+    Some(matrix) => matrix
+    None => @utils.Matrix::zeros(0, 0)
+  }
+}
+
+///|
 test "the pca reducer keeps the distance of every row from the centre" {
   let data = feature_matrix(10000, 42UL)
   let reducer = @data_transformers.DimensionalityReducer::pca(data, 2, false)
-  let reduced = reducer.reduce()
+  let reduced = reduced_matrix(reducer)
   assert_eq(reduced.nrows(), 10000)
   assert_eq(reduced.ncols(), 2)
   // The upstream assertion: the distance of a row from the centre survives
@@ -71,7 +91,7 @@ test "the pca reducer keeps the distance of every row from the centre" {
 test "the pca reducer preserves the total variance of the data" {
   let data = feature_matrix(1000, 7UL)
   let reducer = @data_transformers.DimensionalityReducer::pca(data, 2, false)
-  let reduced = reducer.reduce()
+  let reduced = reduced_matrix(reducer)
   let total_before = total_variance(data)
   let total_after = total_variance(reduced)
   assert_true((total_before - total_after).abs() < 1.0e-8)
@@ -109,7 +129,7 @@ test "the pca reducer standardises the columns when it is asked to" {
     data, 2, true,
   )
   assert_true(standardised.is_standardized())
-  let reduced = standardised.reduce()
+  let reduced = reduced_matrix(standardised)
   // The standardised data has a total variance of one per column, and the
   // reduction keeps that total. The standardisation divides by the POPULATION
   // standard deviation while the covariance divides by `n - 1`, so the total
@@ -146,8 +166,20 @@ test "the reducer keeps at most as many dimensions as the data has columns" {
   let data = feature_matrix(100, 19UL)
   let reducer = @data_transformers.DimensionalityReducer::pca(data, 5, false)
   assert_eq(reducer.dimensions(), 2)
-  let reduced = reducer.reduce()
+  let reduced = reduced_matrix(reducer)
   assert_eq(reduced.ncols(), 2)
+}
+
+///|
+test "the base reducer of the upstream does not reduce the data" {
+  let data = feature_matrix(100, 23UL)
+  let reducer = @data_transformers.DimensionalityReducer::base(data, 2)
+  assert_false(reducer.supports_reduction())
+  assert_true(reducer.reduce() is None)
+  // The principal component analysis of the upstream does reduce the data.
+  let pca = @data_transformers.DimensionalityReducer::pca(data, 2, false)
+  assert_true(pca.supports_reduction())
+  assert_true(pca.reduce() is Some(_))
 }
 
 ///|

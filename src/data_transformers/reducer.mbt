@@ -11,6 +11,11 @@
 /// is fixed the way `sklearn.utils.extmath.svd_flip` fixes it, so that the
 /// largest entry of a component is positive.
 pub enum ReducerKind {
+  /// The base reducer of the upstream, whose reduction is not implemented.
+  ///
+  /// The base class `DimensionalityReducer` of the upstream raises a
+  /// `NotImplementedError` when its reduction is called.
+  Base
   /// The principal component analysis.
   PCA
 }
@@ -55,6 +60,36 @@ pub fn DimensionalityReducer::pca(
 }
 
 ///|
+/// The base reducer of the upstream.
+///
+/// This is the port of the base class `DimensionalityReducer` of the upstream,
+/// whose reduction raises a `NotImplementedError`. The port reports it with
+/// the predicate `supports_reduction` and with a `None` return, because
+/// MoonBit cannot catch the abort of a method.
+pub fn DimensionalityReducer::base(
+  data : @utils.Matrix,
+  ndims : Int32,
+) -> DimensionalityReducer {
+  DimensionalityReducer::new(data, ndims, ReducerKind::Base)
+}
+
+///|
+/// Whether the reducer reduces the data.
+///
+/// This is the port of the `reduce` of the upstream. The base reducer of the
+/// upstream does not reduce the data and raises a `NotImplementedError` when
+/// it is called, and the principal component analysis of the upstream does
+/// reduce it.
+pub fn DimensionalityReducer::supports_reduction(
+  self : DimensionalityReducer,
+) -> Bool {
+  match self.kind {
+    Base => false
+    PCA => true
+  }
+}
+
+///|
 /// The number of dimensions the reducer keeps.
 pub fn DimensionalityReducer::dimensions(self : DimensionalityReducer) -> Int32 {
   let columns = self.data.ncols()
@@ -95,11 +130,15 @@ pub fn DimensionalityReducer::set_standardize(
 ///
 /// The reduced data has one row per row of the input and one column per
 /// component that was kept.
+///
+/// The base reducer of the upstream does not reduce the data and raises a
+/// `NotImplementedError` when it is called, so the port gives `None` for it.
 pub fn DimensionalityReducer::reduce(
   self : DimensionalityReducer,
-) -> @utils.Matrix {
+) -> @utils.Matrix? {
   match self.kind {
-    PCA => self.reduce_pca()
+    Base => None
+    PCA => Some(self.reduce_pca())
   }
 }
 

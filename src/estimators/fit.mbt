@@ -160,6 +160,7 @@ fn CausalEstimator::interventional_outcomes(
   let modified = self.with_treatment(data, value)
   let (design, _) = self.build_design(modified)
   match self.kind {
+    Base => abort("The base estimator of the upstream predicts nothing")
     GeneralizedLinearModel => @utils.glm_predict(self.glm_model, design)
     _ => design.matvec(self.model.beta)
   }
@@ -179,12 +180,19 @@ fn CausalEstimator::interventional_outcomes(
 ///
 /// The name of the upstream is `do`, and `do` is a reserved word of the
 /// toolchain, so the port calls the method `do_operator`.
+///
+/// The base estimator of the upstream does not implement the do operator and
+/// raises a `NotImplementedError` when it is called, so the port gives `None`
+/// for it.
 pub fn CausalEstimator::do_operator(
   self : CausalEstimator,
   x : Double,
   data : @api.DataFrame,
-) -> Double {
-  @utils.mean(self.interventional_outcomes(data, x))
+) -> Double? {
+  match self.kind {
+    Base => None
+    _ => Some(@utils.mean(self.interventional_outcomes(data, x)))
+  }
 }
 
 ///|
@@ -215,6 +223,7 @@ pub fn CausalEstimator::fit(
     .copy()
   self.effect_modifier_names = effect_modifier_names.copy()
   match self.kind {
+    Base => ()
     LinearRegression => self.fit_regression(data)
     PropensityScoreWeighting => self.fit_propensity_score(data)
     PropensityScoreMatching => self.fit_propensity_score(data)
@@ -331,6 +340,7 @@ pub fn CausalEstimator::estimate_effect(
   self.treatment_value = treatment_value
   self.control_value = control_value
   match self.kind {
+    Base => abort("The base estimator of the upstream estimates nothing")
     LinearRegression => self.estimate_regression(data, target_units)
     PropensityScoreWeighting =>
       self.estimate_propensity_score_weighting(data, target_units)

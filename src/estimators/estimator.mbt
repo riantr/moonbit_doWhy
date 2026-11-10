@@ -5,6 +5,13 @@
 /// estimator itself keeps the fitted state, exactly like the Python classes
 /// inherit from `CausalEstimator`.
 pub enum EstimatorKind {
+  /// The base estimator of the upstream, whose placeholder methods are not
+  /// implemented.
+  ///
+  /// The base class `CausalEstimator` of the upstream implements neither the
+  /// do operator nor the symbolic estimator, and it raises a
+  /// `NotImplementedError` when they are called.
+  Base
   /// Ordinary least squares on the treatment and the adjustment variables.
   LinearRegression
   /// Inverse propensity score weighting.
@@ -341,6 +348,87 @@ fn CausalEstimator::new(
     compute_confidence_intervals: false,
     test_significance: false,
   }
+}
+
+///|
+/// The base estimator of the upstream.
+///
+/// This is the port of the base class `CausalEstimator` of the upstream, whose
+/// placeholder methods raise a `NotImplementedError`. The port reports the
+/// placeholders with the predicates `supports_do_operator` and
+/// `supports_symbolic_estimator` and with a `None` return, because MoonBit
+/// cannot catch the abort of a method.
+///
+/// The upstream builds its base estimator without an estimand. The port needs
+/// one for every estimator, so the base takes the estimand it reports with.
+pub fn CausalEstimator::base(
+  estimand : @identifiers.IdentifiedEstimand,
+) -> CausalEstimator {
+  CausalEstimator::new(estimand, EstimatorKind::Base)
+}
+
+///|
+/// Whether the estimator has a do operator.
+///
+/// This is the port of the `_do` of the upstream. The base estimator of the
+/// upstream does not implement it and raises a `NotImplementedError` when it
+/// is called, and so do the estimators of the upstream that do not derive from
+/// the regression estimator or from the doubly robust estimator, which are the
+/// two classes that implement it.
+///
+/// The port computes the do operator for every estimator that has a model, so
+/// this predicate tells what the upstream does and not what the port does.
+pub fn CausalEstimator::supports_do_operator(self : CausalEstimator) -> Bool {
+  match self.kind {
+    Base => false
+    LinearRegression => true
+    GeneralizedLinearModel => true
+    DoublyRobust => true
+    PropensityScoreWeighting => false
+    PropensityScoreMatching => false
+    PropensityScoreStratification => false
+    InstrumentalVariable => false
+    TwoStageRegression => false
+    RegressionDiscontinuity => false
+  }
+}
+
+///|
+/// Whether the estimator has a symbolic estimator.
+///
+/// This is the port of the `construct_symbolic_estimator` of the upstream. The
+/// base estimator of the upstream does not implement it and raises a
+/// `NotImplementedError` when it is called, and every estimator of the
+/// upstream that the port covers implements it.
+///
+/// The port does not build the symbolic estimators, because they are the
+/// symbolic expressions of the sympy of the upstream, so this predicate tells
+/// what the upstream does and not what the port does.
+pub fn CausalEstimator::supports_symbolic_estimator(
+  self : CausalEstimator,
+) -> Bool {
+  match self.kind {
+    Base => false
+    LinearRegression => true
+    GeneralizedLinearModel => true
+    DoublyRobust => true
+    PropensityScoreWeighting => true
+    PropensityScoreMatching => true
+    PropensityScoreStratification => true
+    InstrumentalVariable => true
+    TwoStageRegression => true
+    RegressionDiscontinuity => true
+  }
+}
+
+///|
+/// The message of the error the upstream raises for a method it does not
+/// implement.
+///
+/// This is the port of `DEFAULT_NOTIMPLEMENTEDERROR_MSG` of the upstream. The
+/// upstream puts the class of the estimator in the message.
+pub fn default_not_implemented_error_message() -> String {
+  "not yet implemented for {0}. If you would this to be implemented in the next version, please raise an issue at https://github.com/microsoft/dowhy/issues"
 }
 
 ///|

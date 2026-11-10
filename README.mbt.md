@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.75.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.76.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -17,13 +17,13 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Causal graph, d-separation | `dowhy.graph`, `dowhy.causal_graph` | ported (the graph, the d-separation, the backdoor and the frontdoor paths, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site) |
 | Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators, the **refutation of the graph**, the **do operator**, the **view of the graph** and the **interpretation** of an estimate) |
 | Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
-| Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
+| Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity, and the **base estimator** of the upstream, whose placeholders are not implemented) |
 | Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome, **with its random forest, its neural network and its support vector regressor**, and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis**, its **E-value analysis** and the **default strength** it infers for its confounder --, the **significance test** of the refutations, the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules, and the **graph refutation**, which tests the conditional independences the graph entails against the data) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset`, the **sales data set**, the **random graph** data set and the fixtures the upstream tests use) |
 | Data generating processes | `dowhy.utils.dgp`, `dowhy.utils.dgps` | ported (the linear, the quadratic and the cubic process, the weights and the bias they draw, the binary treatment they convert and the value of the effect they compute) |
 | Randomness | the generator of numpy | ported (the Mersenne Twister of numpy with its double, its normal variate, its Bernoulli and its integer, so the port draws the numbers of the upstream for a seed) |
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
-| Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
+| Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer, and the **base reducer** of the upstream, whose reduction is not implemented) |
 | Intervention sampling | `dowhy.do_sampler`, `dowhy.do_samplers` | ported (the weighting, multivariate weighting and kernel density samplers) -- the MCMC sampler is **not ported**, it needs an inference engine upstream takes from PyMC3 |
 | Time series | `dowhy.timeseries` | ported (the temporal graph, its readers of a CSV and of a DOT, and the temporal shift) |
 | Plotting | `dowhy.utils.plotting`, `dowhy.utils.graphviz_plotting`, `dowhy.utils.networkx_plotting` | ported (the width of the arrows, the label and the colour of the nodes and of the edges, the layer of every node, the uncertainty bars of a bar plot and the graph of an adjacency matrix) -- the port **draws nothing**, it computes the attributes of the two backends of the upstream and writes the ones of the Graphviz backend as a DOT document |
@@ -97,11 +97,11 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `identifiers` | `riantr/moonbit_dowhy/identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `riantr/moonbit_dowhy/model` | `dowhy.causal_estimator` (the estimate objects) |
 | `interpreters` | `riantr/moonbit_dowhy/interpreters` | `dowhy.interpreters`: the sentence that reads an estimate |
-| `estimators` | `riantr/moonbit_dowhy/estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand and the **do operator** |
+| `estimators` | `riantr/moonbit_dowhy/estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand, the **do operator** and the **base estimator** of the upstream |
 | `refuters` | `riantr/moonbit_dowhy/refuters` | `dowhy.causal_refuters`, with the **graph refutation** |
 | `overrule` | `riantr/moonbit_dowhy/overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `datasets` | `riantr/moonbit_dowhy/datasets` | `dowhy.datasets` (the `linear_dataset` generator, the sales data set and the **random graph** data set), the **data generating processes** of `dowhy.utils.dgp` and of `dowhy.utils.dgps`, and the deterministic test fixtures |
-| `data_transformers` | `riantr/moonbit_dowhy/data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
+| `data_transformers` | `riantr/moonbit_dowhy/data_transformers` | `dowhy.data_transformers` (the PCA reducer and the base reducer of the upstream) |
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `plotting` | `riantr/moonbit_dowhy/plotting` | `dowhy.utils.plotting`, `dowhy.utils.graphviz_plotting` and `dowhy.utils.networkx_plotting`: the width of the arrows, the label and the colour of the nodes and of the edges, the layer of every node, the uncertainty bars of a bar plot and the graph of an adjacency matrix |
@@ -1318,6 +1318,20 @@ following ways:
   `utils` package is the one the port used before, and it is the one the
   refuters and the `gcm` package still use, so their numbers are the numbers
   of the port and not the numbers of the upstream.
+- The two base classes of the upstream, the class `CausalEstimator` and the class
+  `DimensionalityReducer`, implement nothing, and they raise a
+  `NotImplementedError` when a placeholder method is called. The port holds
+  them as the kinds `Base` of the estimator and of the reducer, and it reports
+  the placeholders with a predicate and with a `None` return, because MoonBit
+  cannot catch the abort of a method.
+- The upstream implements the do operator in the class of the regression
+  estimator and in the class of the doubly robust estimator, and every other
+  estimator inherits the placeholder of the base. The port computes the do
+  operator for every estimator that has a model, so the predicate
+  `supports_do_operator` tells what the upstream does and not what the port
+  does.
+- The upstream builds its symbolic estimators with the sympy of the upstream,
+  and the port does not build them.
 - The data generating processes of the upstream draw their randomness from the
   global generator of numpy, which every object of the program shares, and they
   seed it in their constructor. The port gives every process its own generator

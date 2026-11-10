@@ -170,13 +170,29 @@ fn sample_text_with_replacement(
 }
 
 ///|
+/// The value of the do operator of the estimator.
+///
+/// The base estimator of the upstream does not implement the do operator, so
+/// its value is `None`.
+fn do_value(
+  estimator : @estimators.CausalEstimator,
+  x : Double,
+  frame : @api.DataFrame,
+) -> Double {
+  match estimator.do_operator(x, frame) {
+    Some(value) => value
+    None => 0.0
+  }
+}
+
+///|
 test "the do operator of the estimator does not move when the rows are permuted" {
   let dataset = confounded()
   let estimand = backdoor_estimand(dataset)
   let estimator = @estimators.CausalEstimator::linear_regression(estimand)
   estimator.fit(dataset.frame(), [])
-  let first = estimator.do_operator(1.0, dataset.frame())
-  let second = estimator.do_operator(1.0, swap_first_two_rows(dataset.frame()))
+  let first = do_value(estimator, 1.0, dataset.frame())
+  let second = do_value(estimator, 1.0, swap_first_two_rows(dataset.frame()))
   // The upstream checks that the value of the do operator does not move when
   // the rows of the data are permuted.
   assert_true((first - second).abs() < 0.000001)
@@ -192,14 +208,14 @@ test "the do operator of the estimator moves when the encoded columns move" {
   let estimand = backdoor_estimand(dataset)
   let estimator = @estimators.CausalEstimator::linear_regression(estimand)
   estimator.fit(dataset.frame(), [])
-  let first = estimator.do_operator(1.0, dataset.frame())
+  let first = do_value(estimator, 1.0, dataset.frame())
   let random = @utils.Random::new(11)
   let randomised = randomise_column(
     dataset.frame(),
     dataset.common_causes()[0],
     random,
   )
-  let second = estimator.do_operator(1.0, randomised)
+  let second = do_value(estimator, 1.0, randomised)
   // The upstream checks that the value of the do operator moves when the
   // values of the encoded columns move, because the encoding of the columns
   // changed.
@@ -220,8 +236,16 @@ test "the do operator of the model is the number of the upstream" {
     [],
   )
   let estimand = model.identify_effect("backdoor")
-  let zero = model.do_operator(0.0, estimand, "backdoor.linear_regression")
-  let one = model.do_operator(1.0, estimand, "backdoor.linear_regression")
+  let zero = match
+    model.do_operator(0.0, estimand, "backdoor.linear_regression") {
+    Some(value) => value
+    None => 0.0
+  }
+  let one = match
+    model.do_operator(1.0, estimand, "backdoor.linear_regression") {
+    Some(value) => value
+    None => 0.0
+  }
   assert_true((zero - -0.04996488764044996).abs() < 0.000000001)
   assert_true((one - 1.94996488764045).abs() < 0.000000001)
 }
@@ -240,10 +264,14 @@ test "the do operator of the model is the value of the outcome under the interve
     [],
   )
   let estimand = model.identify_effect("backdoor")
-  let value = model.do_operator(1.0, estimand, "backdoor.linear_regression")
+  let value = match
+    model.do_operator(1.0, estimand, "backdoor.linear_regression") {
+    Some(result) => result
+    None => 0.0
+  }
   let estimator = @estimators.CausalEstimator::linear_regression(estimand)
   estimator.fit(dataset.frame(), [])
-  let expected = estimator.do_operator(1.0, dataset.frame())
+  let expected = do_value(estimator, 1.0, dataset.frame())
   assert_true((value - expected).abs() < 0.000000001)
 }
 
