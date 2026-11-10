@@ -2170,3 +2170,56 @@ infers from the observed common causes.
 - The `non-parametric-partial-R2` analyzer of the upstream is not ported yet.
 
 [0.0.42]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.42
+
+## [0.0.43] - 2026-11-10
+
+The readers of the temporal graphs of the upstream.
+
+### Added
+
+- `timeseries.create_graph_from_csv_text` and
+  `timeseries.create_graph_from_dot_text`, the port of `create_graph_from_csv`
+  and of `create_graph_from_dot_format` of `dowhy.utils.timeseries`. The
+  upstream reads a CSV file and a DOT file, and this library has no file
+  system, so the port reads the text of the files. The CSV holds the columns
+  `node1`, `node2` and `time_lag`, and every row is an edge with its time lag.
+  The DOT holds the time lags of an edge in its `label` attribute, between
+  parentheses and separated by commas.
+- `graph.parse_dot_edges` and the type `graph.DotEdge`, which give the edges
+  of a DOT string with the label of every edge. The reader of the DOT graphs of
+  the `graph` package ignores the labels, and the temporal graphs need them.
+- `timeseries.TemporalGraph::set_time_lags`, which replaces the time lags of
+  an edge. The upstream merges the entries of one edge of a DOT file with a
+  set, so the lags of the edge are replaced and not appended to.
+- the ten cases of the upstream test file
+  `tests/timeseries/test_temporal_causal_graph_creation.py` that read a CSV
+  and a DOT, in `src/timeseries/timeseries_test.mbt`. The eight cases of the
+  file `tests/timeseries/test_temporal_shift.py` were already mirrored there.
+- `_verify/timeseries_readers_reference.py`, which runs the two readers of the
+  upstream on the fixtures of the upstream test file and prints their edges.
+
+### Notes
+
+- The numbers of the upstream are the ones of its own test file, and the
+  reference script prints them: the reader of the CSV gives the three edges
+  `A -> B` with the lag `5`, `B -> C` with the lag `2` and `A -> C` with the
+  lag `7`, the reader of a CSV with two rows of one edge gives the lags `5`
+  and `3`, and the reader of the DOT gives the same edges.
+- The reader of the DOT of the upstream needs `pygraphviz`, which is not
+  installed here, so it raises an `ImportError`. The reference script runs it
+  with the backend of `pydot` in the place of the backend of `pygraphviz`:
+  the backend of `pydot` keeps the quotes around the value of an attribute,
+  where the backend of `pygraphviz` takes them off, so the script takes them
+  off as well.
+- The upstream merges the entries of one edge of a DOT file with a set, whose
+  order is the order of the set of the interpreter, and the port keeps the
+  order of the entries. The entries of the upstream test file hold one label
+  per edge, so the two agree there.
+- The upstream names a node of a CSV that is missing "nan", the name numpy
+  gives to a missing value, and the port refuses the row.
+- The upstream reads a CSV with `pandas.read_csv`, which understands the
+  quoted fields, and the port reads the plain form: the fields are separated
+  by commas and no field is quoted.
+- The `non-parametric-partial-R2` analyzer of the upstream is not ported yet.
+
+[0.0.43]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.43

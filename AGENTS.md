@@ -718,6 +718,28 @@ statsmodels / scikit-learn conventions are deliberate:
     number and not an array, so the branch raises an `IndexError` on the numpy
     of today. The port computes the number the branch means to compute.
 
+- The readers of the temporal graphs of the `timeseries` package take the text
+  of the files the upstream reads, because the library has no file system.
+  Three conventions of the upstream decide whether the port reproduces its
+  numbers:
+  - **the CSV holds the columns `node1`, `node2` and `time_lag`.** The columns
+    are found by their name, the way the upstream reads them by their name, and
+    a time lag that is not a number makes the reader give no graph, the way the
+    upstream returns `None` when it cannot read the lag of a row. A time lag
+    that is written with a fraction or with an exponent is truncated toward
+    zero, the way `int` truncates a float.
+  - **the DOT holds the time lags of an edge in its `label` attribute.** The
+    lags are written between parentheses and separated by commas, the way the
+    upstream writes them, and the reader takes the parentheses off and reads
+    every part as an integer. An edge without a label is left out of the graph,
+    the way the upstream leaves it out.
+  - **the entries of one edge are merged in two ways.** The reader of a CSV
+    appends the lag of a row to the lags of the edge, and the reader of a DOT
+    replaces them with the lags of all the entries without their duplicates.
+    The upstream merges the entries of a DOT file with a set, whose order is
+    the order of the set of the interpreter, and the port keeps the order of
+    the entries.
+
 ## Package layout
 
 | Package | Ports |

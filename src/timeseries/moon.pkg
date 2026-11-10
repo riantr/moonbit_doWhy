@@ -1,4 +1,6 @@
 import {
+  "moonbitlang/core/math",
   "moonbitlang/core/string",
   "riantr/moonbit_dowhy/api",
+  "riantr/moonbit_dowhy/graph",
 }

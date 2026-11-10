@@ -81,25 +81,58 @@ pub fn TemporalGraph::add_edge_with_lags(
   to : String,
   lags : Array[Int32],
 ) -> Unit {
-  self.add_node(from)
-  self.add_node(to)
-  let key = edge_key(from, to)
+  let key = self.ensure_edge(from, to)
   match self.lags.get(key) {
     Some(existing) =>
       for lag in lags {
         existing.push(lag)
       }
-    None => {
-      self.edges.push((from, to))
-      self.lags.set(key, lags.copy())
-      let children = self.succ.get(from).unwrap_or([])
-      children.push(to)
-      self.succ.set(from, children)
-      let parents = self.pred.get(to).unwrap_or([])
-      parents.push(from)
-      self.pred.set(to, parents)
-    }
+    None => self.lags.set(key, lags.copy())
   }
+}
+
+///|
+/// Replace the time lags of an edge.
+///
+/// The edge is created when it does not exist yet. The lags are copied, so the
+/// caller may modify the array it hands over without changing the graph.
+///
+/// The upstream merges the lags of two entries of the same edge in two ways:
+/// the reader of a CSV file appends the lag of the row to the lags of the
+/// edge, and the reader of a DOT file replaces them with the lags of all the
+/// entries without their duplicates. The appending is the method
+/// `add_edge_with_lags`, and the replacing is this one.
+pub fn TemporalGraph::set_time_lags(
+  self : TemporalGraph,
+  from : String,
+  to : String,
+  lags : Array[Int32],
+) -> Unit {
+  let key = self.ensure_edge(from, to)
+  self.lags.set(key, lags.copy())
+}
+
+///|
+/// Create the edge when it does not exist yet, and return the key it is
+/// stored under.
+fn TemporalGraph::ensure_edge(
+  self : TemporalGraph,
+  from : String,
+  to : String,
+) -> String {
+  self.add_node(from)
+  self.add_node(to)
+  let key = edge_key(from, to)
+  if !self.lags.contains(key) {
+    self.edges.push((from, to))
+    let children = self.succ.get(from).unwrap_or([])
+    children.push(to)
+    self.succ.set(from, children)
+    let parents = self.pred.get(to).unwrap_or([])
+    parents.push(from)
+    self.pred.set(to, parents)
+  }
+  key
 }
 
 ///|

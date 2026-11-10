@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.42.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.43.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -23,7 +23,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
 | Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
 | Intervention sampling | `dowhy.do_sampler`, `dowhy.do_samplers` | ported (the weighting, multivariate weighting and kernel density samplers) -- the MCMC sampler is **not ported**, it needs an inference engine upstream takes from PyMC3 |
-| Time series | `dowhy.timeseries` | ported (the temporal graph and the temporal shift) |
+| Time series | `dowhy.timeseries` | ported (the temporal graph, its readers of a CSV and of a DOT, and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
 | Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure and the **kernel based** one), the prediction models -- the linear one and the **polynomial** ones --, the causal mechanisms, the stochastic models, the noise of a causal model, the **feature relevance**, the **intrinsic causal influence**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution), the **unit change** layer, the **uncertainty** estimates, the **distribution change** layer -- the plain one and the **multiply-robust** one -- and the **arrow strength** layer are ported |
@@ -925,6 +925,19 @@ following ways:
   of the port and the attribution of the upstream are close to each other and
   not equal to each other: on the ten thousand rows of the upstream test file
   they agree to `0.004` for the mean and to `0.05` for the variance.
+- `timeseries` reads the temporal graphs of a CSV and of a DOT from the text
+  of the files, because the library has no file system. The upstream reads the
+  files themselves.
+- `timeseries` reads a CSV in its plain form, where the fields are separated by
+  commas and no field is quoted. The upstream reads the file with
+  `pandas.read_csv`, which understands the quoted fields as well.
+- `timeseries` refuses a row of a CSV whose node names are missing. The
+  upstream names them "nan", the name numpy gives to a missing value.
+- `timeseries` keeps the order of the entries when it merges the entries of
+  one edge of a DOT file. The upstream merges them with a set, whose order is
+  the order of the set of the interpreter, so the two differ when the entries
+  of one edge do not come in the order of their lags. The entries of the
+  upstream test file hold one label per edge, so the two agree there.
 - `refuters` infers the default strength of the confounder of the unobserved
   common cause refuter the way the upstream does: a logistic regression of the
   column on the standardised common causes is fitted, and the share of the

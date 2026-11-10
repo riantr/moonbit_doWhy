@@ -1,9 +1,22 @@
 ///|
 /// The tests of the temporal graphs.
 ///
-/// The cases mirror the upstream test suite (`tests/timeseries/`): the
-/// temporal graph of `dowhy.utils.timeseries` and the unrolling of
-/// `dowhy.timeseries.temporal_shift`.
+/// The cases mirror the two test files of the upstream:
+/// `tests/timeseries/test_temporal_causal_graph_creation.py` and
+/// `tests/timeseries/test_temporal_shift.py`.
+///
+/// The eight cases of `test_temporal_shift.py` are the eight cases of the
+/// upstream: the unrolling of a graph into its lagged nodes and the shifting
+/// of the columns of a frame by the lag of every node.
+///
+/// The seventeen cases of `test_temporal_causal_graph_creation.py` are the
+/// five of the reader of a CSV file, the five of the reader of a DOT file and
+/// the seven of the reader of the array representation. The upstream reads the
+/// CSV and the DOT from files, and this library has no file system, so the
+/// port reads the text of the files. The reader of the DOT of the upstream
+/// needs `pygraphviz`, which is not installed here, so the reference script
+/// `_verify/timeseries_readers_reference.py` runs it with the backend of
+/// `pydot` in the place of the backend of `pygraphviz`.
 
 ///|
 /// A graph with the given edges, every edge with a single time lag.
@@ -357,4 +370,180 @@ test "the networkx array representation skips the self loops" {
   let array = link_array(2, 1, [(0, 0, 0, "-->")])
   let graph = @timeseries.create_graph_from_networkx_array(array, ["X1", "X2"])
   assert_eq(0, graph.edge_count())
+}
+
+///|
+/// The CSV of the basic fixture of the upstream.
+fn csv_basic() -> String {
+  "node1,node2,time_lag\nA,B,5\nB,C,2\nA,C,7"
+}
+
+///|
+/// The CSV of the fixture of the upstream that holds several lags of one edge.
+fn csv_multiple_lags() -> String {
+  "node1,node2,time_lag\nA,B,5\nA,B,3\nA,C,7"
+}
+
+///|
+/// The CSV of the fixture of the upstream that holds a lag that is not a
+/// number.
+fn csv_invalid_lag() -> String {
+  "node1,node2,time_lag\nA,B,five\nB,C,2\nA,C,7"
+}
+
+///|
+/// The DOT of the basic fixture of the upstream.
+fn dot_basic() -> String {
+  "digraph G {\n  A -> B [label=\"(5)\"];\n  B -> C [label=\"(2)\"];\n  A -> C [label=\"(7)\"];\n}"
+}
+
+///|
+/// The DOT of the fixture of the upstream that holds several lags of one edge.
+fn dot_multiple_lags() -> String {
+  "digraph G {\n  A -> B [label=\"(5,3)\"];\n  A -> C [label=\"(7)\"];\n}"
+}
+
+///|
+/// The DOT of the fixture of the upstream that holds a label that is not a
+/// number.
+fn dot_invalid_lag() -> String {
+  "digraph G {\n  A -> B [label=\"(five)\"];\n  B -> C [label=\"(2)\"];\n  A -> C [label=\"(7)\"];\n}"
+}
+
+///|
+/// The CSV reader of the upstream gives the edges of the basic fixture.
+test "the CSV reader gives the edges of the basic fixture of the upstream" {
+  let graph = @timeseries.create_graph_from_csv_text(csv_basic())
+  let graph = match graph {
+    Some(value) => value
+    None => return
+  }
+  assert_eq(3, graph.edge_count())
+  assert_true(graph.has_edge("A", "B"))
+  assert_eq([5], graph.time_lags_of("A", "B"))
+  assert_true(graph.has_edge("B", "C"))
+  assert_eq([2], graph.time_lags_of("B", "C"))
+  assert_true(graph.has_edge("A", "C"))
+  assert_eq([7], graph.time_lags_of("A", "C"))
+}
+
+///|
+/// The CSV reader of the upstream merges the rows of one edge.
+test "the CSV reader merges the rows of one edge of the upstream" {
+  let graph = @timeseries.create_graph_from_csv_text(csv_multiple_lags())
+  let graph = match graph {
+    Some(value) => value
+    None => return
+  }
+  assert_eq(2, graph.edge_count())
+  assert_true(graph.has_edge("A", "B"))
+  assert_eq([5, 3], graph.time_lags_of("A", "B"))
+  assert_true(graph.has_edge("A", "C"))
+  assert_eq([7], graph.time_lags_of("A", "C"))
+}
+
+///|
+/// The CSV reader of the upstream refuses a lag that is not a number.
+test "the CSV reader refuses a lag that is not a number" {
+  let mut absent = false
+  match @timeseries.create_graph_from_csv_text(csv_invalid_lag()) {
+    Some(_) => ()
+    None => absent = true
+  }
+  assert_true(absent)
+}
+
+///|
+/// The CSV reader of the upstream gives an empty graph for an empty CSV.
+test "the CSV reader gives an empty graph for an empty CSV" {
+  let graph = @timeseries.create_graph_from_csv_text("node1,node2,time_lag")
+  let graph = match graph {
+    Some(value) => value
+    None => return
+  }
+  assert_eq(0, graph.edge_count())
+}
+
+///|
+/// The CSV reader of the upstream keeps a self loop.
+test "the CSV reader keeps a self loop of the upstream" {
+  let graph = @timeseries.create_graph_from_csv_text(
+    "node1,node2,time_lag\nA,A,5",
+  )
+  let graph = match graph {
+    Some(value) => value
+    None => return
+  }
+  assert_eq(1, graph.edge_count())
+  assert_true(graph.has_edge("A", "A"))
+  assert_eq([5], graph.time_lags_of("A", "A"))
+}
+
+///|
+/// The DOT reader of the upstream gives the edges of the basic fixture.
+test "the DOT reader gives the edges of the basic fixture of the upstream" {
+  let graph = @timeseries.create_graph_from_dot_text(dot_basic())
+  let graph = match graph {
+    Some(value) => value
+    None => return
+  }
+  assert_eq(3, graph.edge_count())
+  assert_true(graph.has_edge("A", "B"))
+  assert_eq([5], graph.time_lags_of("A", "B"))
+  assert_true(graph.has_edge("B", "C"))
+  assert_eq([2], graph.time_lags_of("B", "C"))
+  assert_true(graph.has_edge("A", "C"))
+  assert_eq([7], graph.time_lags_of("A", "C"))
+}
+
+///|
+/// The DOT reader of the upstream reads the lags of the label of an edge.
+test "the DOT reader reads the lags of the label of an edge of the upstream" {
+  let graph = @timeseries.create_graph_from_dot_text(dot_multiple_lags())
+  let graph = match graph {
+    Some(value) => value
+    None => return
+  }
+  assert_eq(2, graph.edge_count())
+  assert_true(graph.has_edge("A", "B"))
+  assert_eq([5, 3], graph.time_lags_of("A", "B"))
+  assert_true(graph.has_edge("A", "C"))
+  assert_eq([7], graph.time_lags_of("A", "C"))
+}
+
+///|
+/// The DOT reader of the upstream refuses a label that is not a number.
+test "the DOT reader refuses a label that is not a number" {
+  let mut absent = false
+  match @timeseries.create_graph_from_dot_text(dot_invalid_lag()) {
+    Some(_) => ()
+    None => absent = true
+  }
+  assert_true(absent)
+}
+
+///|
+/// The DOT reader of the upstream gives an empty graph for an empty DOT.
+test "the DOT reader gives an empty graph for an empty DOT" {
+  let graph = @timeseries.create_graph_from_dot_text("digraph G {}")
+  let graph = match graph {
+    Some(value) => value
+    None => return
+  }
+  assert_eq(0, graph.edge_count())
+}
+
+///|
+/// The DOT reader of the upstream keeps a self loop.
+test "the DOT reader keeps a self loop of the upstream" {
+  let graph = @timeseries.create_graph_from_dot_text(
+    "digraph G {\n  A -> A [label=\"(5)\"];\n}",
+  )
+  let graph = match graph {
+    Some(value) => value
+    None => return
+  }
+  assert_eq(1, graph.edge_count())
+  assert_true(graph.has_edge("A", "A"))
+  assert_eq([5], graph.time_lags_of("A", "A"))
 }

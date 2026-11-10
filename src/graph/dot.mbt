@@ -10,6 +10,10 @@
 /// declarations with the attributes of the daggity graph. The attributes of a
 /// node are read, but they do not change the graph: the upstream overwrites
 /// the `observed` attribute of every node with the columns of the data anyway.
+///
+/// The label of an edge is read as well, because the temporal graphs of the
+/// `timeseries` package carry the time lag of an edge in its label. The
+/// function `parse_dot_edges` returns the edges with their labels.
 
 ///|
 /// The graph of a DOT string.
@@ -30,6 +34,38 @@ pub fn parse_dot(text : String) -> DirectedGraph {
 }
 
 ///|
+/// An edge of a DOT string.
+pub struct DotEdge {
+  /// The name of the node the edge starts at.
+  source : String
+  /// The name of the node the edge ends at.
+  target : String
+  /// The value of the `label` attribute of the edge.
+  ///
+  /// The label is absent when the edge has no `label` attribute, which is not
+  /// the same as an edge whose label is the empty text.
+  label : String?
+}
+
+///|
+/// The edges of a DOT string, with the label of every edge.
+///
+/// The edges keep the order of the statements of the DOT string.
+pub fn parse_dot_edges(text : String) -> Array[DotEdge] {
+  let edges : Array[DotEdge] = []
+  for statement in dot_statements(text) {
+    if statement.is_edge() {
+      edges.push({
+        source: statement.source,
+        target: statement.target,
+        label: statement.label,
+      })
+    }
+  }
+  edges
+}
+
+///|
 /// The statements of a DOT string.
 ///
 /// A statement is an edge of the graph or the declaration of a node.
@@ -40,6 +76,8 @@ priv struct DotStatement {
   target : String
   /// Whether the statement is an edge.
   edge : Bool
+  /// The value of the `label` attribute of the statement.
+  mut label : String?
 }
 
 ///|
@@ -71,7 +109,11 @@ fn dot_statements(text : String) -> Array[DotStatement] {
       let (name, next) = dot_read_quoted(chars, i)
       i = dot_handle_name(chars, next, name, statements)
     } else if character == '[' {
-      i = dot_skip_block(chars, i)
+      let (label, next) = dot_attribute_block(chars, i)
+      i = next
+      if statements.length() > 0 {
+        statements[statements.length() - 1].label = label
+      }
     } else if is_dot_name_start(character) {
       let (name, next) = dot_read_identifier(chars, i)
       if is_dot_keyword(name) {
@@ -115,10 +157,10 @@ fn dot_handle_name(
       i = next
       value
     }
-    statements.push({ source: name, target, edge: true, })
+    statements.push({ source: name, target, edge: true, label: None, })
     return i
   }
-  statements.push({ source: name, target: "", edge: false, })
+  statements.push({ source: name, target: "", edge: false, label: None, })
   position
 }
 
@@ -150,24 +192,65 @@ fn dot_read_identifier(
 }
 
 ///|
-/// The position after the attribute block at the given position.
-fn dot_skip_block(chars : Array[Char], position : Int32) -> Int32 {
-  let mut depth = 0
-  let mut i = position
+/// The label of the attribute block at the given position, and the position
+/// after the block.
+///
+/// The label is the value of the `label` attribute of the block, and it is
+/// absent when the block holds no such attribute. The value of an attribute
+/// may be a quoted text or a bare word.
+fn dot_attribute_block(
+  chars : Array[Char],
+  position : Int32,
+) -> (String?, Int32) {
+  let mut i = position + 1
+  let mut label : String? = None
   while i < chars.length() {
-    if chars[i] == '[' {
-      depth = depth + 1
-    } else if chars[i] == ']' {
-      depth = depth - 1
+    while i < chars.length() && (chars[i] == ',' || chars[i].is_whitespace()) {
       i = i + 1
-      if depth <= 0 {
-        break
+    }
+    if i >= chars.length() || chars[i] == ']' {
+      if i < chars.length() {
+        i = i + 1
       }
+      break
+    }
+    let start = i
+    while i < chars.length() &&
+          chars[i] != '=' &&
+          chars[i] != ',' &&
+          chars[i] != ']' {
+      i = i + 1
+    }
+    let key = dot_chars_to_string(chars, start, i)
+    while i < chars.length() && chars[i].is_whitespace() {
+      i = i + 1
+    }
+    if i >= chars.length() || chars[i] != '=' {
       continue
     }
     i = i + 1
+    while i < chars.length() && chars[i].is_whitespace() {
+      i = i + 1
+    }
+    let value = if i < chars.length() && chars[i] == '"' {
+      let (text, next) = dot_read_quoted(chars, i)
+      i = next
+      text
+    } else {
+      let start = i
+      while i < chars.length() &&
+            chars[i] != ',' &&
+            chars[i] != ']' &&
+            !chars[i].is_whitespace() {
+        i = i + 1
+      }
+      dot_chars_to_string(chars, start, i)
+    }
+    if key == "label" {
+      label = Some(value)
+    }
   }
-  i
+  (label, i)
 }
 
 ///|
