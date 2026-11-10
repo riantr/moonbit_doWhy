@@ -30,6 +30,8 @@ pub struct PredictionModel {
   /// The degree of the polynomial expansion of the features, zero when the
   /// model is fitted on the features themselves.
   degree : Int32
+  /// The nearest neighbour model, when the model is one.
+  neighbours : KnnModel?
 }
 
 ///|
@@ -44,6 +46,7 @@ pub fn PredictionModel::linear() -> PredictionModel {
     fixed: false,
     equation: None,
     degree: 0,
+    neighbours: None,
   }
 }
 
@@ -66,6 +69,42 @@ pub fn PredictionModel::polynomial(degree~ : Int32 = 2) -> PredictionModel {
     fixed: false,
     equation: None,
     degree,
+    neighbours: None,
+  }
+}
+
+///|
+/// A prediction model of the nearest neighbours of a row.
+///
+/// This is the port of `dowhy.gcm.ml.regression.create_knn_regressor`, which
+/// wraps `sklearn.neighbors.KNeighborsRegressor` with its default parameters:
+/// five neighbours and the uniform weights. The neighbours of a row are the
+/// rows of the training data with the smallest euclidean distance to it.
+pub fn PredictionModel::nearest_neighbour(k~ : Int32 = 5) -> PredictionModel {
+  if k < 1 {
+    abort("the number of the neighbours has to be at least one")
+  }
+  {
+    coefficients: [],
+    intercept: 0.0,
+    fitted: false,
+    fixed: false,
+    equation: None,
+    degree: 0,
+    neighbours: Some(KnnModel::new(k)),
+  }
+}
+
+///|
+/// Whether the model is a nearest neighbour model.
+///
+/// A nearest neighbour model has no coefficient and no intercept: it keeps the
+/// training data and predicts with the average of the targets of the
+/// neighbours of a row.
+pub fn PredictionModel::is_nearest_neighbour(self : PredictionModel) -> Bool {
+  match self.neighbours {
+    Some(_) => true
+    None => false
   }
 }
 
@@ -87,6 +126,7 @@ pub fn PredictionModel::with_fixed_parameters(
     fixed: true,
     equation: None,
     degree: 0,
+    neighbours: None,
   }
 }
 
@@ -151,6 +191,22 @@ pub fn PredictionModel::fit(
         fixed: true,
         equation: Some(equation),
         degree: self.degree,
+        neighbours: self.neighbours,
+      }
+    None => ()
+  }
+  match self.neighbours {
+    Some(neighbours) =>
+      // A nearest neighbour model keeps the training data and computes nothing
+      // else, so the fit is the fit of the nearest neighbour model.
+      return {
+        coefficients: [],
+        intercept: 0.0,
+        fitted: true,
+        fixed: false,
+        equation: None,
+        degree: 0,
+        neighbours: Some(neighbours.fit(x, y)),
       }
     None => ()
   }
@@ -163,6 +219,7 @@ pub fn PredictionModel::fit(
       fixed: true,
       equation: None,
       degree: self.degree,
+      neighbours: None,
     }
   }
   let n = x.nrows()
@@ -183,6 +240,7 @@ pub fn PredictionModel::fit(
       fixed: false,
       equation: None,
       degree: self.degree,
+      neighbours: None,
     }
   }
   let offsets : Array[Double] = []
@@ -212,6 +270,7 @@ pub fn PredictionModel::fit(
     fixed: false,
     equation: None,
     degree: self.degree,
+    neighbours: None,
   }
 }
 
@@ -223,6 +282,10 @@ pub fn PredictionModel::predict(
 ) -> Array[Double] {
   match self.equation {
     Some(equation) => return predict_equation(equation, x)
+    None => ()
+  }
+  match self.neighbours {
+    Some(neighbours) => return neighbours.predict(x)
     None => ()
   }
   if !self.fitted {
@@ -269,6 +332,22 @@ pub fn PredictionModel::clone(self : PredictionModel) -> PredictionModel {
         fixed: true,
         equation: Some(equation),
         degree: self.degree,
+        neighbours: self.neighbours,
+      }
+    None => ()
+  }
+  match self.neighbours {
+    Some(neighbours) =>
+      // The copy keeps the number of the neighbours, because it is a hyper
+      // parameter of the model and not the result of a fit.
+      return {
+        coefficients: [],
+        intercept: 0.0,
+        fitted: false,
+        fixed: false,
+        equation: None,
+        degree: 0,
+        neighbours: Some(KnnModel::new(neighbours.k)),
       }
     None => ()
   }
@@ -280,6 +359,7 @@ pub fn PredictionModel::clone(self : PredictionModel) -> PredictionModel {
       fixed: true,
       equation: None,
       degree: self.degree,
+      neighbours: None,
     }
   }
   {
@@ -289,7 +369,23 @@ pub fn PredictionModel::clone(self : PredictionModel) -> PredictionModel {
     fixed: false,
     equation: None,
     degree: self.degree,
+    neighbours: None,
   }
+}
+
+///|
+/// The one-versus-rest models of a classifier of more than two classes.
+///
+/// This is the port of the multiclass logistic regression of the upstream,
+/// which scikit-learn fits with a multinomial solver. The port fits one
+/// binary logistic regression per class and it normalises the probabilities
+/// of the classes, the way the one-versus-rest variant of the logistic
+/// regression does.
+pub struct OneVersusRestModel {
+  /// The coefficient of every feature of every class, without the intercept.
+  coefficients : Array[Array[Double]]
+  /// The intercept of every class.
+  intercepts : Array[Double]
 }
 
 ///|
@@ -311,6 +407,8 @@ pub struct ClassificationModel {
   /// The degree of the polynomial expansion of the features, zero when the
   /// model is fitted on the features themselves.
   degree : Int32
+  /// The one-versus-rest models, when the target holds more than two classes.
+  one_versus_rest : OneVersusRestModel?
 }
 
 ///|
@@ -318,7 +416,14 @@ pub struct ClassificationModel {
 ///
 /// This is the port of `dowhy.gcm.ml.create_logistic_regression_classifier`.
 pub fn ClassificationModel::logistic() -> ClassificationModel {
-  { coefficients: [], intercept: 0.0, classes: [], fitted: false, degree: 0, }
+  {
+    coefficients: [],
+    intercept: 0.0,
+    classes: [],
+    fitted: false,
+    degree: 0,
+    one_versus_rest: None,
+  }
 }
 
 ///|
@@ -337,7 +442,14 @@ pub fn ClassificationModel::polynomial(
   if degree < 1 {
     abort("the degree of a polynomial model has to be at least one")
   }
-  { coefficients: [], intercept: 0.0, classes: [], fitted: false, degree, }
+  {
+    coefficients: [],
+    intercept: 0.0,
+    classes: [],
+    fitted: false,
+    degree,
+    one_versus_rest: None,
+  }
 }
 
 ///|
@@ -374,18 +486,13 @@ pub fn ClassificationModel::fit(
   x : @utils.Matrix,
   y : Array[String],
 ) -> ClassificationModel {
-  let _ = self
   let classes = sorted_distinct_labels(y)
-  if classes.length() != 2 {
+  if classes.length() < 2 {
     abort(
-      "the port supports a classifier of two classes only, but the target has " +
+      "the target of a classifier needs at least two classes, but it has " +
       classes.length().to_string() +
       " classes",
     )
-  }
-  let response : Array[Double] = []
-  for label in y {
-    response.push(if label == classes[0] { 0.0 } else { 1.0 })
   }
   // A model of the polynomial features is fitted on the expansion of the
   // features, the way the pipeline of the upstream expands them before its
@@ -394,6 +501,13 @@ pub fn ClassificationModel::fit(
     polynomial_features(x, self.degree)
   } else {
     x
+  }
+  if classes.length() > 2 {
+    return fit_one_versus_rest(self, design, y, classes)
+  }
+  let response : Array[Double] = []
+  for label in y {
+    response.push(if label == classes[0] { 0.0 } else { 1.0 })
   }
   let fit = @utils.logistic_fit(
     with_intercept_column(design),
@@ -408,7 +522,62 @@ pub fn ClassificationModel::fit(
     coefficients.push(beta[i])
   }
   let intercept = if beta.length() > 0 { beta[0] } else { 0.0 }
-  { coefficients, intercept, classes, fitted: true, degree: self.degree, }
+  {
+    coefficients,
+    intercept,
+    classes,
+    fitted: true,
+    degree: self.degree,
+    one_versus_rest: None,
+  }
+}
+
+///|
+/// Fit one binary logistic regression per class and normalise the
+/// probabilities of the classes.
+///
+/// The response of the model of a class holds a one for the rows of that
+/// class and a zero for the rows of the other classes.
+fn fit_one_versus_rest(
+  model : ClassificationModel,
+  design : @utils.Matrix,
+  y : Array[String],
+  classes : Array[String],
+) -> ClassificationModel {
+  let coefficients : Array[Array[Double]] = []
+  let intercepts : Array[Double] = []
+  for k in 0..<classes.length() {
+    let response : Array[Double] = []
+    for label in y {
+      if label == classes[k] {
+        response.push(1.0)
+      } else {
+        response.push(0.0)
+      }
+    }
+    let fit = @utils.logistic_fit(
+      with_intercept_column(design),
+      response,
+      1.0,
+      100,
+      1.0e-8,
+    )
+    let beta = fit.beta
+    let row : Array[Double] = []
+    for i = 1; i < beta.length(); i = i + 1 {
+      row.push(beta[i])
+    }
+    coefficients.push(row)
+    intercepts.push(if beta.length() > 0 { beta[0] } else { 0.0 })
+  }
+  {
+    coefficients: [],
+    intercept: 0.0,
+    classes,
+    fitted: true,
+    degree: model.degree,
+    one_versus_rest: Some({ coefficients, intercepts, }),
+  }
 }
 
 ///|
@@ -431,18 +600,48 @@ pub fn ClassificationModel::predict_probabilities(
   } else {
     x
   }
-  let out : Array[Array[Double]] = []
-  for i = 0; i < design.nrows(); i = i + 1 {
-    let mut value = self.intercept
-    for j = 0; j < design.ncols(); j = j + 1 {
-      if j < self.coefficients.length() {
-        value = value + self.coefficients[j] * design.get(i, j)
+  match self.one_versus_rest {
+    Some(models) => {
+      let out : Array[Array[Double]] = []
+      for i = 0; i < design.nrows(); i = i + 1 {
+        let row : Array[Double] = []
+        let mut total = 0.0
+        for k = 0; k < models.coefficients.length(); k = k + 1 {
+          let mut value = models.intercepts[k]
+          let row_coefficients = models.coefficients[k]
+          for j = 0; j < row_coefficients.length(); j = j + 1 {
+            if j < design.ncols() {
+              value = value + row_coefficients[j] * design.get(i, j)
+            }
+          }
+          let probability = @utils.sigmoid(value)
+          row.push(probability)
+          total = total + probability
+        }
+        if total > 0.0 {
+          for k = 0; k < row.length(); k = k + 1 {
+            row[k] = row[k] / total
+          }
+        }
+        out.push(row)
       }
+      out
     }
-    let positive = @utils.sigmoid(value)
-    out.push([1.0 - positive, positive])
+    None => {
+      let out : Array[Array[Double]] = []
+      for i = 0; i < design.nrows(); i = i + 1 {
+        let mut value = self.intercept
+        for j = 0; j < design.ncols(); j = j + 1 {
+          if j < self.coefficients.length() {
+            value = value + self.coefficients[j] * design.get(i, j)
+          }
+        }
+        let positive = @utils.sigmoid(value)
+        out.push([1.0 - positive, positive])
+      }
+      out
+    }
   }
-  out
 }
 
 ///|
@@ -453,11 +652,14 @@ pub fn ClassificationModel::predict(
 ) -> Array[String] {
   let out : Array[String] = []
   for probabilities in self.predict_probabilities(x) {
-    if probabilities[1] > probabilities[0] {
-      out.push(self.classes[1])
-    } else {
-      out.push(self.classes[0])
+    // The class of the row is the one of the largest probability.
+    let mut best = 0
+    for k = 1; k < probabilities.length(); k = k + 1 {
+      if probabilities[k] > probabilities[best] {
+        best = k
+      }
     }
+    out.push(self.classes[best])
   }
   out
 }
@@ -479,6 +681,7 @@ pub fn ClassificationModel::clone(
     classes: [],
     fitted: false,
     degree: self.degree,
+    one_versus_rest: None,
   }
 }
 

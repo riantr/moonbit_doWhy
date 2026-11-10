@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.48.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.49.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -26,7 +26,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph, its readers of a CSV and of a DOT, and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure and the **kernel based** one), the prediction models -- the linear one and the **polynomial** ones --, the causal mechanisms, the stochastic models, the noise of a causal model, the **feature relevance**, the **intrinsic causal influence**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution), the **unit change** layer, the **uncertainty** estimates, the **distribution change** layer -- the plain one and the **multiply-robust** one -- and the **arrow strength** layer are ported |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure and the **kernel based** one), the prediction models -- the linear one and the **polynomial** ones --, the causal mechanisms, the stochastic models, the noise of a causal model, the **feature relevance**, the **intrinsic causal influence**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, **with the selection of the model of a node by cross validation**, the **what-if queries**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution), the **unit change** layer, the **uncertainty** estimates, the **distribution change** layer -- the plain one and the **multiply-robust** one -- and the **arrow strength** layer are ported |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
@@ -101,7 +101,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
-| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
+| `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the automatic assignment of the mechanisms with the selection of the model of a node by cross validation, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
 | `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter, of the data subset refuter, of the dummy outcome refuter, of the unobserved common cause refuter, of the linear sensitivity analysis, of the E-value analysis and of the default strength of the confounder |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
@@ -1025,6 +1025,22 @@ following ways:
 - The upstream runs a matrix of refutations when the inferred strength holds
   more than one number, and the port has no matrix of refutations: it reports
   one refutation.
+- `gcm` selects the model of a node of a causal model by cross validation, the
+  way the upstream does, and it evaluates the models of the `gcm` package
+  instead of the zoo of the scikit-learn estimators of the upstream: the linear
+  and the nearest neighbour regression for the `GOOD` quality, and the
+  polynomial regression as well for the `BETTER` quality. The nearest
+  neighbour regression is the non-linear model of the port, the way the
+  histogram gradient boosting regression is the non-linear model of the
+  upstream.
+- `gcm` shuffles the rows of the cross validation of the model selection with
+  the generator of the `utils` package, whose seed is an argument of the
+  functions. The upstream shuffles them with the global generator of numpy and
+  it does not seed it, so its own selection is not reproducible.
+- `gcm` fits the classifier of more than two classes with one binary logistic
+  regression per class and it normalises the probabilities of the classes. The
+  upstream fits the same classifier with the multinomial solver of
+  scikit-learn.
 
 ## Development
 

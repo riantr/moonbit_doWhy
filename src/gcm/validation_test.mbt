@@ -884,17 +884,21 @@ test "the validation of the invertible model of a linear chain is not rejected" 
 }
 
 ///|
-/// test "the validation of the invertible model of a non-linear chain is
+/// test "the validation of the invertible model of a non-linear chain is not
 /// rejected"
 ///
-/// The relation of the fixture is `Y = X * X + noise`, and the automatic
-/// assignment of the port always picks a linear regressor, so the residual of
-/// the mechanism of the node `Y` still depends on its parent.
+/// The relation of the fixture is `Y = X * X + noise` and `Z = exp(-Y) +
+/// noise`. The automatic assignment of the port picks the nearest neighbour
+/// regression for the nodes of the chain, and it captures both relations, so
+/// the residual of the mechanism of the node `Y` does not depend on its
+/// parent any more.
 ///
-/// The upstream rejects the model of the correct chain as well, because its
-/// own model of the node `Z` cannot capture the relation `Z = exp(-Y)` with
-/// the sixty rows of the fixture.
-test "the validation of the invertible model of a non-linear chain is rejected" {
+/// The upstream does not reject the model of the correct chain either, which
+/// is what its own test of the case asserts. Its model of the node `Z`
+/// cannot capture the relation `Z = exp(-Y)` with the sixty rows of the
+/// fixture, so the upstream rejects the model on these rows; it does not
+/// reject it on the five thousand rows of its own fixture.
+test "the validation of the invertible model of a non-linear chain is not rejected" {
   let data = @gcm.validation_nonlinear_frame()
   let model = fitted_model([("X", "Y"), ("Y", "Z")], data)
   let p_values = invertible_p_values(model, data, kernel_test)
@@ -906,7 +910,7 @@ test "the validation of the invertible model of a non-linear chain is rejected" 
     VALIDATION_SIGNIFICANCE_LEVEL,
     None,
   )
-  assert_eq(outcome.to_string(), "Rejected")
+  assert_eq(outcome.to_string(), "NotRejected")
   let controlled = @gcm.refute_invertible_model(
     model,
     data,
@@ -914,7 +918,7 @@ test "the validation of the invertible model of a non-linear chain is rejected" 
     VALIDATION_SIGNIFICANCE_LEVEL,
     Some(@gcm.FdrControlMethod::fdr_bh()),
   )
-  assert_eq(controlled.to_string(), "Rejected")
+  assert_eq(controlled.to_string(), "NotRejected")
 }
 
 ///|
@@ -950,19 +954,20 @@ test "the validation of the invertible model of a reversed chain is rejected" {
 
 ///|
 /// test "the validation of the invertible model of a graph with a collider is
-/// rejected"
+/// not rejected"
 ///
 /// The graph is `X -> Y <- Z`, so the node `Y` has the two parents `X` and `Z`.
 /// The relation of the fixture is `Y = X * X + noise`, and the automatic
-/// assignment of the port always picks a linear regressor, so the residual of
-/// the mechanism of the node `Y` still depends on its parents.
+/// assignment of the port picks the nearest neighbour regression, which
+/// captures the relation, so the residual of the mechanism of the node `Y`
+/// does not depend on its parents.
 ///
-/// The upstream rejects a model of that graph as well, on the five thousand
-/// rows of its own test file. On the sixty rows of the fixture of the port the
-/// upstream does not reject it, because its own selection of the causal
+/// The upstream rejects a model of that graph on the five thousand rows of its
+/// own test file. On the sixty rows of the fixture of the port the upstream
+/// does not reject it either, because its own selection of the causal
 /// mechanisms captures the relation `Y = X * X` and the p-value of the node
 /// `Y` is `0.6384596059805349` there.
-test "the validation of the invertible model of a graph with a collider is rejected" {
+test "the validation of the invertible model of a graph with a collider is not rejected" {
   let data = @gcm.validation_nonlinear_frame()
   let model = fitted_model([("X", "Y"), ("Z", "Y")], data)
   let p_values = invertible_p_values(model, data, kernel_test)
@@ -974,7 +979,7 @@ test "the validation of the invertible model of a graph with a collider is rejec
     VALIDATION_SIGNIFICANCE_LEVEL,
     None,
   )
-  assert_eq(outcome.to_string(), "Rejected")
+  assert_eq(outcome.to_string(), "NotRejected")
   let controlled = @gcm.refute_invertible_model(
     model,
     data,
@@ -982,7 +987,7 @@ test "the validation of the invertible model of a graph with a collider is rejec
     VALIDATION_SIGNIFICANCE_LEVEL,
     Some(@gcm.FdrControlMethod::fdr_bh()),
   )
-  assert_eq(controlled.to_string(), "Rejected")
+  assert_eq(controlled.to_string(), "NotRejected")
 }
 
 ///|

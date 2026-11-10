@@ -90,6 +90,7 @@ pub fn PredictionModel::with_equation(
     fixed: true,
     equation: Some({ expression, parents: parents.copy(), }),
     degree: 0,
+    neighbours: None,
   }
 }
 

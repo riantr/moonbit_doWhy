@@ -9,9 +9,10 @@
 ///
 /// The port follows the same rules. The upstream selects the model of a node
 /// by cross validation out of a whole zoo of scikit-learn estimators; the port
-/// has one model per kind of data, so the quality of the selection does not
-/// change the outcome and the `BEST` quality of the upstream, which needs the
-/// optional AutoGluon dependency, has no counterpart here.
+/// selects it out of the models of the `gcm` package, the selection being the
+/// port of `dowhy.gcm.auto.select_model`. The `BEST` quality of the upstream
+/// needs the optional AutoGluon dependency, so the port uses the models of
+/// the `BETTER` quality for it.
 
 ///|
 /// The quality of the automatic model selection.
@@ -22,9 +23,10 @@
 /// quality a larger one and the `Best` quality uses an AutoGluon model, which
 /// needs the optional AutoGluon dependency.
 ///
-/// The deviation of the port is that it has one model per kind of data, so it
-/// always uses the smallest set of the upstream and the three qualities behave
-/// the same.
+/// The deviation of the port is that its zoo holds the models of the `gcm`
+/// package, so the `Good` quality and the `Better` quality differ by the
+/// polynomial regression alone, and the `Best` quality cannot be reproduced
+/// and uses the models of the `Better` quality.
 pub enum AssignmentQuality {
   ///
   /// The small set of models of the upstream.
@@ -57,9 +59,8 @@ pub fn AssignmentQuality::better() -> AssignmentQuality {
 /// The AutoGluon model of the upstream.
 ///
 /// This is the port of `AssignmentQuality.BEST` of `dowhy.gcm.auto`. The
-/// upstream needs the optional AutoGluon dependency for it; the port has one
-/// model per kind of data, so it uses the same model as the other two
-/// qualities.
+/// upstream needs the optional AutoGluon dependency for it; the port uses the
+/// same models as the `Better` quality.
 pub fn AssignmentQuality::best() -> AssignmentQuality {
   Best
 }
@@ -69,38 +70,138 @@ pub fn AssignmentQuality::best() -> AssignmentQuality {
 ///
 /// This is the port of `dowhy.gcm.auto.AutoAssignmentSummary`. The upstream
 /// keeps the messages and the performances of the models of every node in a
-/// dictionary; the port keeps the messages of every node in one list, in the
-/// order the nodes were assigned. The upstream has no model selection, so its
-/// summary has no performances either.
+/// dictionary; the port keeps an entry for every node, in the order the nodes
+/// were assigned.
 pub struct AutoAssignmentSummary {
-  /// The messages of every node, in the order the nodes were assigned.
-  messages : Array[String]
+  /// The entries of the nodes, in the order the nodes were assigned.
+  entries : Array[SummaryEntry]
 }
 
 ///|
-/// The messages of the summary.
+/// The summary of one node of the automatic assignment.
+pub struct SummaryEntry {
+  /// The name of the node.
+  node : String
+  /// The messages of the node.
+  messages : Array[String]
+  /// The performances of the models that were evaluated for the node.
+  performances : Array[ModelPerformance]
+}
+
+///|
+/// The messages of every node, in the order the nodes were assigned.
 ///
 /// The returned array is a copy, so a caller may modify it without changing
 /// the summary.
 pub fn AutoAssignmentSummary::messages(
   self : AutoAssignmentSummary,
 ) -> Array[String] {
-  self.messages.copy()
+  let out : Array[String] = []
+  for entry in self.entries {
+    for message in entry.messages {
+      out.push(message)
+    }
+  }
+  out
+}
+
+///|
+/// The names of the nodes, in the order the nodes were assigned.
+pub fn AutoAssignmentSummary::nodes(
+  self : AutoAssignmentSummary,
+) -> Array[String] {
+  let out : Array[String] = []
+  for entry in self.entries {
+    out.push(entry.node)
+  }
+  out
+}
+
+///|
+/// The messages of one node.
+///
+/// The returned array is a copy, so a caller may modify it without changing
+/// the summary.
+pub fn AutoAssignmentSummary::messages_of(
+  self : AutoAssignmentSummary,
+  node : String,
+) -> Array[String] {
+  for entry in self.entries {
+    if entry.node == node {
+      return entry.messages.copy()
+    }
+  }
+  []
+}
+
+///|
+/// The performances of the models that were evaluated for one node.
+///
+/// The returned array is a copy, so a caller may modify it without changing
+/// the summary. A root node has no performances, because the upstream
+/// evaluates no model for it.
+pub fn AutoAssignmentSummary::model_performances_of(
+  self : AutoAssignmentSummary,
+  node : String,
+) -> Array[ModelPerformance] {
+  for entry in self.entries {
+    if entry.node == node {
+      return entry.performances.copy()
+    }
+  }
+  []
 }
 
 ///|
 /// A readable description of the summary.
 ///
 /// This is the port of `dowhy.gcm.auto.AutoAssignmentSummary.__str__`. The
-/// upstream describes the kinds of the mechanisms it considers and the
-/// performances of the models it evaluated; the port has no model selection,
-/// so it lists the messages of the nodes it assigned.
+/// upstream describes the kinds of the mechanisms it considers, the nodes it
+/// assigned and the performances of the models it evaluated for them.
 pub fn AutoAssignmentSummary::to_string(self : AutoAssignmentSummary) -> String {
   let mut out = "When using this auto assignment function, the given data is used to automatically assign a causal mechanism to each node. Note that causal mechanisms can also be customized and assigned manually.\n"
-  out = out + "The following messages were produced:\n"
-  for message in self.messages {
-    out = out + message + "\n"
+  out = out +
+    "The following types of causal mechanisms are considered for the automatic selection:\n"
+  out = out + "\nIf root node:\n"
+  out = out +
+    "An empirical distribution, i.e., the distribution is represented by randomly sampling from the provided data. This provides a flexible and non-parametric way to model the marginal distribution and is valid for all types of data modalities.\n"
+  out = out + "\nIf non-root node and the data is continuous:\n"
+  out = out +
+    "Additive Noise Models (ANM) of the form X_i = f(PA_i) + N_i, where PA_i are the parents of X_i and the unobserved noise N_i is assumed to be independent of PA_i.To select the best model for f, different regression models are evaluated and the model with the smallest mean squared error is selected.Note that minimizing the mean squared error here is equivalent to selecting the best choice of an ANM.\n"
+  out = out + "\nIf non-root node and the data is discrete:\n"
+  out = out +
+    "Discrete Additive Noise Models have almost the same definition as non-discrete ANMs, but come with an additional constraint for f to only return discrete values.\nNote that 'discrete' here refers to numerical values with an order. If the data is categorical, consider representing them as strings to ensure proper model selection.\n"
+  out = out + "\nIf non-root node and the data is categorical:\n"
+  out = out +
+    "A functional causal model based on a classifier, i.e., X_i = f(PA_i, N_i).\nHere, N_i follows a uniform distribution on [0, 1] and is used to randomly sample a class (category) using the conditional probability distribution produced by a classification model. Here, different model classes are evaluated using the log loss metric and the best performing model class is selected.\n"
+  out = out +
+    "\nIn total, " +
+    self.nodes().length().to_string() +
+    " nodes were analyzed:\n"
+  for entry in self.entries {
+    out = out + "\n--- Node: " + entry.node + "\n"
+    for message in entry.messages {
+      out = out + message + "\n"
+    }
+    if entry.performances.length() > 0 {
+      out = out +
+        "\nFor the model selection, the following models were evaluated on the " +
+        entry.performances[0].metric() +
+        " metric:\n\n"
+      for performance in entry.performances {
+        out = out +
+          performance.model() +
+          ": " +
+          performance.performance().to_string() +
+          "\n"
+      }
+    }
   }
+  out = out + "\n===Note===\n"
+  out = out +
+    "Note, based on the selected auto assignment quality, the set of evaluated models changes.\n"
+  out = out +
+    "For more insights toward the quality of the fitted graphical causal model, consider using the evaluate_causal_model function after fitting the causal mechanisms.\n"
   out
 }
 
@@ -115,38 +216,49 @@ pub fn AutoAssignmentSummary::to_string(self : AutoAssignmentSummary) -> String 
 /// again when `override_models` is true.
 ///
 /// The deviations from the upstream are the following ones. The upstream
-/// selects the model of a node by cross validation out of a zoo of
-/// scikit-learn estimators, so the quality of the selection changes the
-/// outcome; the port has one model per kind of data, so the quality does not
-/// change it, and the port cannot reproduce the `BEST` quality of the
-/// upstream, which needs the optional AutoGluon dependency. The upstream
-/// reports the performances of the models it evaluated; the port evaluates no
-/// model, so its summary holds the messages only. The upstream takes the
-/// experimental flag `experimental_allow_nans`; the port has no missing
-/// values, so the flag is not there.
+/// reports the performances of the models it evaluated; the port reports them
+/// as well, and they are the performances of the models of the port. The
+/// upstream takes the experimental flag `experimental_allow_nans`; the port
+/// has no missing values, so the flag is not there. The upstream shuffles the
+/// rows of the cross validation of the selection with the global generator of
+/// numpy; the port shuffles them with its own generator, whose seed is the
+/// argument of the function.
 pub fn assign_causal_mechanisms(
   causal_model : ProbabilisticCausalModel,
   based_on : @api.DataFrame,
   quality : AssignmentQuality,
   override_models : Bool,
+  seed~ : UInt64 = 0UL,
 ) -> AutoAssignmentSummary {
-  let summary : AutoAssignmentSummary = { messages: [], }
+  let summary : AutoAssignmentSummary = { entries: [], }
   for node in causal_model.graph.topological_order() {
     if !override_models && causal_model.has_causal_mechanism(node) {
       validate_causal_model_assignment(causal_model, node)
-      summary.messages.push(
-        "Node " +
-        node +
-        " already has a causal mechanism assigned and the override parameter is False. Skipping this node.",
-      )
+      summary.entries.push({
+        node,
+        messages: [
+          "Node " +
+          node +
+          " already has a causal mechanism assigned and the override parameter is False. Skipping this node.",
+        ],
+        performances: [],
+      })
       continue
     }
-    assign_causal_mechanism_node(causal_model, node, based_on, quality)
-    summary.messages.push(auto_kind_of_data_message(causal_model, node))
+    let performances = assign_causal_mechanism_node(
+      causal_model,
+      node,
+      based_on,
+      quality,
+      seed~,
+    )
+    let messages : Array[String] = []
+    messages.push(auto_kind_of_data_message(causal_model, node))
     if !is_root_node(causal_model, node) {
-      summary.messages.push(auto_relationship_message(causal_model, node))
+      messages.push(auto_relationship_message(causal_model, node))
     }
-    summary.messages.push(auto_assigned_model_message(causal_model, node))
+    messages.push(auto_assigned_model_message(causal_model, node))
+    summary.entries.push({ node, messages, performances, })
   }
   summary
 }
@@ -157,28 +269,20 @@ pub fn assign_causal_mechanisms(
 /// This is the port of `dowhy.gcm.auto.assign_causal_mechanism_node`. A root
 /// node gets the marginal distribution of its column, which is the empirical
 /// distribution of the column, or the empirical categorical distribution when
-/// the column holds strings. A node with parents gets the additive noise
-/// model, the discrete additive noise model when every value of the column is
-/// a whole number, or the categorical model when the column holds strings.
+/// the column holds strings. A node with parents gets the model the selection
+/// picked, which is the additive noise model, the discrete additive noise
+/// model when every value of the column is a whole number, or the categorical
+/// model when the column holds strings.
 ///
-/// The deviations from the upstream are the following ones. The upstream
-/// selects the model by cross validation out of a zoo of scikit-learn
-/// estimators and returns the performances of the models it evaluated; the
-/// port has one model per kind of data, so the quality of the selection does
-/// not change the outcome and the function returns nothing. The upstream uses
-/// the empirical distribution for every root node; the port uses the
-/// empirical categorical distribution when the column of the root node holds
-/// strings, so that the root node can draw the categories of the column.
+/// The function returns the performances of the models the selection
+/// evaluated, the way the upstream returns them.
 pub fn assign_causal_mechanism_node(
   causal_model : ProbabilisticCausalModel,
   node : String,
   based_on : @api.DataFrame,
   quality : AssignmentQuality,
-) -> Unit {
-  // The port has one model per kind of data, so the quality of the upstream,
-  // which selects the model out of a zoo of scikit-learn estimators, does not
-  // change the outcome.
-  let _ = quality
+  seed~ : UInt64 = 0UL,
+) -> Array[ModelPerformance] {
   if is_root_node(causal_model, node) {
     if based_on.is_discrete(node) {
       causal_model.set_root_model(
@@ -188,42 +292,59 @@ pub fn assign_causal_mechanism_node(
     } else {
       causal_model.set_root_model(node, StochasticModel::empirical())
     }
-    return
+    return []
   }
-  if based_on.is_discrete(node) {
-    causal_model.set_causal_mechanism(
-      node,
-      CausalMechanism::classifier(ClassificationModel::logistic()),
-    )
-    return
+  let parents = causal_model.graph.ordered_predecessors(node)
+  let selection = select_model(
+    based_on.select(parents),
+    based_on.select([node]),
+    quality,
+    seed,
+  )
+  let performances = selection.performances()
+  match selection.model() {
+    SelectedModel::Classification(classifier) =>
+      causal_model.set_causal_mechanism(
+        node,
+        CausalMechanism::classifier(classifier),
+      )
+    SelectedModel::Regression(regression) =>
+      if is_discrete(based_on.numeric(node)) {
+        causal_model.set_causal_mechanism(
+          node,
+          CausalMechanism::discrete_additive_noise(regression),
+        )
+      } else {
+        causal_model.set_causal_mechanism(
+          node,
+          CausalMechanism::additive_noise(regression),
+        )
+      }
   }
-  if is_discrete(based_on.numeric(node)) {
-    causal_model.set_causal_mechanism(
-      node,
-      CausalMechanism::discrete_additive_noise(PredictionModel::linear()),
-    )
-  } else {
-    causal_model.set_causal_mechanism(
-      node,
-      CausalMechanism::additive_noise(PredictionModel::linear()),
-    )
-  }
+  performances
 }
 
 ///|
-/// The message that names the kind of the data of the node.
+/// The message that names the kind of the data of the node and the model that
+/// was assigned to it.
 fn auto_kind_of_data_message(
   causal_model : ProbabilisticCausalModel,
   node : String,
 ) -> String {
   if is_root_node(causal_model, node) {
-    return "Node " + node + " is a root node."
+    return "Node " +
+      node +
+      " is a root node. Therefore, assigning '" +
+      auto_root_model_name(causal_model, node) +
+      "' to the node representing the marginal distribution."
   }
   "Node " +
   node +
   " is a non-root node with " +
   auto_data_type(causal_model, node) +
-  " data."
+  " data. Assigning '" +
+  auto_mechanism_name(causal_model, node) +
+  "' to the node."
 }
 
 ///|
@@ -329,10 +450,18 @@ fn auto_mechanism_name(
   match causal_model.causal_mechanism(node) {
     Some(mechanism) =>
       match mechanism.kind() {
-        AdditiveNoise => "an additive noise model"
-        DiscreteAdditiveNoise => "a discrete additive noise model"
-        PostNonlinear => "a post non-linear model"
-        Classifier => "a classifier based functional causal model"
+        AdditiveNoise =>
+          "an additive noise model using " +
+          regression_model_name(mechanism.prediction_model())
+        DiscreteAdditiveNoise =>
+          "a discrete additive noise model using " +
+          regression_model_name(mechanism.prediction_model())
+        PostNonlinear =>
+          "a post non-linear model using " +
+          regression_model_name(mechanism.prediction_model())
+        Classifier =>
+          "a classifier based functional causal model using " +
+          classification_model_name(mechanism.classifier_model())
       }
     None => "no causal mechanism"
   }

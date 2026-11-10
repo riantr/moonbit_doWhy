@@ -2441,3 +2441,75 @@ The Gaussian mixture of the upstream.
   estimator whose numbers it can pin down.
 
 [0.0.48]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.48
+## [0.0.49] - 2026-11-10
+
+The model selection of the automatic assignment.
+
+### Added
+
+- the model selection of the automatic assignment of the `gcm` package, the
+  port of `dowhy.gcm.auto.select_model` and of `dowhy.gcm.auto.find_best_model`:
+  a cross validation of five folds that evaluates the models of the zoo of the
+  selection and keeps the one with the smallest mean squared error for a
+  continuous target and the one with the smallest log loss for a categorical
+  one.
+- the nearest neighbour prediction model of the `gcm` package, the port of
+  `dowhy.gcm.ml.regression.create_knn_regressor`.
+- the classifier of more than two classes of the `gcm` package: one binary
+  logistic regression per class and the probabilities of the classes
+  normalised.
+- the cases of the upstream test file `tests/gcm/test_auto.py` in
+  `src/gcm/auto_test.mbt`: the model that the selection picks for a linear and
+  for a non-linear regression problem, for a linear and for a non-linear
+  classification problem, the assignment of the data with a categorical
+  parent, the summary of the assignment and the refusal of a target of a
+  single class.
+- the numbers of the upstream in `_verify/gcm_auto_reference.py`, which runs
+  the upstream on the rows of the fixtures of the port and prints them.
+
+### Changed
+
+- the automatic assignment of the `gcm` package picks the model of a node by
+  cross validation now, the way the upstream does, and the summary of the
+  assignment holds the performances of the models that were evaluated. The
+  assignment of one node returns those performances as well, the way the
+  upstream returns them, so its signature changed.
+- the messages of the summary of the automatic assignment have the wording of
+  the upstream now, and the description of the summary has its layout.
+- the case of the invertible model of the validation layer that the automatic
+  assignment of the port used to reject is not rejected any more, which is the
+  outcome the upstream asserts for the chain of its own fixture.
+
+### Notes
+
+- The header of the test file of the automatic assignment names the upstream
+  test file it mirrors now, and the counter of
+  `_verify/upstream_test_coverage.py` counts 69 of the 74 test files of the
+  upstream. The port mirrors 15 of the 26 cases of that file; the cases of
+  `has_linear_relationship`, the ones of the multiclass targets and the ones
+  of the statistics of the drawn samples are the ones that are left.
+- The upstream evaluates a whole zoo of scikit-learn estimators and it picks
+  one of them. The port evaluates the models of the `gcm` package: the linear
+  and the nearest neighbour regression for the `GOOD` quality, and the
+  polynomial regression as well for the `BETTER` quality. The nearest
+  neighbour regression is the non-linear model of the port, the way the
+  histogram gradient boosting regression is the non-linear model of the
+  upstream.
+- The upstream shuffles the rows of the cross validation with the global
+  generator of numpy and it does not seed it, so its own selection is not
+  reproducible. The port shuffles them with the generator of the `utils`
+  package, whose seed is an argument of the functions.
+- The upstream draws the target of its linear fixtures without a noise, which
+  makes its linear and its polynomial model the same number. The port adds a
+  noise to the target of its linear fixtures, so that the selection is
+  unambiguous.
+- The upstream fits the multiclass logistic regression with a multinomial
+  solver; the port fits one binary logistic regression per class and it
+  normalises the probabilities of the classes.
+- The upstream rejects the model of the correct chain of its invertible model
+  case with the sixty rows of the fixture of the port, and it does not reject
+  the model of the graph with a collider. The port does not reject either of
+  them, because the nearest neighbour regression of its zoo captures the
+  relations of the fixture.
+
+[0.0.49]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.49

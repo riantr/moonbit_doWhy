@@ -761,7 +761,7 @@ fn remove_invariant_nodes(
       }
     }
     for child in children {
-      assign_causal_mechanism_node(
+      let _ = assign_causal_mechanism_node(
         causal_model,
         child,
         old_data,

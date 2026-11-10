@@ -792,6 +792,23 @@ statsmodels / scikit-learn conventions are deliberate:
   - **the days of the shopping events are drawn without replacement**, so every
     day of the range holds at most one event.
 
+- The model selection of the automatic assignment of the `gcm` package is the
+  port of `dowhy.gcm.auto.select_model` and of
+  `dowhy.gcm.auto.find_best_model`. The folds of the cross validation are the
+  same for every model of the zoo, they are the folds of a k-fold cross
+  validation for a continuous target and the folds of a stratified k-fold cross
+  validation for a categorical one, and the score of a model is the mean of the
+  metric over the folds: the mean squared error for a regression and the log
+  loss for a classification. The encoder of the parents is fitted on the
+  training rows of a fold and applied to its held out rows, the way the
+  upstream fits its encoders. The zoo of the port holds the linear and the
+  nearest neighbour regression for the `GOOD` quality and the polynomial
+  regression as well for the `BETTER` quality; the nearest neighbour
+  regression is the non-linear model of the port, the way the histogram
+  gradient boosting regression is the non-linear model of the upstream. The
+  port shuffles the rows with the generator of the `utils` package, whose seed
+  is an argument of the functions, because the upstream uses the global
+  generator of numpy and does not seed it.
 - The Gaussian mixture of the `gcm` package is fitted with the mean field
   variational update of Bishop: the responsibilities of the components use the
   expectations of the log weights, of the log determinant of the precisions and
@@ -816,7 +833,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations |
 | `overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the automatic assignment of the mechanisms with the selection of the model by cross validation, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -855,6 +872,13 @@ README makes, so they are tracked in the repository:
   `gcm` package: the fit of the upstream draws the centres of the components at
   random and does not seed its generator, so its own numbers move from one seed
   to the other.
+- `gcm_auto_reference.py` runs the upstream `dowhy.gcm.auto` on the rows of
+  the fixtures of the tests of the port -- it reproduces the generator of the
+  `utils` package, so it runs the upstream on the very same rows -- and prints
+  the model the upstream picks and the score of every model of its zoo. It is
+  the evidence for the model selection of the `gcm` package: the upstream
+  shuffles the rows of its cross validation with the global generator of numpy
+  and does not seed it, so the script prints the result of several seeds.
 - `check_dataset_columns.py` prints the columns of the upstream
   `linear_dataset`, which is how the column count of the `datasets` package
   was pinned.
