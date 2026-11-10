@@ -3107,6 +3107,51 @@ The categorical noise dependent function.
   counterpart, because the nodes of the port are named with strings.
 
 [0.0.61]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.61
+## [0.0.74] - 2026-11-11
+
+The generator of numpy.
+
+### Added
+
+- the generator of numpy, in the new file `src/utils/numpy_random.mbt`: the
+  port of the generator the upstream of DoWhy draws its randomness from. It
+  is the Mersenne Twister of numpy with its double, its normal variate, its
+  Bernoulli and its integer, so the port draws the numbers of the upstream
+  for a seed.
+- the public functions of the generator: `NumpyRandom::new`, which takes the
+  seed, `next_uint32`, `next_uint64`, `next_double`, `standard_normal`,
+  `normal`, `uniform`, `bernoulli`, `randint`, `permutation` and
+  `multivariate_normal_identity`.
+- the eight cases of the new file `src/utils/numpy_random_test.mbt`: the
+  doubles, the uniforms, the normal variates, the normal distribution, the
+  Bernoulli trials, the integers, the permutation and the multivariate normal
+  of the generator are the ones of numpy for the seeds 42 and 7.
+- the numbers of numpy in `_verify/numpy_random_reference.py`: the script
+  prints the doubles, the uniforms, the normal variates, the Bernoulli trials,
+  the integers and the permutation of numpy for the seeds of the tests, and
+  the values of its multivariate normal with the identity as its covariance.
+
+### Notes
+
+- The double of numpy is built out of two words of the Twister with the
+  recipe of Python: the first word gives the high 27 bits and the second word
+  gives the low 26 bits.
+- The normal variate of numpy is the one of the polar method of Marsaglia,
+  which keeps the second variate of a pair for the next call, so a pair of
+  variates costs four words of the Twister.
+- The Bernoulli of numpy is the binomial of one trial, which is the case the
+  upstream uses. The binomial of more trials of numpy uses the algorithm of
+  Kachitvichyanukul and Schmeiser, which is not ported.
+- The multivariate normal of numpy turns the covariance into the singular
+  values and the singular vectors of its decomposition. The port takes the
+  identity as its covariance, which is the covariance the upstream uses, so
+  the port cannot take the general covariance.
+- The numbers that come out of the logarithm may differ by one unit in the
+  last place between the backends of the toolchain, so the tests compare them
+  with a tolerance. The other numbers are compared with the equality.
+
+[0.0.74]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.74
+
 ## [0.0.73] - 2026-11-11
 
 The interpretation of an estimate.

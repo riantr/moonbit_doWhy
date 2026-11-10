@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.73.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.74.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -20,6 +20,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
 | Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome, **with its random forest, its neural network and its support vector regressor**, and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis**, its **E-value analysis** and the **default strength** it infers for its confounder --, the **significance test** of the refutations, the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules, and the **graph refutation**, which tests the conditional independences the graph entails against the data) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset`, the **sales data set**, the **random graph** data set and the fixtures the upstream tests use) |
+| Randomness | the generator of numpy | ported (the Mersenne Twister of numpy with its double, its normal variate, its Bernoulli and its integer, so the port draws the numbers of the upstream for a seed) |
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
 | Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
 | Intervention sampling | `dowhy.do_sampler`, `dowhy.do_samplers` | ported (the weighting, multivariate weighting and kernel density samplers) -- the MCMC sampler is **not ported**, it needs an inference engine upstream takes from PyMC3 |
@@ -90,7 +91,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | Package | Import path | Ports |
 | --- | --- | --- |
 | `api` | `riantr/moonbit_dowhy/api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder |
-| `utils` | `riantr/moonbit_dowhy/utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, a deterministic generator, the tests of the conditional independence |
+| `utils` | `riantr/moonbit_dowhy/utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, a deterministic generator, **the generator of numpy**, the tests of the conditional independence |
 | `graph` | `riantr/moonbit_dowhy/graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
 | `identifiers` | `riantr/moonbit_dowhy/identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `riantr/moonbit_dowhy/model` | `dowhy.causal_estimator` (the estimate objects) |
@@ -1296,6 +1297,13 @@ following ways:
   toolchain writes seventeen digits, so the sentence of the port holds
   `1.9999297752808973` where the sentence of the upstream holds
   `1.9999297752809`. The two are the same number.
+- The upstream draws its randomness from the global generator of numpy, so
+  a data set of the upstream is only reproducible with the seed it was drawn
+  with. The `utils` package carries the generator of numpy, so the port
+  draws the numbers of the upstream for a seed. The generator of the
+  `utils` package is the one the port used before, and it is the one the
+  refuters and the `gcm` package still use, so their numbers are the numbers
+  of the port and not the numbers of the upstream.
 
 ## Development
 

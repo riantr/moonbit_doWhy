@@ -190,6 +190,22 @@ original. Five of these cost real debugging time here:
 The port reproduces DoWhy's numbers, so the following NumPy / pandas /
 statsmodels / scikit-learn conventions are deliberate:
 
+- The upstream draws its randomness from the global generator of numpy. The
+  `utils` package carries that generator, the Mersenne Twister of numpy with
+  its double, its normal variate, its Bernoulli and its integer, so a port
+  that takes the seed of the upstream draws its numbers exactly. The double of
+  numpy is built out of two words with the recipe of Python: the first word
+  gives the high 27 bits and the second word gives the low 26 bits. The normal
+  variate is the polar method of Marsaglia, which keeps the second variate of
+  a pair for the next call. The Bernoulli is the binomial of one trial, which
+  is the case the upstream uses; the binomial of more trials of numpy uses the
+  algorithm of Kachitvichyanukul and Schmeiser, which is not ported. The
+  multivariate normal of numpy needs the singular values and the singular
+  vectors of the covariance, so the port takes the identity as its covariance,
+  which is the covariance the upstream uses.
+- The numbers that come out of a logarithm may differ by one unit in the last
+  place between the backends of the toolchain, so the tests that compare such
+  numbers use a tolerance.
 - `variance` uses `ddof = 0` unless asked otherwise; `cov` uses `ddof = 1`
   like `numpy.cov`.
 - `percentile` uses NumPy's linear interpolation.
@@ -1188,7 +1204,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | --- | --- |
 | the root package (`src/`) | `dowhy.causal_model`: the `CausalModel` entry point |
 | `api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder |
-| `utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, the tests of the conditional independence |
+| `utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, **the generator of numpy**, the tests of the conditional independence |
 | `graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
 | `identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `dowhy.causal_estimator` (the estimate objects) |
@@ -1228,6 +1244,12 @@ README makes, so they are tracked in the repository:
   tests of the `datasets` package compare against. It prints the draws of the
   upstream as well, so that the sampler of the port can be checked against the
   ones of SciPy.
+- `numpy_random_reference.py` prints the numbers of the generator of numpy for
+  the seeds of the tests of the `utils` package -- the doubles, the uniforms,
+  the normal variates, the Bernoulli trials, the integers and the permutation --
+  and the values of the multivariate normal of numpy with the identity as its
+  covariance. It is the evidence for the generator of numpy of the `utils`
+  package.
 - `gcm_general_reference.py` runs the upstream `dowhy.gcm.util.general` on the
   fixtures of the tests of the port and prints the numbers it produces -- the
   geometric median, the set difference of the rows, the scaling of the columns
