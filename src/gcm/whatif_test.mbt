@@ -2,12 +2,14 @@
 /// The tests of the what-if questions of a fitted causal model.
 ///
 /// The expectations are the ones of the upstream tests of
-/// `dowhy.gcm.whatif`, which are in `tests/gcm/test_whatif.py`. The fixtures
-/// are deterministic: the simple fixture takes the values of a fixed symmetric
-/// grid and the values of a fixed noise pattern, and the fixture of the
-/// average causal effect takes the values of a fixed pseudo random noise that
-/// is centred and orthogonal to the treatment. The only randomness of the
-/// tests comes from the deterministic generator of the `utils` package.
+/// `dowhy.gcm.whatif`, which are in `tests/gcm/test_whatif.py`; every case of
+/// that file has a counterpart here. The fixtures are deterministic: the simple
+/// fixture takes the values of a fixed symmetric grid and the values of a fixed
+/// noise pattern, the fixture of the average causal effect takes the values of a
+/// fixed pseudo random noise that is centred and orthogonal to the treatment,
+/// and the fixtures with the categorical variables and with the discrete data
+/// are drawn with a fixed seed. The only randomness of the tests comes from the
+/// deterministic generator of the `utils` package.
 
 ///|
 /// The number of rows of the fixtures.
@@ -20,6 +22,22 @@ const WHATIF_NUM_SAMPLES : Int32 = 1000
 ///|
 /// The seed of the generator of the tests.
 const WHATIF_SEED : UInt64 = 20261031UL
+
+///|
+/// The number of rows of the fixture with the categorical variables.
+const WHATIF_CATEGORICAL_ROWS : Int32 = 5000
+
+///|
+/// The number of samples of the intervention with the categorical variables.
+const WHATIF_CATEGORICAL_SAMPLES : Int32 = 100
+
+///|
+/// The seed of the generator of the fixture with the categorical variables.
+const WHATIF_CATEGORICAL_SEED : UInt64 = 20261032UL
+
+///|
+/// The seed of the generator of the fixture with the discrete data.
+const WHATIF_DISCRETE_SEED : UInt64 = 20261033UL
 
 ///|
 /// Whether two numbers are close to each other.
@@ -233,6 +251,126 @@ fn whatif_ace_binary_data() -> @api.DataFrame {
     ("Y", @api.Column::discrete(y)),
   ])
   @api.DataFrame::new(["T", "X0", "X1", "Y"], columns)
+}
+
+///|
+/// The number of the values of the array that are the given label.
+fn whatif_count_of(labels : Array[String], label : String) -> Int32 {
+  let mut count = 0
+  for value in labels {
+    if value == label {
+      count = count + 1
+    }
+  }
+  count
+}
+
+///|
+/// The data of the fixture with the categorical variables.
+///
+/// The fixture is the deterministic version of the fixture of the upstream
+/// test: `X0` is a normal variable, `X1` holds the categories "0" and "1",
+/// `X2` holds the classes "True" and "False" and `X3` holds the classes
+/// "False" and "True".
+fn whatif_categorical_data() -> @api.DataFrame {
+  let rng = @utils.Random::new(WHATIF_CATEGORICAL_SEED)
+  let x0 : Array[Double] = []
+  for _ in 0..<WHATIF_CATEGORICAL_ROWS {
+    x0.push(rng.next_normal())
+  }
+  let x1 : Array[String] = []
+  for _ in 0..<WHATIF_CATEGORICAL_ROWS {
+    x1.push(if rng.next_int(2) == 0 { "0" } else { "1" })
+  }
+  let x2 : Array[String] = []
+  let x3 : Array[String] = []
+  for i in 0..<WHATIF_CATEGORICAL_ROWS {
+    let value = if x1[i] == "0" { x0[i] + 2.0 > 0.0 } else { x0[i] - 2.0 > 0.0 }
+    x2.push(if value { "True" } else { "False" })
+    x3.push(if value { "False" } else { "True" })
+  }
+  let columns : Map[String, @api.Column] = Map([
+    ("X0", @api.Column::numeric(x0)),
+    ("X1", @api.Column::discrete(x1)),
+    ("X2", @api.Column::discrete(x2)),
+    ("X3", @api.Column::discrete(x3)),
+  ])
+  @api.DataFrame::new(["X0", "X1", "X2", "X3"], columns)
+}
+
+///|
+/// The model of the fixture with the categorical variables, whose graph is
+/// `X0 -> X2`, `X1 -> X2` and `X2 -> X3`.
+fn whatif_categorical_model() -> @gcm.ProbabilisticCausalModel {
+  let graph = @graph.DirectedGraph::new()
+  graph.add_edge("X0", "X2")
+  graph.add_edge("X1", "X2")
+  graph.add_edge("X2", "X3")
+  let model = @gcm.ProbabilisticCausalModel::new(graph)
+  model.set_root_model("X0", @gcm.StochasticModel::empirical())
+  model.set_root_model("X1", @gcm.StochasticModel::empirical_categorical())
+  model.set_causal_mechanism(
+    "X2",
+    @gcm.CausalMechanism::classifier(@gcm.ClassificationModel::logistic()),
+  )
+  model.set_causal_mechanism(
+    "X3",
+    @gcm.CausalMechanism::classifier(@gcm.ClassificationModel::logistic()),
+  )
+  @gcm.fit(model, whatif_categorical_data())
+  model
+}
+
+///|
+/// The data of the fixture with the discrete data.
+///
+/// The fixture is the deterministic version of the fixture of the upstream
+/// test: `X` is a normal variable, `Y` holds the values -1, 0 and 1 and `Z`
+/// follows `Z = 2 * Y + noise`.
+fn whatif_discrete_data() -> @api.DataFrame {
+  let rng = @utils.Random::new(WHATIF_DISCRETE_SEED)
+  let x : Array[Double] = []
+  for _ in 0..<WHATIF_NUM_ROWS {
+    x.push(rng.next_normal())
+  }
+  let noise : Array[Double] = []
+  for _ in 0..<WHATIF_NUM_ROWS {
+    noise.push(0.1 * rng.next_normal())
+  }
+  let y : Array[Double] = []
+  let z : Array[Double] = []
+  for i in 0..<WHATIF_NUM_ROWS {
+    let label = if x[i] < -1.5 { -1.0 } else if x[i] <= 1.5 { 0.0 } else { 1.0 }
+    y.push(label)
+    z.push(2.0 * label + noise[i])
+  }
+  @api.DataFrame::from_numeric(
+    ["X", "Y", "Z"],
+    Map([("X", x), ("Y", y), ("Z", z)]),
+  )
+}
+
+///|
+/// The model of the fixture with the discrete data, whose graph is `X -> Y`
+/// and `Y -> Z`.
+fn whatif_discrete_model() -> @gcm.ProbabilisticCausalModel {
+  let graph = @graph.DirectedGraph::new()
+  graph.add_edge("X", "Y")
+  graph.add_edge("Y", "Z")
+  let model = @gcm.ProbabilisticCausalModel::new(graph)
+  model.set_root_model("X", @gcm.StochasticModel::empirical())
+  model.set_causal_mechanism(
+    "Y",
+    @gcm.CausalMechanism::discrete_additive_noise(
+      @gcm.PredictionModel::nearest_neighbour(k=5),
+    ),
+  )
+  model.set_causal_mechanism(
+    "Z",
+    @gcm.CausalMechanism::additive_noise(@gcm.PredictionModel::linear()),
+  )
+  @gcm.fit(model, whatif_discrete_data())
+  model
 }
 
 ///|
@@ -454,4 +592,56 @@ test "the average causal effect of a binary target is the expected result" {
     @utils.Random::new(WHATIF_SEED),
   )
   assert_true(whatif_near(effect, 0.5, 0.1))
+}
+
+///|
+/// test "an intervention on the categorical variables returns the correct sample values"
+///
+/// This is the port of the upstream test
+/// `test_given_categorical_variables_when_draw_interventional_samples_then_return_correct_sample_values`.
+/// The upstream draws the classes of the two targets with a uniform noise, so
+/// the number of the samples that hold the expected class is a random number;
+/// the generator of the `utils` package is seeded, so the number is the same
+/// number at every run.
+test "an intervention on the categorical variables returns the correct sample values" {
+  let model = whatif_categorical_model()
+  let samples = @gcm.interventional_samples(
+    model,
+    Map([("X0", @gcm.set_number(0.0)), ("X1", @gcm.set_category("0"))]),
+    None,
+    Some(WHATIF_CATEGORICAL_SAMPLES),
+    @utils.Random::new(WHATIF_CATEGORICAL_SEED),
+  )
+  for value in samples.numeric("X0") {
+    assert_true(whatif_near(value, 0.0, 0.0))
+  }
+  for value in samples.discrete("X1") {
+    assert_eq(value, "0")
+  }
+  assert_true(whatif_count_of(samples.discrete("X2"), "True") > 95)
+  assert_true(whatif_count_of(samples.discrete("X3"), "False") > 95)
+}
+
+///|
+/// test "an intervention on the discrete data returns the correct samples"
+///
+/// This is the port of the upstream test
+/// `test_given_discrete_data_when_performing_interventions_then_returns_correct_samples`.
+/// The upstream fits the histogram gradient boosting regression on the target
+/// of the discrete additive noise model; the port fits the nearest neighbour
+/// regression, which is the non-linear model of the port.
+test "an intervention on the discrete data returns the correct samples" {
+  let model = whatif_discrete_model()
+  let samples = @gcm.interventional_samples(
+    model,
+    Map([("X", @gcm.set_number(-2.0))]),
+    None,
+    Some(WHATIF_NUM_SAMPLES),
+    @utils.Random::new(WHATIF_DISCRETE_SEED),
+  )
+  for value in samples.numeric("X") {
+    assert_true(whatif_near(value, -2.0, 0.0))
+  }
+  assert_true(whatif_near(@utils.median(samples.numeric("Y")), -1.0, 0.0))
+  assert_true(whatif_near(@utils.mean(samples.numeric("Z")), -2.0, 0.05))
 }

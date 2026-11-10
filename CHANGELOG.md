@@ -2724,3 +2724,42 @@ The attribution of the anomalies without a causal model.
   port do satisfy it.
 
 [0.0.53]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.53
+
+## [0.0.54] - 2026-11-12
+
+The what-if queries with the categorical variables and with the discrete data.
+
+### Added
+
+- the cases of the upstream test file `tests/gcm/test_whatif.py` that draw the
+  interventional samples of a model with the categorical variables and of a
+  model with the discrete data, in `src/gcm/whatif_test.mbt`: the
+  intervention of the categorical variables sets the values of the two root
+  nodes and the two targets hold the expected classes, and the intervention of
+  the discrete data sets the value of the root node, so the median of the
+  discrete target is `-1` and the mean of its descendant is about `-2`.
+- the numbers of the upstream on the fixtures of the port in
+  `_verify/gcm_whatif_reference.py`: the upstream runs on the very rows of the
+  port, because the script replicates the generator of `src/utils/random.mbt`.
+
+### Fixed
+
+- the reference script of the what-if layer runs again: the upstream module
+  `dowhy.causal_model` pulls in the whole graph learning stack of the upstream,
+  so it is stubbed out with a placeholder class, the way the reference script
+  of the attribution of the anomalies does it.
+
+### Notes
+
+- The upstream draws the class of a categorical target with a uniform noise, so
+  the number of the samples that hold the expected class is a random number;
+  the generator of the `utils` package is seeded, so the number of the port is
+  the same number at every run.
+- The upstream fits the histogram gradient boosting regression on the target of
+  the discrete additive noise model; the port fits the nearest neighbour
+  regression, which is the non-linear model of the port. The upstream and the
+  port make the same decision on the rows of the port: the median of the
+  discrete target is `-1` on both sides and the mean of its descendant is
+  `-1.9943` on the side of the upstream and `-1.9974` on the side of the port.
+
+[0.0.54]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.54

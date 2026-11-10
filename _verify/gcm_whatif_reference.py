@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import os
 import sys
+import types
 
 import networkx as nx
 import numpy as np
@@ -62,6 +63,55 @@ SEED = 2024
 # The number of rows of the fixture of the upstream tests.
 NUM_SAMPLES = 10000
 
+# The number of rows of the fixture with the categorical variables.
+CATEGORICAL_ROWS = 5000
+
+# The number of samples of the intervention with the categorical variables.
+CATEGORICAL_SAMPLES = 100
+
+# The seed of the generator of the port for the fixture with the categorical
+# variables.
+CATEGORICAL_SEED = 20261032
+
+# The seed of the generator of the port for the fixture with the discrete data.
+DISCRETE_SEED = 20261033
+
+# The mask of the 64 bit values of the generator of the port.
+MASK64 = (1 << 64) - 1
+
+
+class Xorshift:
+    """The generator of `src/utils/random.mbt`.
+
+    The port draws its own noise with this generator, so the reference script
+    replicates it and works on the very rows the port works on.
+    """
+
+    def __init__(self, seed: int) -> None:
+        self.state = seed if seed != 0 else 0x9E3779B97F4A7C15
+
+    def next_u64(self) -> int:
+        x = self.state
+        x ^= (x << 13) & MASK64
+        x ^= x >> 7
+        x ^= (x << 17) & MASK64
+        self.state = x
+        return x
+
+    def next_double(self) -> float:
+        return (self.next_u64() >> 11) / 9007199254740992.0
+
+    def next_normal(self) -> float:
+        u1 = self.next_double()
+        u2 = self.next_double()
+        u1 = 1.0e-12 if u1 < 1.0e-12 else u1
+        return np.sqrt(-2.0 * np.log(u1)) * np.cos(2.0 * np.pi * u2)
+
+    def next_int(self, bound: int) -> int:
+        if bound <= 0:
+            return 0
+        return self.next_u64() % bound
+
 np.random.seed(SEED)
 
 
@@ -77,6 +127,24 @@ def register_missing_modules() -> None:
     upstream_gcm._PATHS["dowhy.gcm.fitting_sampling"] = "gcm/fitting_sampling.py"
     upstream_gcm._PATHS["dowhy.causal_graph"] = "causal_graph.py"
     upstream_gcm._PATHS["dowhy.causal_model"] = "causal_model.py"
+
+
+def stub_causal_model() -> None:
+    """Stubs the upstream `dowhy.causal_model` with a placeholder class.
+
+    The constructor of `ProbabilisticCausalModel` imports the module and uses
+    its `CausalModel` class for an `isinstance` check of the graph it is given.
+    The graph of the reference is a `networkx` graph, so the check is false with
+    the placeholder class as well. The real module is not loaded, because it
+    pulls in the whole graph learning stack of the upstream.
+    """
+    module = types.ModuleType("dowhy.causal_model")
+
+    class CausalModel:  # noqa: D101
+        """The placeholder of the class the upstream checks the graph against."""
+
+    module.CausalModel = CausalModel  # type: ignore[attr-defined]
+    sys.modules["dowhy.causal_model"] = module
 
 
 def expose_upstream_packages() -> None:
@@ -166,8 +234,88 @@ def create_and_fit_treatment_model(models, auto, fitting, binary_target: bool):
     return causal_model
 
 
+def categorical_rows() -> pd.DataFrame:
+    """The rows of the fixture with the categorical variables of the port.
+
+    The port draws the values of `X0` first and the categories of `X1` after
+    them, and the classes of `X2` and `X3` follow from them.
+    """
+    generator = Xorshift(CATEGORICAL_SEED)
+    x0 = np.array([generator.next_normal() for _ in range(CATEGORICAL_ROWS)])
+    x1 = np.array(
+        ["0" if generator.next_int(2) == 0 else "1" for _ in range(CATEGORICAL_ROWS)]
+    )
+    x2 = []
+    x3 = []
+    for i in range(CATEGORICAL_ROWS):
+        value = (x0[i] + 2.0 > 0.0) if x1[i] == "0" else (x0[i] - 2.0 > 0.0)
+        x2.append("True" if value else "False")
+        x3.append("False" if value else "True")
+    return pd.DataFrame({"X0": x0, "X1": x1, "X2": np.array(x2), "X3": np.array(x3)})
+
+
+def discrete_rows() -> pd.DataFrame:
+    """The rows of the fixture with the discrete data of the port.
+
+    The port draws the values of `X` first and the noise of `Z` after them, and
+    the values of `Y` follow from the values of `X`.
+    """
+    generator = Xorshift(DISCRETE_SEED)
+    x = np.array([generator.next_normal() for _ in range(NUM_SAMPLES)])
+    noise = np.array([0.1 * generator.next_normal() for _ in range(NUM_SAMPLES)])
+    y = np.array([-1.0 if value < -1.5 else (0.0 if value <= 1.5 else 1.0) for value in x])
+    z = 2.0 * y + noise
+    return pd.DataFrame({"X": x, "Y": y, "Z": z})
+
+
+def build_categorical_model(models, mechanisms, stochastic, ml, fitting, rows):
+    """The model of the fixture with the categorical variables of the upstream.
+
+    The graph is `X0 -> X2`, `X1 -> X2` and `X2 -> X3`, an empirical
+    distribution for the two root nodes and a classifier with a logistic
+    regression for the two other nodes.
+    """
+    causal_model = models.ProbabilisticCausalModel(
+        nx.DiGraph([("X0", "X2"), ("X1", "X2"), ("X2", "X3")])
+    )
+    causal_model.set_causal_mechanism("X0", stochastic.EmpiricalDistribution())
+    causal_model.set_causal_mechanism("X1", stochastic.EmpiricalDistribution())
+    causal_model.set_causal_mechanism(
+        "X2", mechanisms.ClassifierFCM(classifier_model=ml.create_logistic_regression_classifier())
+    )
+    causal_model.set_causal_mechanism(
+        "X3", mechanisms.ClassifierFCM(classifier_model=ml.create_logistic_regression_classifier())
+    )
+    fitting.fit(causal_model, rows)
+    return causal_model
+
+
+def build_discrete_model(models, mechanisms, stochastic, ml, fitting, rows):
+    """The model of the fixture with the discrete data of the upstream.
+
+    The graph is `X -> Y` and `Y -> Z`, an empirical distribution for the root
+    node, a discrete additive noise model with a histogram gradient boosting
+    regressor for `Y` and an additive noise model with a linear regressor for
+    `Z`.
+    """
+    causal_model = models.ProbabilisticCausalModel(nx.DiGraph([("X", "Y"), ("Y", "Z")]))
+    causal_model.set_causal_mechanism("X", stochastic.EmpiricalDistribution())
+    causal_model.set_causal_mechanism(
+        "Y",
+        mechanisms.DiscreteAdditiveNoiseModel(
+            prediction_model=ml.create_hist_gradient_boost_regressor()
+        ),
+    )
+    causal_model.set_causal_mechanism(
+        "Z", mechanisms.AdditiveNoiseModel(prediction_model=ml.create_linear_regressor())
+    )
+    fitting.fit(causal_model, rows)
+    return causal_model
+
+
 def main() -> None:
     register_missing_modules()
+    stub_causal_model()
 
     config = load("dowhy.gcm.config")
     # The progress bars of the upstream fitting would write to the standard
@@ -194,7 +342,6 @@ def main() -> None:
     # the wider package, which the stubbed packages do not reach.
     expose_upstream_packages()
     load("dowhy.causal_graph")
-    load("dowhy.causal_model")
 
     print(f"SEED = {SEED}")
 
@@ -375,6 +522,50 @@ def main() -> None:
     print("DATA_FROM_NOISE")
     for node in ("X0", "X1", "X2", "X3"):
         show(node, computed_data[node].to_numpy().squeeze())
+
+    # ------------------------------------------------------------------
+    # E.1. The intervention on the categorical variables.
+    #
+    # The upstream test `test_given_categorical_variables_when_draw_interventional_
+    # samples_then_return_correct_sample_values` expects the values of `X0` to be
+    # zero, the values of `X1` to be "0", more than 95 of the 100 values of `X2`
+    # to be "True" and more than 95 of the 100 values of `X3` to be "False".
+    # ------------------------------------------------------------------
+    np.random.seed(SEED)
+    categorical_model = build_categorical_model(
+        models, mechanisms, stochastic, ml, fitting, categorical_rows()
+    )
+    np.random.seed(SEED)
+    categorical = whatif.interventional_samples(
+        categorical_model,
+        dict(X0=lambda _ : 0, X1=lambda _ : "0"),
+        num_samples_to_draw=CATEGORICAL_SAMPLES,
+    )
+    print("INTERVENTIONAL_CATEGORICAL")
+    show("X0_distinct", len(set(categorical["X0"].to_numpy().tolist())))
+    show("X1_distinct", len(set(categorical["X1"].to_numpy().tolist())))
+    show("X2_true", np.sum(categorical["X2"].to_numpy() == "True"))
+    show("X3_false", np.sum(categorical["X3"].to_numpy() == "False"))
+
+    # ------------------------------------------------------------------
+    # F.1. The intervention on the discrete data.
+    #
+    # The upstream test `test_given_discrete_data_when_performing_interventions_
+    # then_returns_correct_samples` expects the values of `X` to be -2, the
+    # median of `Y` to be -1 and the mean of `Z` to be about -2.
+    # ------------------------------------------------------------------
+    np.random.seed(SEED)
+    discrete_model = build_discrete_model(
+        models, mechanisms, stochastic, ml, fitting, discrete_rows()
+    )
+    np.random.seed(SEED)
+    discrete = whatif.interventional_samples(
+        discrete_model, dict(X=lambda _ : -2), num_samples_to_draw=NUM_SAMPLES
+    )
+    print("INTERVENTIONAL_DISCRETE")
+    show("X_distinct", len(set(discrete["X"].to_numpy().tolist())))
+    show("Y_median", np.median(discrete["Y"].to_numpy()))
+    show("Z_mean", np.mean(discrete["Z"].to_numpy()))
 
 
 if __name__ == "__main__":

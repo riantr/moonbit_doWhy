@@ -880,6 +880,19 @@ statsmodels / scikit-learn conventions are deliberate:
   prediction at an anomaly sample, which is far outside of them, is off by
   about `6.6`, and that error moves the contribution of the target of the
   attribution of the anomalies from `9.6` to `4.1`.
+- The what-if queries of the `gcm` package with the categorical variables and
+  with the discrete data follow the upstream `dowhy.gcm.whatif`. The class of a
+  categorical target is drawn with a uniform noise on `[0, 1]`, and the class is
+  the first one whose cumulative probability reaches the noise, so the number of
+  the samples that hold the expected class is a random number; the generator of
+  the `utils` package is seeded, so the number is the same number at every run.
+  The upstream fits the histogram gradient boosting regression on the target of
+  the discrete additive noise model; the port fits the nearest neighbour
+  regression, which is the non-linear model of the port. The upstream `dowhy.gcm`
+  is run on the very rows of the port by `_verify/gcm_whatif_reference.py`, which
+  replicates the generator of `src/utils/random.mbt`; the two make the same
+  decision on them: the median of the target of the discrete fixture is `-1` on
+  both sides and the mean of its descendant is about `-2` on both sides.
 - The summary of the automatic assignment of the `gcm` package reproduces the
   text of `dowhy.gcm.auto.AutoAssignmentSummary.__str__` character for
   character: the name of the distribution of a root node is `Empirical
@@ -1001,7 +1014,10 @@ README makes, so they are tracked in the repository:
   interventional samples, the counterfactual samples, the average causal
   effect, the noise of a model and the data of a model -- with the upstream
   `dowhy.gcm` code, which is where the expectations of the tests of the
-  what-if queries come from.
+  what-if queries come from. The two fixtures with the categorical variables and
+  with the discrete data are the very rows the port works on: the script
+  replicates the generator of `src/utils/random.mbt`, so the two sides work on
+  the same rows.
 - `gen_validation_testdata.py` generates `src/gcm/validation_testdata.mbt`
   mechanically from the upstream fixtures of `tests/gcm/test_validation.py`,
   with the draws of the upstream replaced by the draws of a fixed seed, so the
