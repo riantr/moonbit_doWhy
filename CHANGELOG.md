@@ -3165,6 +3165,73 @@ The categorical noise dependent function.
 
 [0.0.61]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.61
 
+## [0.0.70] - 2026-11-11
+
+The plotting layer.
+
+### Added
+
+- the `plotting` package, in the new directory `src/plotting/`: the port of
+  `dowhy.utils.plotting`, of `dowhy.utils.graphviz_plotting` and of
+  `dowhy.utils.networkx_plotting`. The upstream draws a causal graph with
+  Graphviz and falls back to `matplotlib` when Graphviz is not installed, and it
+  draws the bar plots with `matplotlib`. MoonBit has neither of them, so the
+  port computes the attributes the two backends compute: the width of the arrow
+  of an edge, the label and the colour of the nodes and of the edges, the layer
+  of every node, the size of the figure and the uncertainty bars of a bar plot.
+  The attributes of the Graphviz backend are written as a Graphviz DOT
+  document, which Graphviz reads and draws.
+- the public functions of the package: `calc_arrow_width`, which is the port of
+  `_calc_arrow_width`, `strength_label`, `bar_plot`, `plot`,
+  `plot_adjacency_matrix`, `graph_of_adjacency_matrix`, `graphviz_plot`,
+  `networkx_plot` and `has_self_cycle`. The public structs are `GraphPlot`
+  with its nodes and its edges, `NetworkxPlot` with its nodes, its edges and
+  its layers, and `BarPlot` with its bars and their error bars.
+- the thirteen cases of the new file `src/plotting/plotting_test.mbt`, which
+  are the cases of the upstream test file `tests/utils/test_plotting.py`: the
+  plot of a graph, the plot of an adjacency matrix, the plot that does not
+  change the strengths and the colours of the caller, the width of the arrows,
+  the attributes of the Graphviz backend, the attributes of the networkx
+  backend, the graph that holds a self-cycle, the label of a node and the bar
+  plot of the uncertainties the upstream drops.
+- the numbers of the upstream on the fixtures of the port in
+  `_verify/plotting_reference.py`: the script runs the upstream
+  `dowhy.utils.plotting` and the upstream `dowhy.utils.networkx_plotting` on
+  the very graph and on the very values the port works on, and it prints the
+  widths of the arrows, the error bars of the bar plots, the attributes of the
+  two backends and the graph of the adjacency matrix. The Graphviz backend is
+  exercised with a stub of `pygraphviz`, because the package is an optional
+  dependency of the upstream. Every number of the script is the number of the
+  port, and the difference of the error bars is zero.
+
+### Notes
+
+- The port draws nothing. The upstream writes a picture, and the port writes
+  the attributes of that picture, so the numbers of the upstream are the
+  evidence for the numbers of the port.
+- The upstream keeps the strengths and the colours of a plot in one
+  dictionary, whose keys are the name of a node and the pair of the names of an
+  edge. The port keeps them apart, in a map of the nodes and in a map of the
+  edges, because MoonBit has no type that holds two kinds of keys.
+- The upstream takes the strength of an edge from the `CAUSAL_STRENGTH`
+  attribute of the edge when the caller gave none, and the graph of the port
+  holds no attribute on its edges. The strength of an edge of the port is the
+  one of the caller, and an edge the caller gave no strength for has none.
+- The upstream writes the bars it has no uncertainty for into the dictionary of
+  the uncertainties of the caller, and it places the ticks of the x-axis of a
+  bar plot at the keys of that dictionary, which are strings and which
+  matplotlib refuses. The port never writes into the dictionary of the caller
+  and places the ticks at the bars.
+- The upstream refuses to draw a graph that holds a self-cycle, and it raises a
+  `ValueError`. MoonBit cannot catch an abort, so the check that tells whether
+  the graph holds one is the public function `has_self_cycle`, and the plot of
+  such a graph is `None`.
+- The count of the nodes vertically of the upstream is the maximum of the
+  numbers of the layers and of their counts, because it takes the maximum of
+  the pairs of the layer and of the count. The port does the same.
+
+[0.0.70]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.70
+
 ## [0.0.69] - 2026-11-11
 
 The decision tree classifier of the graphical causal models.

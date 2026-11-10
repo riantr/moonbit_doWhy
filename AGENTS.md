@@ -1134,6 +1134,24 @@ statsmodels / scikit-learn conventions are deliberate:
   of the port, the way the histogram gradient boosting classifier is the
   non-linear classifier of the zoo of the upstream.
 
+- The plotting layer of the library draws nothing: MoonBit has neither
+  Graphviz nor matplotlib, so the port computes the attributes the two
+  backends of the upstream compute -- the width of the arrow of an edge,
+  the label and the colour of the nodes and of the edges, the layer of
+  every node and the error bars of a bar plot -- and it writes the
+  attributes of the Graphviz backend as a Graphviz DOT document. The
+  width of an arrow is `0.1 + 4.0 * abs(strength) / max_strength`, and it
+  is `4.1` when the graph holds no strength; the upstream refuses a
+  negative largest strength, so the width of the port is `None` there.
+  The label of an edge is the strength truncated towards zero to two
+  decimals, so the label of the strength `0.29` is ` 0.28`, and it is
+  `Inf` for an infinite strength, whose arrow is drawn with the width of
+  the strength of a hundred.
+- The count of the nodes vertically of the networkx backend of the
+  upstream is the maximum of the numbers of the layers and of their
+  counts, because it takes the maximum of the pairs of the layer and of
+  the count. The port does the same.
+
 ## Package layout
 
 | Package | Ports |
@@ -1153,6 +1171,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
+| `plotting` | `dowhy.utils.plotting`, `dowhy.utils.graphviz_plotting` and `dowhy.utils.networkx_plotting` (the width of the arrows, the label and the colour of the nodes and of the edges, the layer of every node, the error bars of a bar plot and the graph of an adjacency matrix) |
 | `tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter and of the data subset refuter |
 | `examples` | the runnable quick start |
 
@@ -1230,6 +1249,13 @@ README makes, so they are tracked in the repository:
   cannot store the one element array that its `convert_to_binary` returns in
   the output of a scalar, so the script restores the behaviour of NumPy 1 for
   it.
+- `plotting_reference.py` runs the upstream `dowhy.utils.plotting` and the
+  upstream `dowhy.utils.networkx_plotting` on the very graph and on the very
+  values the port works on, and it prints the widths of the arrows, the
+  error bars of the bar plots, the attributes of the two backends and the
+  graph of the adjacency matrix. The Graphviz backend of the upstream is
+  exercised with a stub of `pygraphviz`, because the package is an optional
+  dependency of the upstream. It is the evidence for the `plotting` package.
 - `gcm_scm_reference.py` computes the numbers of the causal mechanisms, of the
   fitting of a causal model and of the sampling from it with the upstream
   `dowhy.gcm` code, which is where the expectations of the tests of the

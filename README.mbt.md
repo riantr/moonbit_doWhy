@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.69.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.70.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -24,6 +24,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
 | Intervention sampling | `dowhy.do_sampler`, `dowhy.do_samplers` | ported (the weighting, multivariate weighting and kernel density samplers) -- the MCMC sampler is **not ported**, it needs an inference engine upstream takes from PyMC3 |
 | Time series | `dowhy.timeseries` | ported (the temporal graph, its readers of a CSV and of a DOT, and the temporal shift) |
+| Plotting | `dowhy.utils.plotting`, `dowhy.utils.graphviz_plotting`, `dowhy.utils.networkx_plotting` | ported (the width of the arrows, the label and the colour of the nodes and of the edges, the layer of every node, the uncertainty bars of a bar plot and the graph of an adjacency matrix) -- the port **draws nothing**, it computes the attributes of the two backends of the upstream and writes the ones of the Graphviz backend as a DOT document |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
 | Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the **CatBoost encoder** of the categorical columns, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure, the **kernel based** one, **with categorical data**, and the **randomised** one), the prediction models -- the linear one, the **polynomial** ones and the **decision tree** --, the causal mechanisms, the stochastic models, **with the beta distribution, with the automatic selection of the family and with the Bayesian Gaussian mixture**, the noise of a causal model, **with a categorical root and with a categorical target**, the **feature relevance**, the **intrinsic causal influence**, **with a categorical target and with a categorical root**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, **with the selection of the model of a node by cross validation**, the **test of a linear relationship** and the **missing values**, the **what-if queries**, **with the categorical variables and with the discrete data**, the **validation** layer, the **falsification** layer, **with the categorical data**, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution, **with a non-linear mechanism** and **without a causal model**), the **unit change** layer, **with its dispatcher and with the predicates of the exceptions of the upstream**, the **uncertainty** estimates, the **distribution change** layer -- the plain one and the **multiply-robust** one -- and the **arrow strength** layer are ported |
@@ -100,6 +101,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `data_transformers` | `riantr/moonbit_dowhy/data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
+| `plotting` | `riantr/moonbit_dowhy/plotting` | `dowhy.utils.plotting`, `dowhy.utils.graphviz_plotting` and `dowhy.utils.networkx_plotting`: the width of the arrows, the label and the colour of the nodes and of the edges, the layer of every node, the uncertainty bars of a bar plot and the graph of an adjacency matrix |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
 | `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the **CatBoost encoder** of the categorical columns, the prediction models **with the decision tree**, the causal mechanisms, the stochastic models **with their Bayesian Gaussian mixture**, the automatic assignment of the mechanisms with the selection of the model of a node by cross validation, the test of a linear relationship and the missing values, the noise of a causal model **with a categorical root**, the feature relevance, the intrinsic causal influence **with a categorical target and with a categorical root**, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer **with the categorical data**, the model evaluation layer, the anomaly detection layer, the unit change layer **with its dispatcher**, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
 | `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter, of the data subset refuter, of the dummy outcome refuter, of the unobserved common cause refuter, of the linear sensitivity analysis, of the E-value analysis and of the default strength of the confounder |
@@ -1219,6 +1221,31 @@ following ways:
   missing value, because its histogram gradient boosting model reads them; the
   port has no model that reads them, so it drops the rows that hold a missing
   value in a feature as well.
+
+- The `plotting` package draws nothing: MoonBit has neither Graphviz
+  nor matplotlib, so the port computes the attributes the two backends
+  of the upstream compute and writes the attributes of the Graphviz
+  backend as a Graphviz DOT document, which Graphviz reads and draws.
+- The upstream keeps the strengths and the colours of a plot in one
+  dictionary, whose keys are the name of a node and the pair of the
+  names of an edge. The port keeps them apart, in a map of the nodes
+  and in a map of the edges, because MoonBit has no type that holds two
+  kinds of keys.
+- The upstream takes the strength of an edge from the `CAUSAL_STRENGTH`
+  attribute of the edge when the caller gave none. The graph of the port
+  holds no attribute on its edges, so the strength of an edge is the one
+  of the caller and an edge the caller gave no strength for has none.
+- The upstream writes the bars it has no uncertainty for into the
+  dictionary of the uncertainties of the caller. The port reads the
+  dictionary and never writes into it.
+- The upstream places the ticks of the x-axis of a bar plot at the keys
+  of the dictionary of the uncertainties, which are strings, and
+  matplotlib refuses them. The port places them at the bars, in the
+  order of the values.
+- The count of the nodes vertically of the upstream is the maximum of the
+  numbers of the layers and of their counts, because it takes the
+  maximum of the pairs of the layer and of the count. The port does the
+  same.
 
 ## Development
 
