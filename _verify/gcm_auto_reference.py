@@ -21,6 +21,17 @@ them, so the script prints the family of the model the upstream picked: the
 linear one or the non-linear one. The tests of the port assert the family
 that the upstream picks.
 
+The script also runs the upstream `has_linear_relationship` on the fixtures of
+the tests of the port and it prints the decisions it takes and the numbers it
+compares, so that the decisions of the port can be checked against the
+upstream. The upstream splits the rows of that test with the global generator
+of numpy, so its decisions are not reproducible either; the script runs it
+several times and it prints every decision.
+
+The script prints the text of the summary of the upstream as well, so that the
+format of the summary of the port can be compared with it character for
+character.
+
 Usage:
     python _verify/gcm_auto_reference.py
 """
@@ -45,6 +56,8 @@ NUM_FEATURES = 5
 NUM_ROWS = 120
 SEED = 20240101
 TARGET_SEED = 20240102
+RELATIONSHIP_SEED = 20240103
+RELATIONSHIP_ROWS = 1000
 NOISE = 0.2
 WEIGHTS = [2.0, -1.5, 3.0, -0.5, 1.0]
 
@@ -141,6 +154,42 @@ def run(name: str, target: np.ndarray, quality: AssignmentQuality, seed: int) ->
         print(f"    {str(factory()):<52} {performance!r}  [{metric}]")
 
 
+def relationship_uniform() -> np.ndarray:
+    """The features of the simple fixture of the test of a linear relationship."""
+    rng = PortRandom(RELATIONSHIP_SEED)
+    return np.array([rng.next_double() for _ in range(RELATIONSHIP_ROWS)])
+
+
+def relationship_normals() -> tuple[np.ndarray, np.ndarray]:
+    """The features of the categorical fixture of the test of a linear relationship."""
+    rng = PortRandom(RELATIONSHIP_SEED)
+    first = [rng.next_normal() for _ in range(RELATIONSHIP_ROWS)]
+    second = [rng.next_normal() for _ in range(RELATIONSHIP_ROWS)]
+    return np.array(first), np.array(second)
+
+
+def run_relationship(name: str, x: np.ndarray, y: np.ndarray, runs: int = 5) -> None:
+    """Run the upstream test of a linear relationship and print its decisions."""
+    from dowhy.gcm.auto import has_linear_relationship
+
+    decisions = [has_linear_relationship(x, y) for _ in range(runs)]
+    print(f"  [{name}] the decisions of the upstream: {decisions}")
+
+
+def run_summary(name: str, target: np.ndarray, quality: AssignmentQuality) -> None:
+    """Print the summary of the upstream, so that its format can be compared."""
+    np.random.seed(7)
+    columns = port_features()
+    data = {"X" + str(j): np.array(columns[j]) for j in range(NUM_FEATURES)}
+    data["Y"] = target
+    graph = nx.DiGraph([("X" + str(j), "Y") for j in range(NUM_FEATURES)])
+    model = ProbabilisticCausalModel(graph)
+    summary = assign_causal_mechanisms(model, pd.DataFrame(data), quality=quality)
+    print(f"  [{name}] the summary of the upstream:")
+    for line in str(summary).split("\n"):
+        print(f"    | {line}")
+
+
 def main() -> None:
     columns = port_features()
     print("=== the fixtures of the port")
@@ -167,6 +216,30 @@ def main() -> None:
     for seed in (7, 11):
         run("non-linear GOOD", non_linear_labels(columns), AssignmentQuality.GOOD, seed)
     run("non-linear BETTER", non_linear_labels(columns), AssignmentQuality.BETTER, 7)
+
+    print("=== the test of a linear relationship")
+    uniform = relationship_uniform()
+    run_relationship("the simple data", uniform.reshape(-1, 1), (2.0 * uniform).reshape(-1, 1))
+    run_relationship("the quadratic data", uniform.reshape(-1, 1), (uniform * uniform).reshape(-1, 1))
+
+    first, second = relationship_normals()
+    both = np.column_stack([first, second])
+    run_relationship("the linear boundary", both, (first + second > 0).astype(str))
+    run_relationship("the product boundary", both, (first * second > 0).astype(str))
+
+    imbalanced_x = np.append(first, 0)
+    imbalanced_y = np.append(np.array(["OneClass"] * RELATIONSHIP_ROWS), "RareClass")
+    run_relationship("the imbalanced target", imbalanced_x.reshape(-1, 1), imbalanced_y)
+
+    rare_x = np.array(["Feature" + str(i) for i in range(20)])
+    rare_y = np.array(["Class1"] * 10 + ["Class2"] * 10)
+    run_relationship("the rare features", rare_x, rare_y)
+
+    print("=== the summary of a continuous target")
+    run_summary("the continuous target", linear_target(columns), AssignmentQuality.GOOD)
+
+    print("=== the summary of a categorical target")
+    run_summary("the categorical target", linear_labels(columns), AssignmentQuality.GOOD)
 
 
 if __name__ == "__main__":

@@ -2513,3 +2513,66 @@ The model selection of the automatic assignment.
   relations of the fixture.
 
 [0.0.49]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.49
+## [0.0.50] - 2026-11-11
+
+The test of a linear relationship and the rest of the automatic assignment.
+
+### Added
+
+- the test of a linear relationship of the `gcm` package, the port of
+  `dowhy.gcm.auto.has_linear_relationship`: the data is split into a training
+  part and a test part, a linear model and a non-linear model are fitted on
+  the training part and the two of them are compared on the test part.
+- the nearest neighbour classifier of the `gcm` package, the port of
+  `dowhy.gcm.ml.classification.create_knn_classifier`, and the nearest
+  neighbour classifier of the zoo of the model selection.
+- the CatBoost encoder of the `gcm` package, the port of
+  `dowhy.gcm.util.catboost_encoder.CatBoostEncoder`, which the upstream uses
+  when the data holds more than seven categories.
+- the cases of the upstream test file `tests/gcm/test_auto.py` in
+  `src/gcm/auto_test.mbt`: the test of a linear relationship of a continuous
+  and of a categorical target, the imbalanced target, the rare categorical
+  features, the format of the summary of a continuous and of a categorical
+  target, the statistics of the samples of a fitted model and the assignment of
+  a target of three classes with categorical features.
+- the decisions of the upstream `has_linear_relationship` and the text of the
+  summary of the upstream in `_verify/gcm_auto_reference.py`, which runs the
+  upstream on the rows of the fixtures of the port.
+
+### Changed
+
+- the summary of the automatic assignment of the `gcm` package reproduces the
+  text of the upstream character for character now: the name of the
+  distribution of a root node is `Empirical Distribution`, the name of a
+  mechanism is `AdditiveNoiseModel using ...`,
+  `Discrete AdditiveNoiseModel using ...` or `Classifier FCM based on ...`, and
+  the relation of a discrete node is introduced by `This represents the
+  discrete causal relationship as`.
+- the header of the test file of the automatic assignment records that the port
+  mirrors 22 of the 26 cases of the upstream test file and that the case of the
+  multiclass target ends in a different model.
+
+### Notes
+
+- The upstream compares the linear regression with the histogram gradient
+  boosting regression in its test of a linear relationship, and the logistic
+  regression with the histogram gradient boosting classifier; the port compares
+  the ordinary least squares regression with the nearest neighbour regression,
+  and the logistic regression with the nearest neighbour classifier. The
+  decisions agree on the six fixtures of the upstream test file.
+- The upstream splits the rows of that test with the global generator of numpy
+  and does not seed it, so its split is not reproducible; the port splits them
+  with the generator of the `utils` package, whose seed is an argument of the
+  function. The share of a class in a stratified split follows
+  `sklearn.model_selection._approximate_mode`, and the port picks the classes
+  of the largest remainder in the order of the classes where the upstream picks
+  them at random.
+- The upstream fits the multiclass logistic regression with a multinomial
+  solver; the port fits one binary logistic regression per class and it
+  normalises the probabilities of the classes. The probabilities of the port
+  are worse for a target of more than two classes, so the selection of the
+  model of such a target picks the polynomial logistic regression of the port
+  where the upstream picks the linear model. The case of the upstream test
+  file records the difference.
+
+[0.0.50]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.50

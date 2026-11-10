@@ -185,9 +185,9 @@ pub fn AutoAssignmentSummary::to_string(self : AutoAssignmentSummary) -> String 
     }
     if entry.performances.length() > 0 {
       out = out +
-        "\nFor the model selection, the following models were evaluated on the " +
+        "For the model selection, the following models were evaluated on the " +
         entry.performances[0].metric() +
-        " metric:\n\n"
+        " metric:\n"
       for performance in entry.performances {
         out = out +
           performance.model() +
@@ -201,7 +201,7 @@ pub fn AutoAssignmentSummary::to_string(self : AutoAssignmentSummary) -> String 
   out = out +
     "Note, based on the selected auto assignment quality, the set of evaluated models changes.\n"
   out = out +
-    "For more insights toward the quality of the fitted graphical causal model, consider using the evaluate_causal_model function after fitting the causal mechanisms.\n"
+    "For more insights toward the quality of the fitted graphical causal model, consider using the evaluate_causal_model function after fitting the causal mechanisms."
   out
 }
 
@@ -379,7 +379,15 @@ fn auto_relationship_message(
     Some(mechanism) => is_classifier_kind(mechanism.kind())
     None => false
   }
-  let mut out = "This represents the causal relationship as "
+  let discrete = match causal_model.causal_mechanism(node) {
+    Some(mechanism) => is_discrete_additive_noise_kind(mechanism.kind())
+    None => false
+  }
+  let mut out = if discrete {
+    "This represents the discrete causal relationship as "
+  } else {
+    "This represents the causal relationship as "
+  }
   out = out + node
   out = out + " := f("
   out = out + parents
@@ -431,11 +439,14 @@ fn auto_root_model_name(
   match causal_model.root_model(node) {
     Some(model) =>
       match model.kind() {
-        Empirical => "an empirical distribution"
-        EmpiricalCategorical => "an empirical categorical distribution"
-        Normal => "a normal distribution"
-        Laplace => "a Laplace distribution"
-        Uniform => "a uniform distribution"
+        Empirical => "Empirical Distribution"
+        // The upstream has a single empirical distribution, which samples the
+        // discrete values of a column of categories as well, so the port names
+        // the categorical distribution the same way.
+        EmpiricalCategorical => "Empirical Distribution"
+        Normal => "norm distribution"
+        Laplace => "laplace distribution"
+        Uniform => "uniform distribution"
       }
     None => "no distribution"
   }
@@ -451,16 +462,17 @@ fn auto_mechanism_name(
     Some(mechanism) =>
       match mechanism.kind() {
         AdditiveNoise =>
-          "an additive noise model using " +
+          "AdditiveNoiseModel using " +
           regression_model_name(mechanism.prediction_model())
         DiscreteAdditiveNoise =>
-          "a discrete additive noise model using " +
+          "Discrete AdditiveNoiseModel using " +
           regression_model_name(mechanism.prediction_model())
         PostNonlinear =>
-          "a post non-linear model using " +
-          regression_model_name(mechanism.prediction_model())
+          "PostNonlinearModel with " +
+          regression_model_name(mechanism.prediction_model()) +
+          " and an identity"
         Classifier =>
-          "a classifier based functional causal model using " +
+          "Classifier FCM based on " +
           classification_model_name(mechanism.classifier_model())
       }
     None => "no causal mechanism"

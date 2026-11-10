@@ -409,6 +409,8 @@ pub struct ClassificationModel {
   degree : Int32
   /// The one-versus-rest models, when the target holds more than two classes.
   one_versus_rest : OneVersusRestModel?
+  /// The nearest neighbour model, when the model is one.
+  neighbours : KnnClassifier?
 }
 
 ///|
@@ -423,6 +425,47 @@ pub fn ClassificationModel::logistic() -> ClassificationModel {
     fitted: false,
     degree: 0,
     one_versus_rest: None,
+    neighbours: None,
+  }
+}
+
+///|
+/// A classification model of the nearest neighbours of a row.
+///
+/// This is the port of
+/// `dowhy.gcm.ml.classification.create_knn_classifier`, which wraps
+/// `sklearn.neighbors.KNeighborsClassifier` with its default parameters: five
+/// neighbours and the uniform weights. The neighbours of a row are the rows of
+/// the training data with the smallest euclidean distance to it, and the class
+/// of the row is the class of the majority of its neighbours.
+pub fn ClassificationModel::nearest_neighbour(
+  k~ : Int32 = 5,
+) -> ClassificationModel {
+  if k < 1 {
+    abort("the number of the neighbours has to be at least one")
+  }
+  {
+    coefficients: [],
+    intercept: 0.0,
+    classes: [],
+    fitted: false,
+    degree: 0,
+    one_versus_rest: None,
+    neighbours: Some(KnnClassifier::new(k)),
+  }
+}
+
+///|
+/// Whether the model is a nearest neighbour model.
+///
+/// A nearest neighbour model has no coefficient and no intercept: it keeps the
+/// training data and predicts with the classes of the neighbours of a row.
+pub fn ClassificationModel::is_nearest_neighbour(
+  self : ClassificationModel,
+) -> Bool {
+  match self.neighbours {
+    Some(_) => true
+    None => false
   }
 }
 
@@ -449,6 +492,7 @@ pub fn ClassificationModel::polynomial(
     fitted: false,
     degree,
     one_versus_rest: None,
+    neighbours: None,
   }
 }
 
@@ -494,6 +538,21 @@ pub fn ClassificationModel::fit(
       " classes",
     )
   }
+  match self.neighbours {
+    Some(neighbours) =>
+      // A nearest neighbour model keeps the training data and computes nothing
+      // else, so the fit is the fit of the nearest neighbour classifier.
+      return {
+        coefficients: [],
+        intercept: 0.0,
+        classes,
+        fitted: true,
+        degree: 0,
+        one_versus_rest: None,
+        neighbours: Some(neighbours.fit(x, y)),
+      }
+    None => ()
+  }
   // A model of the polynomial features is fitted on the expansion of the
   // features, the way the pipeline of the upstream expands them before its
   // logistic regression sees them.
@@ -529,6 +588,7 @@ pub fn ClassificationModel::fit(
     fitted: true,
     degree: self.degree,
     one_versus_rest: None,
+    neighbours: None,
   }
 }
 
@@ -577,6 +637,7 @@ fn fit_one_versus_rest(
     fitted: true,
     degree: model.degree,
     one_versus_rest: Some({ coefficients, intercepts, }),
+    neighbours: None,
   }
 }
 
@@ -591,6 +652,10 @@ pub fn ClassificationModel::predict_probabilities(
 ) -> Array[Array[Double]] {
   if !self.fitted {
     abort("the classification model has not been fitted")
+  }
+  match self.neighbours {
+    Some(neighbours) => return neighbours.predict_probabilities(x)
+    None => ()
   }
   // A model of the polynomial features predicts with the expansion of the
   // features, the way the pipeline of the upstream expands them before its
@@ -682,6 +747,10 @@ pub fn ClassificationModel::clone(
     fitted: false,
     degree: self.degree,
     one_versus_rest: None,
+    neighbours: match self.neighbours {
+      Some(neighbours) => Some(KnnClassifier::new(neighbours.k))
+      None => None
+    },
   }
 }
 
@@ -840,7 +909,19 @@ pub fn with_intercept_column(x : @utils.Matrix) -> @utils.Matrix {
 }
 
 ///|
-/// The distinct values of the labels, in lexicographic order.
+/// The index of the label in the classes, or minus one when the label is not
+/// one of them.
+fn index_of_class(classes : Array[String], label : String) -> Int32 {
+  for i in 0..<classes.length() {
+    if classes[i] == label {
+      return i
+    }
+  }
+  -1
+}
+
+///|
+/// The sorted distinct labels of a column of classes.
 fn sorted_distinct_labels(y : Array[String]) -> Array[String] {
   let distinct : Array[String] = []
   for label in y {
@@ -898,13 +979,26 @@ pub fn KnnModel::fit(
   x : @utils.Matrix,
   y : Array[Double],
 ) -> KnnModel {
+  {
+    k: self.k,
+    rows: x.copy(),
+    targets: y.copy(),
+    order: sorted_row_order(x),
+    fitted: true,
+  }
+}
+
+///|
+/// The rows of a design matrix, sorted by their first column.
+///
+/// The rows are sorted by their first column, so that the neighbours of a row
+/// are found with a walk over the sorted rows instead of a scan over all of
+/// them.  The walk finds the same neighbours as the scan.
+fn sorted_row_order(x : @utils.Matrix) -> Array[Int32] {
   let order : Array[Int32] = []
   for i in 0..<x.nrows() {
     order.push(i)
   }
-  // The rows are sorted by their first column, so that the neighbours of a row
-  // are found with a walk over the sorted rows instead of a scan over all of
-  // them.  The walk finds the same neighbours as the scan.
   if x.ncols() > 0 {
     order.sort_by(fn(a, b) {
       let c = @utils.compare_double(x.get(a, 0), x.get(b, 0))
@@ -919,7 +1013,7 @@ pub fn KnnModel::fit(
       }
     })
   }
-  { k: self.k, rows: x.copy(), targets: y.copy(), order, fitted: true, }
+  order
 }
 
 ///|
@@ -952,8 +1046,34 @@ pub fn KnnModel::predict(self : KnnModel, x : @utils.Matrix) -> Array[Double] {
 /// sorted rows stops as soon as the rows that are left are further away than
 /// the neighbours that were found already.
 fn KnnModel::predict_row(self : KnnModel, query : Array[Double]) -> Double {
-  let n = self.order.length()
-  let k = if self.k < n { self.k } else { n }
+  let best_rows = knn_neighbour_rows(self.rows, self.order, self.k, query)
+  let mut sum = 0.0
+  for row in best_rows {
+    sum = sum + self.targets[row]
+  }
+  if best_rows.length() == 0 {
+    return 0.0
+  }
+  sum / best_rows.length().to_double()
+}
+
+///|
+/// The rows that are the nearest neighbours of a row.
+///
+/// The neighbours are the rows with the smallest euclidean distance to the
+/// row, and they are returned in the order of their distance.  The rows are
+/// sorted by their first column, so the walk over the sorted rows stops as
+/// soon as the rows that are left are further away than the neighbours that
+/// were found already.  A tie is broken with the order of the rows, which is
+/// the rule of a scan over the rows.
+fn knn_neighbour_rows(
+  rows : @utils.Matrix,
+  order : Array[Int32],
+  k : Int32,
+  query : Array[Double],
+) -> Array[Int32] {
+  let n = order.length()
+  let count = if k < n { k } else { n }
   // The distances of the neighbours that were found and the rows they belong
   // to, in the order of their distance.
   let best_distances : Array[Double] = []
@@ -963,7 +1083,7 @@ fn KnnModel::predict_row(self : KnnModel, query : Array[Double]) -> Double {
   let mut hi = n
   while lo < hi {
     let mid = lo + (hi - lo) / 2
-    if self.rows.get(self.order[mid], 0) < query[0] {
+    if rows.get(order[mid], 0) < query[0] {
       lo = mid + 1
     } else {
       hi = mid
@@ -981,17 +1101,17 @@ fn KnnModel::predict_row(self : KnnModel, query : Array[Double]) -> Double {
     // The smallest squared distance a row that was not visited can have.
     let mut bound = 1.0e300
     if left >= 0 {
-      let difference = query[0] - self.rows.get(self.order[left], 0)
+      let difference = query[0] - rows.get(order[left], 0)
       bound = difference * difference
     }
     if right < n {
-      let difference = self.rows.get(self.order[right], 0) - query[0]
+      let difference = rows.get(order[right], 0) - query[0]
       let squared = difference * difference
       if squared < bound {
         bound = squared
       }
     }
-    if best_distances.length() == k && bound > best_distances[k - 1] {
+    if best_distances.length() == count && bound > best_distances[count - 1] {
       // Every row that is left is further away than the neighbours that were
       // found already.
       done = true
@@ -1003,20 +1123,20 @@ fn KnnModel::predict_row(self : KnnModel, query : Array[Double]) -> Double {
     } else if left < 0 {
       false
     } else {
-      let difference = query[0] - self.rows.get(self.order[left], 0)
-      let right_difference = self.rows.get(self.order[right], 0) - query[0]
+      let difference = query[0] - rows.get(order[left], 0)
+      let right_difference = rows.get(order[right], 0) - query[0]
       difference <= right_difference
     }
     let row = if take_left {
-      let visited = self.order[left]
+      let visited = order[left]
       left = left - 1
       visited
     } else {
-      let visited = self.order[right]
+      let visited = order[right]
       right = right + 1
       visited
     }
-    let distance = squared_distance(query, self.rows, row)
+    let distance = squared_distance(query, rows, row)
     // The neighbours are kept in the order of their distance.
     let mut position = best_distances.length()
     for i in 0..<best_distances.length() {
@@ -1025,23 +1145,16 @@ fn KnnModel::predict_row(self : KnnModel, query : Array[Double]) -> Double {
         break
       }
     }
-    if position < k {
+    if position < count {
       best_distances.insert(position, distance)
       best_rows.insert(position, row)
-      if best_distances.length() > k {
+      if best_distances.length() > count {
         let _ = best_distances.pop()
         let _ = best_rows.pop()
       }
     }
   }
-  let mut sum = 0.0
-  for row in best_rows {
-    sum = sum + self.targets[row]
-  }
-  if best_rows.length() == 0 {
-    return 0.0
-  }
-  sum / best_rows.length().to_double()
+  best_rows
 }
 
 ///|
@@ -1060,6 +1173,130 @@ fn squared_distance(
     total = total + difference * difference
   }
   total
+}
+
+///|
+/// A classification model of the nearest neighbours of a row.
+///
+/// This is the port of `dowhy.gcm.ml.classification.create_knn_classifier`,
+/// which wraps `sklearn.neighbors.KNeighborsClassifier` with its default
+/// parameters: five neighbours and the uniform weights.  The neighbours of a
+/// row are the rows of the training data with the smallest euclidean distance
+/// to it, and the class of the row is the class of the majority of its
+/// neighbours.
+pub struct KnnClassifier {
+  /// The number of the neighbours.
+  k : Int32
+  /// The rows of the training data.
+  rows : @utils.Matrix
+  /// The labels of the training data.
+  labels : Array[String]
+  /// The rows of the training data, sorted by their first column.
+  order : Array[Int32]
+  /// The classes of the model, in lexicographic order.
+  classes : Array[String]
+  /// Whether the model has been fitted.
+  fitted : Bool
+}
+
+///|
+/// An unfitted nearest neighbour classification model.
+pub fn KnnClassifier::new(k : Int32) -> KnnClassifier {
+  {
+    k,
+    rows: @utils.Matrix::zeros(0, 0),
+    labels: [],
+    order: [],
+    classes: [],
+    fitted: false,
+  }
+}
+
+///|
+/// Fit the model on the given labels.
+///
+/// The result is a new model; the model the fit is called on stays as it is.
+/// The fit of `sklearn.neighbors.KNeighborsClassifier` keeps the training data
+/// and computes nothing else.
+pub fn KnnClassifier::fit(
+  self : KnnClassifier,
+  x : @utils.Matrix,
+  y : Array[String],
+) -> KnnClassifier {
+  {
+    k: self.k,
+    rows: x.copy(),
+    labels: y.copy(),
+    order: sorted_row_order(x),
+    classes: sorted_distinct_labels(y),
+    fitted: true,
+  }
+}
+
+///|
+/// The probability of every class for every row of the design matrix.
+///
+/// The probability of a class is the share of the neighbours of the row that
+/// belong to it, the way the uniform weights of the neighbours of scikit-learn
+/// give every neighbour the same share of the vote.
+pub fn KnnClassifier::predict_probabilities(
+  self : KnnClassifier,
+  x : @utils.Matrix,
+) -> Array[Array[Double]] {
+  if !self.fitted {
+    abort("the classification model has not been fitted")
+  }
+  let out : Array[Array[Double]] = []
+  for i in 0..<x.nrows() {
+    out.push(self.probabilities_of_row(x.row(i)))
+  }
+  out
+}
+
+///|
+/// The predicted class of every row of the design matrix.
+pub fn KnnClassifier::predict(
+  self : KnnClassifier,
+  x : @utils.Matrix,
+) -> Array[String] {
+  let out : Array[String] = []
+  for probabilities in self.predict_probabilities(x) {
+    // The class of the row is the one of the largest probability.
+    let mut best = 0
+    for k = 1; k < probabilities.length(); k = k + 1 {
+      if probabilities[k] > probabilities[best] {
+        best = k
+      }
+    }
+    out.push(self.classes[best])
+  }
+  out
+}
+
+///|
+/// The probabilities of the classes for one row.
+fn KnnClassifier::probabilities_of_row(
+  self : KnnClassifier,
+  query : Array[Double],
+) -> Array[Double] {
+  let counts : Array[Double] = []
+  for _ in self.classes {
+    counts.push(0.0)
+  }
+  let neighbours = knn_neighbour_rows(self.rows, self.order, self.k, query)
+  for row in neighbours {
+    let index = index_of_class(self.classes, self.labels[row])
+    if index >= 0 {
+      counts[index] = counts[index] + 1.0
+    }
+  }
+  let total = neighbours.length().to_double()
+  if total > 0.0 {
+    for i in 0..<counts.length() {
+      counts[i] = counts[i] / total
+    }
+  }
+  counts
 }
 
 ///|

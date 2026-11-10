@@ -313,7 +313,9 @@ fn regression_model_name(model : PredictionModel) -> String {
 ///|
 /// The name of a classifier of the zoo of the selection.
 fn classification_model_name(model : ClassificationModel) -> String {
-  if model.degree() > 0 {
+  if model.is_nearest_neighbour() {
+    "the nearest neighbour classifier"
+  } else if model.degree() > 0 {
     "the polynomial logistic regression"
   } else {
     "the logistic regression"
@@ -412,7 +414,7 @@ fn log_loss(
   }
   let mut total = 0.0
   for i in 0..<n {
-    let index = index_of_label(classes, y_true[i])
+    let index = index_of_class(classes, y_true[i])
     let mut probability = if index >= 0 { probabilities[i][index] } else { 0.0 }
     if probability < LOG_LOSS_EPSILON {
       probability = LOG_LOSS_EPSILON
@@ -423,18 +425,6 @@ fn log_loss(
     total = total + -@math.ln(probability)
   }
   total / n.to_double()
-}
-
-///|
-/// The index of the label in the classes, or minus one when the label is not
-/// one of them.
-fn index_of_label(classes : Array[String], label : String) -> Int32 {
-  for i in 0..<classes.length() {
-    if classes[i] == label {
-      return i
-    }
-  }
-  -1
 }
 
 ///|

@@ -809,6 +809,44 @@ statsmodels / scikit-learn conventions are deliberate:
   port shuffles the rows with the generator of the `utils` package, whose seed
   is an argument of the functions, because the upstream uses the global
   generator of numpy and does not seed it.
+- The test of a linear relationship of the `gcm` package is the port of
+  `dowhy.gcm.auto.has_linear_relationship`. The upstream compares the linear
+  regression with the histogram gradient boosting regression for a continuous
+  target, and the logistic regression with the histogram gradient boosting
+  classifier for a categorical one; the port compares the ordinary least
+  squares regression with the nearest neighbour regression, and the logistic
+  regression with the nearest neighbour classifier. The nearest neighbour model
+  is the non-linear model of the port here as well: it is decisively worse than
+  the linear model on a linear relation and decisively better on a curved one,
+  while the polynomial regression is a numerical tie with the linear one on a
+  linear relation.
+- The split of the test of a linear relationship follows the split of
+  `sklearn.model_selection.train_test_split`: seventy percent of the rows are
+  the training part, the rows that are left are the test part and the part of a
+  categorical target is stratified. The share of a class in a stratified split
+  is the share of its rows, the shares are rounded down and the rows that are
+  left over go to the classes whose share has the largest remainder, the way
+  `sklearn.model_selection._approximate_mode` gives them; the upstream picks
+  the classes of the largest remainder at random when several of them have the
+  same remainder and the port picks them in the order of the classes. A class
+  that holds a single row is duplicated before the split, the way the upstream
+  duplicates it, so that the stratified split can put one of its rows in each
+  part.
+- The encoder of the test of a linear relationship is the one of
+  `dowhy.gcm.util.general.auto_fit_encoders`: the one-hot encoder when the
+  data holds at most seven categories and the CatBoost encoder otherwise. The
+  CatBoost encoder of the `gcm` package is the port of
+  `dowhy.gcm.util.catboost_encoder.CatBoostEncoder`: the value of a category is
+  the mean of the target of its rows and the mean of the target of the whole
+  column, and a category that holds a single row takes the mean of the whole
+  column.
+- The summary of the automatic assignment of the `gcm` package reproduces the
+  text of `dowhy.gcm.auto.AutoAssignmentSummary.__str__` character for
+  character: the name of the distribution of a root node is `Empirical
+  Distribution`, the name of a mechanism is `AdditiveNoiseModel using ...`,
+  `Discrete AdditiveNoiseModel using ...` or `Classifier FCM based on ...`,
+  and the relation of a discrete node is introduced by `This represents the
+  discrete causal relationship as`.
 - The Gaussian mixture of the `gcm` package is fitted with the mean field
   variational update of Bishop: the responsibilities of the components use the
   expectations of the log weights, of the log determinant of the precisions and
@@ -833,7 +871,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations |
 | `overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
-| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the automatic assignment of the mechanisms with the selection of the model by cross validation, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
+| `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the prediction models, the causal mechanisms, the automatic assignment of the mechanisms with the selection of the model by cross validation and the test of a linear relationship, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
 | `datasets` | `dowhy.datasets` and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
@@ -878,7 +916,12 @@ README makes, so they are tracked in the repository:
   the model the upstream picks and the score of every model of its zoo. It is
   the evidence for the model selection of the `gcm` package: the upstream
   shuffles the rows of its cross validation with the global generator of numpy
-  and does not seed it, so the script prints the result of several seeds.
+  and does not seed it, so the script prints the result of several seeds. The
+  script also runs the upstream `has_linear_relationship` on the fixtures of
+  the tests of the port and prints its decisions -- they are the evidence for
+  the decisions of the port -- and it prints the text of the summary of the
+  upstream, so that the format of the summary of the port can be compared with
+  it character for character.
 - `check_dataset_columns.py` prints the columns of the upstream
   `linear_dataset`, which is how the column count of the `datasets` package
   was pinned.
