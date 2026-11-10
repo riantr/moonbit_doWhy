@@ -16,6 +16,11 @@
 /// `tests/gcm/test_anomaly_attribution.py` asserts and the numbers of the
 /// upstream reference, with a tolerance that covers the difference of the two
 /// generators.
+///
+/// The cases the port does not mirror are the two of the upstream that
+/// attribute the anomalies of a sample without a causal model, because the
+/// scorer of the port scores one variable at a time and the scorer of the
+/// upstream scores a sample of several variables at once.
 
 ///|
 /// The number of the rows of the fixture of the causal chain.
@@ -34,7 +39,7 @@ fn anomaly_chain_fixture() -> (
   @api.DataFrame,
   @gcm.ProbabilisticCausalModel,
 ) {
-  let rng = anomaly_rng(4)
+  let rng = anomaly_rng(1)
   let x0 = anomaly_normals(rng, ANOMALY_NUM_ROWS_CHAIN)
   let x1 = anomaly_sum(x0, anomaly_normals(rng, ANOMALY_NUM_ROWS_CHAIN))
   let x2 = anomaly_sum(x1, anomaly_normals(rng, ANOMALY_NUM_ROWS_CHAIN))
@@ -119,8 +124,26 @@ fn anomaly_assert_contribution(
   index : Int32,
   expected : Double,
 ) -> Unit raise {
+  anomaly_assert_contribution_within(attribution, node, index, expected, 0.05)
+}
+
+///|
+/// The contribution of the given node of the given attribution, compared with
+/// the expected number of the upstream reference, with the given tolerance.
+///
+/// The tolerance is wider for the case of the non-trivial graph, because the
+/// contributions of that case depend on the permutations of the noise of the
+/// distribution, which the port draws with its own generator and the upstream
+/// draws with the global generator of numpy.
+fn anomaly_assert_contribution_within(
+  attribution : Map[String, Array[Double]],
+  node : String,
+  index : Int32,
+  expected : Double,
+  tolerance : Double,
+) -> Unit raise {
   let actual = attribution.get(node).unwrap()[index]
-  assert_true((actual - expected).abs() <= 0.05)
+  assert_true((actual - expected).abs() <= tolerance)
 }
 
 ///|
@@ -246,4 +269,178 @@ test "given a causal chain with linear relationships when attributing the anomal
       (anomaly_sum_of(attribution, i) - 0.49990001999600053).abs() <= 0.001,
     )
   }
+}
+
+///|
+/// The number of the rows of the fixture of the non-trivial graph.
+const ANOMALY_NUM_ROWS_NON_LINEAR : Int32 = 10000
+
+///|
+/// The squares of the given samples.
+fn anomaly_squared(values : Array[Double]) -> Array[Double] {
+  let out : Array[Double] = []
+  for value in values {
+    out.push(value * value)
+  }
+  out
+}
+
+///|
+/// The given number of the samples of the uniform distribution on `[-5, 5)`.
+fn anomaly_uniforms_five(rng : @utils.Random, count : Int32) -> Array[Double] {
+  let out : Array[Double] = []
+  for _ in 0..<count {
+    out.push(-5.0 + 10.0 * rng.next_double())
+  }
+  out
+}
+
+///|
+/// The training data, the anomaly data and the causal model of the fixture of
+/// the non-trivial graph.
+///
+/// The fixture is the one of the upstream test file
+/// `tests/gcm/test_anomaly_attribution.py`: the node `X1` is the square of
+/// `X0` with a noise, the node `X2` is uniform and the node `X3` is the square
+/// of the sum of `X1` and `X2` with a noise.
+///
+/// The upstream sets the mechanisms of the two nodes whose relation is
+/// non-linear to a model that computes the square of the sum of the parents,
+/// and it assigns the mechanisms of the other two nodes. The port expresses
+/// the same model with its equation parser, so that the mechanism of a node is
+/// the relation of the fixture and not a fit of it.
+fn anomaly_non_linear_fixture() -> (
+  @api.DataFrame,
+  @api.DataFrame,
+  @gcm.ProbabilisticCausalModel,
+) {
+  let rng = anomaly_rng(2)
+  let x0 = anomaly_normals(rng, ANOMALY_NUM_ROWS_NON_LINEAR)
+  let noise_one = anomaly_normals(rng, ANOMALY_NUM_ROWS_NON_LINEAR)
+  let x1 = anomaly_sum(anomaly_squared(x0), noise_one)
+  let x2 = anomaly_uniforms_five(rng, ANOMALY_NUM_ROWS_NON_LINEAR)
+  let noise_three = anomaly_normals(rng, ANOMALY_NUM_ROWS_NON_LINEAR)
+  let x3 = anomaly_sum(anomaly_squared(anomaly_sum(x1, x2)), noise_three)
+  let training_data = anomaly_frame([
+    ("X0", x0),
+    ("X1", x1),
+    ("X2", x2),
+    ("X3", x3),
+  ])
+  let anomaly_data = anomaly_frame([
+    ("X0", [10.0, 10.0, 0.0]),
+    ("X1", [100.0, 110.0, 0.0]),
+    ("X2", [0.0, 0.0, 10.0]),
+    ("X3", [10000.0, 12100.0, 110.0]),
+  ])
+  // The mechanism of the node `X1` is the square of its parent, and the
+  // mechanism of the node `X3` is the square of the sum of its parents. The
+  // upstream sets them to a model that computes the square of the sum of the
+  // parents, and the port expresses the same model with its equation parser.
+  let model = @gcm.create_causal_model_from_equations(
+    "X0 = empirical()\n" +
+    "X1 = X0 * X0 + empirical()\n" +
+    "X2 = empirical()\n" +
+    "X3 = (X1 + X2) * (X1 + X2) + empirical()\n",
+  )
+  let _ = @gcm.assign_causal_mechanisms(
+    model,
+    training_data,
+    @gcm.AssignmentQuality::good(),
+    false,
+  )
+  @gcm.fit(model, training_data)
+  (training_data, anomaly_data, model)
+}
+
+///|
+/// test "given a non-trivial graph with non-linear relationships when attributing the anomalies with the information theoretic score then report the root cause"
+///
+/// This is the case of the upstream
+/// `test_given_non_trivial_graph_with_nonlinear_relationships_when_attribute_anomaly_scores_with_it_score_then_returns_qualitatively_correct_results`.
+test "given a non-trivial graph with non-linear relationships when attributing the anomalies with the information theoretic score then report the root cause" {
+  let (training_data, anomaly_data, model) = anomaly_non_linear_fixture()
+  let attribution = @gcm.attribute_anomalies(
+    model,
+    "X3",
+    anomaly_data,
+    @gcm.AnomalyScorer::median_cdf_quantile(),
+    false,
+    ANOMALY_NUM_ROWS_NON_LINEAR,
+    anomaly_shapley_config(),
+    anomaly_rng(8),
+  )
+  // The first sample is anomalous in X0 only.
+  assert_true(attribution.get("X0").unwrap()[0] > 8.0)
+  assert_true(attribution.get("X1").unwrap()[0] < 1.0)
+  assert_true(attribution.get("X2").unwrap()[0] < 1.0)
+  assert_true(attribution.get("X3").unwrap()[0] < 1.0)
+  // The second sample is anomalous in X0 and in X1.
+  assert_true(attribution.get("X0").unwrap()[1] > 4.0)
+  assert_true(attribution.get("X1").unwrap()[1] > 1.0)
+  assert_true(attribution.get("X2").unwrap()[1] < 1.0)
+  assert_true(attribution.get("X3").unwrap()[1] < 1.0)
+  // The third sample is anomalous in X2 and in X3.
+  assert_true(attribution.get("X0").unwrap()[2] < 1.0)
+  assert_true(attribution.get("X1").unwrap()[2] < 1.0)
+  assert_true(attribution.get("X2").unwrap()[2] > 1.0)
+  assert_true(attribution.get("X3").unwrap()[2] > 1.0)
+  // The sum of the contributions is the anomaly score of the target. The
+  // tolerance is the one of the upstream, because the port and the upstream
+  // reconstruct the distribution of the target from the noise of its
+  // mechanisms, and the noise of the distribution is drawn from the empirical
+  // distribution of the residuals.
+  for i in 0..<3 {
+    let expected = anomaly_total_score(
+      training_data,
+      anomaly_data.numeric("X3")[i],
+    )
+    assert_true((anomaly_sum_of(attribution, i) - expected).abs() <= 0.6)
+  }
+  // The contributions are the numbers of the upstream reference.
+  anomaly_assert_contribution_within(
+    attribution, "X0", 0, 9.628884479119142, 0.6,
+  )
+  anomaly_assert_contribution_within(
+    attribution, "X0", 1, 7.61613130313375, 0.6,
+  )
+  anomaly_assert_contribution_within(
+    attribution, "X0", 2, -1.788514155267602, 0.6,
+  )
+  anomaly_assert_contribution_within(
+    attribution, "X1", 0, -0.0915510240556759, 0.6,
+  )
+  anomaly_assert_contribution_within(
+    attribution, "X1", 1, 2.0595935356086215, 0.6,
+  )
+  anomaly_assert_contribution_within(
+    attribution, "X1", 2, -0.5465142067199505, 0.6,
+  )
+  anomaly_assert_contribution_within(
+    attribution, "X2", 0, 0.2746530721670277, 0.6,
+  )
+  anomaly_assert_contribution_within(
+    attribution, "X2", 1, 0.04471066443244667, 0.6,
+  )
+  anomaly_assert_contribution_within(
+    attribution, "X2", 2, 5.534849931917564, 0.6,
+  )
+  anomaly_assert_contribution_within(
+    attribution, "X3", 0, 0.09155102405567593, 0.6,
+  )
+  anomaly_assert_contribution_within(
+    attribution, "X3", 1, 0.18310204811135183, 0.6,
+  )
+  anomaly_assert_contribution_within(
+    attribution, "X3", 2, 1.6997696754106988, 0.6,
+  )
+  // The sum of the contributions is the total of the upstream reference. The
+  // first two samples are in the tail of the distribution of the target, and
+  // the third one is not, so their totals are different.
+  for i in 0..<2 {
+    assert_true(
+      (anomaly_sum_of(attribution, i) - 9.90353755128617).abs() <= 0.4,
+    )
+  }
+  assert_true((anomaly_sum_of(attribution, 2) - 4.89959124534071).abs() <= 0.6)
 }

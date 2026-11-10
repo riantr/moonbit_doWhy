@@ -858,6 +858,15 @@ statsmodels / scikit-learn conventions are deliberate:
   matrices of the port hold numbers only, so the encoding happens at the call
   site of the test. The p-values of the port and of the upstream differ by less than
   `5e-12` on the categorical fixture of the test.
+- The mechanism of a node of the `gcm` package can be the model of an equation
+  of the port, which is the relation of the node itself and not a fit of it.
+  The upstream sets such a mechanism to a model of its own, and the port
+  expresses the same model with its equation parser. The difference matters
+  outside of the rows of the training data: a fitted polynomial model of the
+  second degree is the same relation on the rows of the training data, but its
+  prediction at an anomaly sample, which is far outside of them, is off by
+  about `6.6`, and that error moves the contribution of the target of the
+  attribution of the anomalies from `9.6` to `4.1`.
 - The summary of the automatic assignment of the `gcm` package reproduces the
   text of `dowhy.gcm.auto.AutoAssignmentSummary.__str__` character for
   character: the name of the distribution of a root node is `Empirical
@@ -1067,7 +1076,12 @@ README makes, so they are tracked in the repository:
   score of every anomaly sample, with the information theoretic score and with
   the feature relevance, and the total anomaly score -- with the upstream
   `dowhy.gcm.anomaly.attribute_anomalies` code, which is where the expectations
-  of the tests of the layer come from. The attribution permutes the samples of
+  of the tests of the layer come from. It computes the numbers of the non-trivial
+  graph, whose relations are non-linear, as well. The constructor of
+  `InvertibleStructuralCausalModel` of the upstream imports the module
+  `dowhy.causal_model`, which pulls in the whole graph learning stack of the
+  upstream, so the module is stubbed out with a placeholder class, the way the
+  script of the validation layer does it. The attribution permutes the samples of
   the distribution with the global generator of numpy, so its numbers depend on
   that generator and are only close to the numbers of the port, which draws its
   permutations from the generator it is given. The sum of the contributions does

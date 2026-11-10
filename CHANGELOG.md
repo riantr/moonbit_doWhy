@@ -2639,3 +2639,45 @@ categorical cases of the kernel based independence test.
   p-value, and two runs with another seed give another one.
 
 [0.0.51]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.51
+
+## [0.0.52] - 2026-11-12
+
+The attribution of the anomalies with a non-linear mechanism.
+
+### Added
+
+- the case of the upstream test file `tests/gcm/test_anomaly_attribution.py`
+  that attributes the anomalies of a graph whose relations are non-linear, in
+  `src/gcm/anomaly_attribution_test.mbt`: the node `X1` is the square of `X0`
+  with a noise, the node `X2` is uniform and the node `X3` is the square of the
+  sum of `X1` and `X2` with a noise, and each of the three anomaly samples is
+  attributed to its root causes.
+- the numbers of the upstream on the fixture of the non-trivial graph in
+  `_verify/gcm_anomaly_attribution_reference.py`.
+
+### Fixed
+
+- the reference script of the attribution of the anomalies runs again. The
+  constructor of `InvertibleStructuralCausalModel` of the upstream imports the
+  module `dowhy.causal_model`, which pulls in the whole graph learning stack
+  of the upstream, so the module is stubbed out with a placeholder class, the
+  way the reference script of the validation layer does it.
+
+### Notes
+
+- The upstream sets the mechanisms of the two nodes whose relation is
+  non-linear to a model that computes the square of the sum of the parents.
+  The port expresses the same model with its equation parser, so that the
+  mechanism of a node is the relation of the fixture and not a fit of it. A
+  fitted polynomial model of the second degree is the same relation on the rows
+  of the training data, but its prediction at the anomaly samples, which are
+  far outside of the training data, is off by about `6.6`, and that error
+  moves the contribution of the target of the first sample from `9.6` to `4.1`.
+- The seeds of the fixtures of the attribution of the anomalies are the ones of
+  the reference script now, so that the fixtures of the port and the fixtures
+  of the script are the same numbers. The contributions of the port and of the
+  upstream are close to each other and not equal, because the permutations of
+  the noise of the distribution come from the generator of the port and from
+  the global generator of numpy.
+
+[0.0.52]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.52

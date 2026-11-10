@@ -1,16 +1,18 @@
 """The upstream reference of the attribution of the anomalies of `dowhy.gcm`.
 
 The script runs the upstream `dowhy.gcm.anomaly.attribute_anomalies` on the
-fixture of the causal chain of the upstream test file
-`tests/gcm/test_anomaly_attribution.py` and prints the numbers the MoonBit port
-has to reproduce:
+fixture of the causal chain and on the fixture of the non-trivial graph of the
+upstream test file `tests/gcm/test_anomaly_attribution.py` and prints the
+numbers the MoonBit port has to reproduce:
 
   * the contribution of every upstream node to the anomaly score of every
     anomaly sample, with the information theoretic score,
   * the contribution of every upstream node to the deviation of the anomaly
     score, with the feature relevance,
   * the total anomaly score of every anomaly sample, which is the sum of the
-    contributions.
+    contributions,
+  * the contribution of every upstream node to the anomaly score of every
+    anomaly sample of the non-trivial graph, whose relations are non-linear.
 
 The fixtures are the ones of the upstream test file, with the draws of the
 upstream replaced by the draws of the generator of the port. The generator of
@@ -47,6 +49,7 @@ import sys
 import networkx as nx
 import numpy as np
 import pandas as pd
+import types
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -60,6 +63,10 @@ SEED = 2025
 
 # The number of the rows of the fixture of the causal chain.
 NUM_ROWS = 5000
+
+# The number of the rows of the fixture of the non-trivial graph. The upstream
+# draws ten thousand of them.
+NUM_ROWS_NON_LINEAR = 10000
 
 # The upstream modules of the layer.
 ML = None
@@ -129,6 +136,24 @@ def register_missing_modules() -> None:
     upstream_gcm._PATHS["dowhy.gcm.util"] = "gcm/util/__init__.py"
 
 
+def stub_causal_model() -> None:
+    """Stubs the upstream `dowhy.causal_model` with a placeholder class.
+
+    The constructor of `InvertibleStructuralCausalModel` imports the module and
+    uses its `CausalModel` class for an `isinstance` check of the graph it is
+    given. The graph of the reference is a `networkx` graph, so the check is
+    false with the placeholder class as well. The real module is not loaded,
+    because it pulls in the whole graph learning stack of the upstream.
+    """
+    module = types.ModuleType("dowhy.causal_model")
+
+    class CausalModel:  # noqa: D101
+        """The placeholder of the class the upstream checks the graph against."""
+
+    module.CausalModel = CausalModel  # type: ignore[attr-defined]
+    sys.modules["dowhy.causal_model"] = module
+
+
 def expose_upstream_packages() -> None:
     """Points the stubbed packages at the real directories of the upstream.
 
@@ -154,6 +179,7 @@ def load_upstream() -> None:
 
     register_missing_modules()
     upstream_gcm._stub_packages()
+    stub_causal_model()
     expose_upstream_packages()
 
     ML = load("dowhy.gcm.ml")
@@ -220,6 +246,52 @@ def causal_chain_fixture() -> tuple[object, pd.DataFrame, pd.DataFrame]:
     return causal_model, training_data, anomaly_data
 
 
+def non_linear_fixture() -> tuple[object, pd.DataFrame, pd.DataFrame]:
+    """The causal model, the training data and the anomaly data of the fixture.
+
+    The graph has four nodes: the node `X1` is the square of `X0` with a
+    noise, the node `X2` is uniform and the node `X3` is the square of the sum
+    of `X1` and `X2` with a noise.
+    """
+    class NonLinearModel(ML.PredictionModel):
+        """The non-linear model of the upstream test file.
+
+        The model is the square of the sum of its parents, which is the
+        relation of the fixture of the non-trivial graph. It needs no fit,
+        because it is the relation itself.
+        """
+
+        def fit(self, X: np.ndarray, Y: np.ndarray) -> None:
+            pass
+
+        def predict(self, X: np.ndarray) -> np.ndarray:
+            return (np.sum(X, axis=1) ** 2).reshape(-1, 1)
+
+        def clone(self) -> "NonLinearModel":
+            return NonLinearModel()
+
+    rng = fixture_rng(2)
+    x0 = rng.normals(NUM_ROWS_NON_LINEAR)
+    x1 = x0**2 + rng.normals(NUM_ROWS_NON_LINEAR)
+    x2 = np.array([-5.0 + 10.0 * rng.next_double() for _ in range(NUM_ROWS_NON_LINEAR)])
+    x3 = (x1 + x2) ** 2 + rng.normals(NUM_ROWS_NON_LINEAR)
+    training_data = pd.DataFrame({"X0": x0, "X1": x1, "X2": x2, "X3": x3})
+    anomaly_data = pd.DataFrame(
+        {
+            "X0": np.array([10.0, 10.0, 0.0]),
+            "X1": np.array([100.0, 110.0, 0.0]),
+            "X2": np.array([0.0, 0.0, 10.0]),
+            "X3": np.array([10000.0, 12100.0, 110.0]),
+        }
+    )
+    causal_model = CAUSAL_MODELS.InvertibleStructuralCausalModel(
+        nx.DiGraph([("X0", "X1"), ("X1", "X3"), ("X2", "X3")])
+    )
+    causal_model.set_causal_mechanism("X1", MECHANISMS.AdditiveNoiseModel(NonLinearModel()))
+    causal_model.set_causal_mechanism("X3", MECHANISMS.AdditiveNoiseModel(NonLinearModel()))
+    return causal_model, training_data, anomaly_data
+
+
 def total_anomaly_score(training_data: pd.DataFrame, anomaly_sample: np.ndarray) -> float:
     """The anomaly score of the target, like the upstream test computes it."""
     distribution_samples = training_data["X3"].to_numpy()
@@ -271,6 +343,30 @@ def main() -> None:
     for i in range(3):
         total = sum(scores[node][i] for node in scores)
         show(f"relevance.total[{i}]", total)
+
+    print("== the attribution of the non-trivial graph with the information theoretic score ==")
+    non_linear_model, non_linear_data, non_linear_anomalies = non_linear_fixture()
+    np.random.seed(SEED)
+    AUTO.assign_causal_mechanisms(
+        non_linear_model,
+        non_linear_data,
+        AUTO.AssignmentQuality.GOOD,
+        override_models=False,
+    )
+    FITTING.fit(non_linear_model, non_linear_data)
+    scores = ANOMALY.attribute_anomalies(
+        non_linear_model,
+        "X3",
+        non_linear_anomalies,
+        anomaly_scorer=SCORERS.MedianCDFQuantileScorer(),
+        num_distribution_samples=NUM_ROWS_NON_LINEAR,
+        attribute_mean_deviation=False,
+    )
+    for node in sorted(scores):
+        show_list(f"non_linear[{node}]", scores[node])
+    for i in range(3):
+        total = sum(scores[node][i] for node in scores)
+        show(f"non_linear.total[{i}]", total)
 
 
 if __name__ == "__main__":
