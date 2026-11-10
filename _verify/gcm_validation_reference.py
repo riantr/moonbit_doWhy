@@ -220,6 +220,11 @@ class PortRandom:
         u1 = u1 if u1 >= 1e-12 else 1e-12
         return math.sqrt(-2.0 * math.log(u1)) * math.cos(2.0 * math.pi * u2)
 
+    def next_int(self, bound: int) -> int:
+        if bound <= 0:
+            return 0
+        return self.next_u64() % bound
+
 
 def categorical_kernel_fixture() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """The categorical fixture of the kernel test of the port.
@@ -247,6 +252,96 @@ def categorical_kernel_fixture() -> tuple[np.ndarray, np.ndarray, np.ndarray, np
         np.array(z),
         np.array(r),
     )
+
+
+RANDOMISED_SEED = 2026
+RANDOMISED_ROWS = 200
+RANDOMISED_FEATURES = 10
+RANDOMISED_PERMUTATIONS = 20
+RANDOMISED_RUNS = 5
+
+
+def randomised_conditional_fixture() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """The fixture of the randomised tests of the port with two continuous variables.
+
+    The two variables are the exponential of the same normal deviate plus a
+    uniform deviate, so they are dependent, and the third one is a normal
+    deviate that is independent of them.
+    """
+    rng = PortRandom(RANDOMISED_SEED)
+    x: list[float] = []
+    y: list[float] = []
+    z: list[float] = []
+    w: list[float] = []
+    for _ in range(RANDOMISED_ROWS):
+        value = rng.next_normal()
+        x.append(math.exp(value + rng.next_double()))
+        y.append(math.exp(value + rng.next_double()))
+        z.append(value)
+        w.append(rng.next_normal())
+    return (
+        np.array(x).reshape(-1, 1),
+        np.array(y).reshape(-1, 1),
+        np.array(z).reshape(-1, 1),
+        np.array(w).reshape(-1, 1),
+    )
+
+
+def randomised_dependent_fixture() -> tuple[np.ndarray, np.ndarray]:
+    """The fixture of the randomised tests of the port with two dependent variables."""
+    rng = PortRandom(RANDOMISED_SEED)
+    x: list[float] = []
+    y: list[float] = []
+    for _ in range(RANDOMISED_ROWS):
+        value = rng.next_normal()
+        x.append(math.exp(value + rng.next_double()))
+        y.append(math.exp(value + rng.next_double()))
+    return (np.array(x).reshape(-1, 1), np.array(y).reshape(-1, 1))
+
+
+def randomised_independent_fixture() -> tuple[np.ndarray, np.ndarray]:
+    """The fixture of the randomised tests of the port with two independent variables."""
+    rng = PortRandom(RANDOMISED_SEED)
+    x: list[float] = []
+    y: list[float] = []
+    for _ in range(RANDOMISED_ROWS):
+        x.append(rng.next_normal())
+        y.append(math.exp(rng.next_double()))
+    return (np.array(x).reshape(-1, 1), np.array(y).reshape(-1, 1))
+
+
+def randomised_categorical_fixture() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """The fixture of the randomised tests of the port with a categorical variable.
+
+    The continuous variable is a normal deviate, the categorical one holds the
+    class of its sign, and the third one holds the number of the class with a
+    normal deviate.
+    """
+    rng = PortRandom(RANDOMISED_SEED)
+    x: list[float] = []
+    y: list[float] = []
+    z: list[str] = []
+    for _ in range(RANDOMISED_ROWS):
+        value = rng.next_normal()
+        x.append(value)
+        if value > 0.0:
+            z.append("Class 1")
+            y.append(0.0 + rng.next_normal())
+        else:
+            z.append("Class 2")
+            y.append(1.0 + rng.next_normal())
+    return (np.array(x).reshape(-1, 1), np.array(y).reshape(-1, 1), np.array(z))
+
+
+def randomised_categorical_independent_fixture() -> tuple[np.ndarray, np.ndarray]:
+    """The fixture of the randomised tests of the port with an independent category."""
+    rng = PortRandom(RANDOMISED_SEED)
+    x: list[float] = []
+    y: list[str] = []
+    for _ in range(RANDOMISED_ROWS):
+        x.append(rng.next_normal())
+        y.append("Class 1" if rng.next_int(2) == 0 else "Class 2")
+    return (np.array(x).reshape(-1, 1), np.array(y))
 
 
 def print_validation_summary(summary: dict) -> None:
@@ -355,6 +450,24 @@ def main() -> None:
 
     kernel_based = independence.kernel_based
 
+    def randomised(
+        x: np.ndarray, y: np.ndarray, z: np.ndarray | None = None
+    ) -> float:
+        return float(
+            independence.approx_kernel_based(
+                x,
+                y,
+                z,
+                num_random_features_X=RANDOMISED_FEATURES,
+                num_random_features_Y=RANDOMISED_FEATURES,
+                num_random_features_Z=RANDOMISED_FEATURES,
+                num_permutations=RANDOMISED_PERMUTATIONS,
+                use_bootstrap=True,
+                bootstrap_num_runs=RANDOMISED_RUNS,
+                bootstrap_num_samples=RANDOMISED_ROWS,
+            )
+        )
+
     fixtures = gen_validation_testdata.build_fixtures()
 
     print(f"SEED = {SEED}")
@@ -440,6 +553,39 @@ def main() -> None:
     show("p(X,R)", kernel_based(x, r))
     show("p(X,Z)", kernel_based(x, z))
 
+
+    # ------------------------------------------------------------------
+    # F. The p-values of the randomised independence test of the fixtures
+    # of the port.
+    #
+    # The randomised test is the one of Strobl, Zhang and Visweswaran. The
+    # upstream draws its randomness from the global generator of numpy, and
+    # the port draws it from the generator of the `utils` package, so the two
+    # p-values are different numbers that agree on the decision.
+    # ------------------------------------------------------------------
+    x, y, z, w = randomised_conditional_fixture()
+    np.random.seed(SEED)
+    print("RANDOMISED_TEST conditional")
+    show("p(X,Y|Z)", randomised(x, y, z))
+    show("p(X,Y|W)", randomised(x, y, w))
+    x, y = randomised_dependent_fixture()
+    np.random.seed(SEED)
+    print("RANDOMISED_TEST dependent")
+    show("p(X,Y)", randomised(x, y))
+    x, y = randomised_independent_fixture()
+    np.random.seed(SEED)
+    print("RANDOMISED_TEST independent")
+    show("p(X,Y)", randomised(x, y))
+    x, y, z = randomised_categorical_fixture()
+    np.random.seed(SEED)
+    print("RANDOMISED_TEST categorical")
+    show("p(X,Y|Z)", randomised(x, y, z))
+    show("p(X,Z|Y)", randomised(x, z, y))
+    show("p(X,Z)", randomised(x, z))
+    x, y = randomised_categorical_independent_fixture()
+    np.random.seed(SEED)
+    print("RANDOMISED_TEST categorical independent")
+    show("p(X,Y)", randomised(x, y))
 
 if __name__ == "__main__":
     main()

@@ -2843,3 +2843,58 @@ uniform distribution of the package.
   files that expect one are ported as predicates.
 
 [0.0.55]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.55
+
+## [0.0.56] - 2026-11-12
+
+The randomised independence tests of the `gcm` package.
+
+### Added
+
+- the randomised independence test of the `gcm` package, in `src/gcm/kernel.mbt`:
+  the new public function `approx_kernel_based` is the port of
+  `dowhy.gcm.independence_test.kernel.approx_kernel_based`, which is the
+  randomised independence test of Strobl, Zhang and Visweswaran. The samples of
+  the two variables are mapped into the feature space of the Gaussian kernel
+  with the Nystroem method, the columns of the two feature matrices are
+  compared with their covariances, and the p-value is the fraction of the
+  permutations of the rows of the first variable whose statistic is not larger
+  than the statistic of the sample itself. The conditional test regresses the
+  features of the two variables on the features of the conditioning variable
+  before the permutation test.
+- the eleven cases of the upstream test file
+  `tests/gcm/independence_test/test_kernel.py` that use the randomised test, in
+  `src/gcm/kernel_test.mbt`: the two continuous variables that are independent
+  given the third one and the two that are dependent given a third one that is
+  independent of them, the categorical variable that is independent given the
+  third one and the one that is dependent given it, the two continuous
+  variables that are independent and the two that are dependent, the
+  categorical variable that is independent of the continuous one and the one
+  that is dependent on it, the determinism of the two tests for a given seed,
+  and the constant data.
+- the numbers of the upstream on the fixtures of the port in
+  `_verify/gcm_validation_reference.py`: the section `RANDOMISED_TEST` runs the
+  upstream on the very rows of the port. The upstream does not reject the two
+  variables that are independent given the third one (`0.567`) and it rejects
+  the two that are dependent given a third one that is independent of them
+  (`0.0`), and it makes the same decision as the port on every one of the
+  cases.
+
+### Notes
+
+- The upstream draws its randomness from the global generator of numpy and the
+  port draws it from the generator of the `utils` package, so the p-value of
+  the port and the p-value of the upstream are different numbers that agree on
+  the decision the tests assert.
+- The inverse of the covariance of the features of the conditioning variable is
+  computed with the Gauss-Jordan elimination of the `utils` package, like the
+  inverse of the regressor of the conditional kernel based test, and not with
+  the Cholesky factorisation of the upstream.
+- The fixtures of the port hold two hundred rows and the randomised test uses
+  ten random features, twenty permutations and five runs of its bootstrap,
+  where the upstream draws a thousand rows and uses fifty random features, a
+  hundred permutations and ten runs: the randomised test evaluates the
+  covariances of the columns of the features of the kernel space for every one
+  of its permutations, and the tests of the port have to stay within the time
+  the gate of the port needs on every backend.
+
+[0.0.56]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.56

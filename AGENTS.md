@@ -280,6 +280,20 @@ statsmodels / scikit-learn conventions are deliberate:
   eigenvalue is the shift of `1e-3` — and its eigenvalues are clustered, so
   the pseudo inverse divides by them and turns the absolute error of an eigen
   decomposition into a relative error of the inverse.
+- The randomised independence test of the `gcm` package is the port of
+  `dowhy.gcm.independence_test.kernel.approx_kernel_based`, which is the
+  randomised independence test of Strobl, Zhang and Visweswaran. The samples are
+  mapped into the feature space of the Gaussian kernel with the Nystroem method,
+  whose precision is the inverse of the median of the distances between the rows
+  -- the median trick -- and the normalisation of the transformer inverts the
+  square root of the kernel matrix of the basis points, like the normalisation
+  of the Nystroem transformer of the regression based test. The inverse of the
+  covariance of the features of the conditioning variable is computed with the
+  Gauss-Jordan elimination of the `utils` package, like the inverse of the
+  regressor of the conditional kernel based test, and not with the Cholesky
+  factorisation of the upstream. The upstream draws its randomness from the
+  global generator of numpy, so the p-value of the port and the p-value of the
+  upstream are different numbers that agree on the decision the tests assert.
 - The false discovery rate control of the `gcm` package is the
   Benjamini-Hochberg **step-up** procedure of
   `statsmodels.stats.multitest.multipletests(method="fdr_bh")`: the adjusted

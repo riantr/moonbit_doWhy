@@ -634,3 +634,327 @@ fn kernel_select_rows(
   }
   @utils.Matrix::from_rows(rows)
 }
+
+///|
+/// The p-value of the randomised independence test of X and Y.
+///
+/// This is the port of `dowhy.gcm.independence_test.kernel.approx_kernel_based`
+/// and of its helper `_rit`, which is the randomised independence test of
+/// Strobl, Zhang and Visweswaran.
+///
+/// The samples of the two variables are mapped into the feature space of the
+/// Gaussian kernel with the Nystroem method, and the columns of the two
+/// feature matrices are compared with their covariances. The statistic of the
+/// test is the number of the samples times the sum of the squares of those
+/// covariances, and the p-value is the fraction of the permutations of the
+/// rows of the first variable whose statistic is not larger than the statistic
+/// of the sample itself.
+///
+/// The columns that hold a single value are removed before the test, and the
+/// p-value is `1.0` when one of the two variables has no column left. The
+/// number of the runs of the bootstrap and the number of the samples of a run
+/// are the two parameters that the upstream calls `bootstrap_num_runs` and
+/// `bootstrap_num_samples`.
+///
+/// The upstream draws its randomness from the global generator of numpy and it
+/// runs the runs of the bootstrap in a process pool; the port draws from the
+/// generator it is given and runs the runs one after another, so the p-value
+/// of the port and the one of the upstream are different numbers that agree
+/// on the decision the tests assert.
+pub fn approx_kernel_based(
+  x : @utils.Matrix,
+  y : @utils.Matrix,
+  z : @utils.Matrix?,
+  num_random_features_x : Int32,
+  num_random_features_y : Int32,
+  num_random_features_z : Int32,
+  num_permutations : Int32,
+  num_runs : Int32,
+  num_max_samples_per_run : Int32,
+  scale_data : Bool,
+  p_value_adjust_func : (Array[Double]) -> Double,
+  rng : @utils.Random,
+) -> Double {
+  let reduced_x = kernel_remove_constant_columns(x)
+  let reduced_y = kernel_remove_constant_columns(y)
+  if reduced_x.ncols() == 0 || reduced_y.ncols() == 0 {
+    // One of the two variables is constant, so the two cannot be dependent.
+    return 1.0
+  }
+  let conditioning = match z {
+    Some(value) => {
+      let reduced = kernel_remove_constant_columns(value)
+      if reduced.ncols() == 0 {
+        None
+      } else {
+        Some(reduced)
+      }
+    }
+    None => None
+  }
+  // The data is scaled before the runs of the bootstrap, like the upstream does
+  // it, and the features of the kernel space are scaled inside every run.
+  let scaled_x = if scale_data { scale_columns(reduced_x) } else { reduced_x }
+  let scaled_y = if scale_data { scale_columns(reduced_y) } else { reduced_y }
+  let scaled_z = match conditioning {
+    Some(value) => Some(if scale_data { scale_columns(value) } else { value })
+    None => None
+  }
+  let p_values : Array[Double] = []
+  for _ in 0..<num_runs {
+    p_values.push(
+      match scaled_z {
+        Some(value) =>
+          kernel_randomised_conditional_test(
+            scaled_x, scaled_y, value, num_random_features_x, num_random_features_y,
+            num_random_features_z, num_permutations, num_max_samples_per_run, rng,
+          )
+        None =>
+          kernel_randomised_test(
+            scaled_x, scaled_y, num_random_features_x, num_random_features_y, num_permutations,
+            num_max_samples_per_run, rng,
+          )
+      },
+    )
+  }
+  p_value_adjust_func(p_values)
+}
+
+///|
+/// The p-value of the randomised independence test of one run.
+///
+/// This is the port of the helper `_rit` of the upstream. The rows of the two
+/// variables are subsampled with the same indices, the two samples are mapped
+/// into the feature space of the Gaussian kernel, and the p-value is the one
+/// of the permutation test.
+fn kernel_randomised_test(
+  x : @utils.Matrix,
+  y : @utils.Matrix,
+  num_random_features_x : Int32,
+  num_random_features_y : Int32,
+  num_permutations : Int32,
+  num_max_samples_per_run : Int32,
+  rng : @utils.Random,
+) -> Double {
+  let indices = kernel_run_indices(x.nrows(), num_max_samples_per_run, rng)
+  let features_x = kernel_random_features(
+    kernel_select_rows(x, indices),
+    num_random_features_x,
+    rng,
+  )
+  let features_y = kernel_random_features(
+    kernel_select_rows(y, indices),
+    num_random_features_y,
+    rng,
+  )
+  kernel_permutation_p_value(features_x, features_y, num_permutations, rng)
+}
+
+///|
+/// The p-value of the randomised conditional independence test of one run.
+///
+/// This is the port of the helper `_rcit` of the upstream. The features of the
+/// second variable are built from that variable and from the conditioning one,
+/// and the parts of the features of the two variables that the features of the
+/// conditioning variable explain are removed before the permutation test.
+fn kernel_randomised_conditional_test(
+  x : @utils.Matrix,
+  y : @utils.Matrix,
+  z : @utils.Matrix,
+  num_random_features_x : Int32,
+  num_random_features_y : Int32,
+  num_random_features_z : Int32,
+  num_permutations : Int32,
+  num_max_samples_per_run : Int32,
+  rng : @utils.Random,
+) -> Double {
+  let indices = kernel_run_indices(x.nrows(), num_max_samples_per_run, rng)
+  let features_x = kernel_random_features(
+    kernel_select_rows(x, indices),
+    num_random_features_x,
+    rng,
+  )
+  let features_y = kernel_random_features(
+    kernel_hstack([
+      kernel_select_rows(y, indices),
+      kernel_select_rows(z, indices),
+    ]),
+    num_random_features_y,
+    rng,
+  )
+  let features_z = kernel_random_features(
+    kernel_select_rows(z, indices),
+    num_random_features_z,
+    rng,
+  )
+  // The covariance of the features of the conditioning variable with itself,
+  // with the shift of the upstream on its diagonal.
+  let cov_zz = kernel_cross_covariances(features_z, features_z)
+  let inverse_cov_zz = kernel_regressor_inverse(
+    kernel_add_diagonal(cov_zz, 1.0e-10),
+  )
+  let cov_xz = kernel_cross_covariances(features_x, features_z)
+  let cov_zy = kernel_cross_covariances(features_z, features_y)
+  let projected = features_z.mul(inverse_cov_zz)
+  let residual_x = kernel_subtract(
+    features_x,
+    projected.mul(cov_xz.transpose()),
+  )
+  let residual_y = kernel_subtract(features_y, projected.mul(cov_zy))
+  kernel_permutation_p_value(residual_x, residual_y, num_permutations, rng)
+}
+
+///|
+/// The indices of the rows of one run of the randomised tests.
+///
+/// The upstream draws at most `num_max_samples_per_run` rows without a
+/// replacement when the sample holds more of them, and it draws the same
+/// indices for the two variables and for the conditioning one.
+fn kernel_run_indices(
+  n : Int32,
+  num_max_samples_per_run : Int32,
+  rng : @utils.Random,
+) -> Array[Int32] {
+  if n > num_max_samples_per_run {
+    kernel_sample_indices(n, num_max_samples_per_run, rng)
+  } else {
+    let indices : Array[Int32] = []
+    for i in 0..<n {
+      indices.push(i)
+    }
+    indices
+  }
+}
+
+///|
+/// The features of the samples in the feature space of the Gaussian kernel.
+///
+/// This is the port of `approximate_rbf_kernel_features` of the upstream, which
+/// is the Nystroem method with the RBF kernel, and the features are scaled
+/// afterwards, like the upstream scales them.
+fn kernel_random_features(
+  samples : @utils.Matrix,
+  n_components : Int32,
+  rng : @utils.Random,
+) -> @utils.Matrix {
+  let gamma = kernel_median_precision(samples)
+  let transformer = nystroem_fit(samples, n_components, rng, gamma)
+  scale_columns(nystroem_transform(samples, transformer))
+}
+
+///|
+/// The precision of the Gaussian kernel, from the median trick.
+///
+/// This is the port of the helper `_median_based_precision` of the upstream:
+/// the precision is the inverse of the median of the distances between the
+/// pairs of the rows that are further apart than zero.
+fn kernel_median_precision(samples : @utils.Matrix) -> Double {
+  let distances : Array[Double] = []
+  for i in 0..<samples.nrows() {
+    for j = i + 1; j < samples.nrows(); j = j + 1 {
+      let distance = kernel_euclidean_distance(samples, i, j)
+      if distance > 0.0 {
+        distances.push(distance)
+      }
+    }
+  }
+  if distances.length() == 0 {
+    // Every row is the same, so there is no distance to take the median of.
+    return 1.0
+  }
+  1.0 / @utils.median(distances)
+}
+
+///|
+/// The p-value of the permutation test of the randomised tests.
+///
+/// The statistic of the sample is compared with the statistics of the
+/// permutations of the rows of the first variable, and the p-value is the
+/// fraction of the permutations whose statistic is smaller than the one of
+/// the sample.
+fn kernel_permutation_p_value(
+  features_x : @utils.Matrix,
+  features_y : @utils.Matrix,
+  num_permutations : Int32,
+  rng : @utils.Random,
+) -> Double {
+  if num_permutations <= 0 {
+    abort("the randomised independence test needs at least one permutation")
+  }
+  let observed = kernel_rit_statistic(features_x, features_y)
+  let mut smaller = 0
+  for _ in 0..<num_permutations {
+    let order = random_permutation(rng, features_x.nrows())
+    let statistic = kernel_rit_statistic(
+      kernel_select_rows(features_x, order),
+      features_y,
+    )
+    if observed > statistic {
+      smaller = smaller + 1
+    }
+  }
+  1.0 - smaller.to_double() / num_permutations.to_double()
+}
+
+///|
+/// The statistic of the randomised tests.
+///
+/// This is the port of the helper `_estimate_rit_statistic` of the upstream:
+/// the number of the samples times the sum of the squares of the covariances
+/// of the columns of the two feature matrices.
+fn kernel_rit_statistic(left : @utils.Matrix, right : @utils.Matrix) -> Double {
+  let covariances = kernel_cross_covariances(left, right)
+  let mut sum = 0.0
+  for i in 0..<covariances.nrows() {
+    for j in 0..<covariances.ncols() {
+      let value = covariances.get(i, j)
+      sum = sum + value * value
+    }
+  }
+  left.nrows().to_double() * sum
+}
+
+///|
+/// The covariances of the columns of the two matrices.
+///
+/// This is the port of the helper `_estimate_column_wise_covariances` of the
+/// upstream, which is the block of the covariance matrix of the two sets of
+/// columns. The covariance of a pair of columns is the one of `numpy.cov`,
+/// which uses one degree of of freedom less.
+fn kernel_cross_covariances(
+  left : @utils.Matrix,
+  right : @utils.Matrix,
+) -> @utils.Matrix {
+  let out = @utils.Matrix::zeros(left.ncols(), right.ncols())
+  for i in 0..<left.ncols() {
+    for j in 0..<right.ncols() {
+      out.set(i, j, @utils.cov(left.col(i), right.col(j)))
+    }
+  }
+  out
+}
+
+///|
+/// The matrix with the given value on its diagonal.
+fn kernel_add_diagonal(m : @utils.Matrix, value : Double) -> @utils.Matrix {
+  let out = m.copy()
+  for i = 0; i < out.nrows(); i = i + 1 {
+    out.set(i, i, out.get(i, i) + value)
+  }
+  out
+}
+
+///|
+/// The difference of the two matrices.
+fn kernel_subtract(
+  left : @utils.Matrix,
+  right : @utils.Matrix,
+) -> @utils.Matrix {
+  let out = @utils.Matrix::zeros(left.nrows(), left.ncols())
+  for i in 0..<left.nrows() {
+    for j in 0..<left.ncols() {
+      out.set(i, j, left.get(i, j) - right.get(i, j))
+    }
+  }
+  out
+}

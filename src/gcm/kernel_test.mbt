@@ -6,11 +6,11 @@
 /// conditional test of independent and of dependent data, the tests of the
 /// categorical data, the determinism of the test for a given seed, the
 /// constant inputs, which the test removes before it runs, and the almost
-/// constant ones.
+/// constant ones. The cases of the randomised test of the upstream, which is
+/// the randomised independence test of Strobl et al., are the ones of the
+/// randomised tests of this file.
 ///
-/// The cases the port does not mirror are the ones of the approximate test of
-/// the upstream, which is the randomised independence test of Strobl et al.
-/// and which the port does not have, and the one of the data of a numpy dtype
+/// The case the port does not mirror is the one of the data of a numpy dtype
 /// of an object, which the frame of the port does not hold.
 ///
 /// The expectations are the numbers the upstream `dowhy.gcm` computes on the
@@ -739,4 +739,487 @@ test "an almost constant column does not make the test return a number that is n
   assert_false(pair != pair)
   assert_false(conditional != conditional)
   assert_false(conditioning != conditioning)
+}
+
+///|
+/// The seed of the generator of the fixtures of the randomised tests.
+const KERNEL_RIT_SEED : UInt64 = 2026UL
+
+///|
+/// The number of the rows of the fixtures of the randomised tests.
+///
+/// The upstream draws a thousand rows, and five thousand for the case with the
+/// conditionally independent continuous data. The fixtures of the port are
+/// smaller, the way the fixtures of the other layers of the port are: the
+/// randomised test evaluates the covariances of the columns of the features of
+/// the kernel space for every one of its permutations.
+const KERNEL_RIT_ROWS : Int32 = 200
+
+///|
+/// The number of the random features of the randomised tests.
+const KERNEL_RIT_FEATURES : Int32 = 10
+
+///|
+/// The number of the permutations of the randomised tests.
+const KERNEL_RIT_PERMUTATIONS : Int32 = 20
+
+///|
+/// The number of the runs of the bootstrap of the randomised tests.
+const KERNEL_RIT_RUNS : Int32 = 5
+
+///|
+/// The mean of the p-values of the runs of the bootstrap.
+///
+/// This is the adjustment of the upstream test file, which merges the p-values
+/// of the runs of its bootstrap with the mean of numpy.
+fn kernel_rit_mean_p_value(p_values : Array[Double]) -> Double {
+  let mut total = 0.0
+  for p_value in p_values {
+    total = total + p_value
+  }
+  total / p_values.length().to_double()
+}
+
+///|
+/// The p-value of the randomised independence test of two matrices.
+fn kernel_rit(
+  x : @utils.Matrix,
+  y : @utils.Matrix,
+  z : @utils.Matrix?,
+  num_random_features_x : Int32,
+  num_random_features_y : Int32,
+  num_random_features_z : Int32,
+  p_value_adjust_func : (Array[Double]) -> Double,
+  rng : @utils.Random,
+) -> Double {
+  @gcm.approx_kernel_based(
+    x,
+    y,
+    z,
+    num_random_features_x,
+    num_random_features_y,
+    num_random_features_z,
+    KERNEL_RIT_PERMUTATIONS,
+    KERNEL_RIT_RUNS,
+    KERNEL_RIT_ROWS,
+    false,
+    p_value_adjust_func,
+    rng,
+  )
+}
+
+///|
+/// The merged p-value of the runs of the bootstrap.
+///
+/// This is the adjustment of the upstream, which merges the p-values of the
+/// runs of its bootstrap with the average of the upstream.
+fn kernel_rit_merged_p_value(p_values : Array[Double]) -> Double {
+  @gcm.merge_p_values_average(
+    p_values,
+    false,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+}
+
+///|
+/// The fixture of the randomised tests with two continuous variables that are
+/// dependent and a third one that is independent of them.
+///
+/// The upstream draws the conditioning variable from the normal distribution
+/// and the two other variables as the exponential of the conditioning one plus
+/// a uniform deviate.
+fn kernel_rit_conditional_fixture() -> (
+  @utils.Matrix,
+  @utils.Matrix,
+  @utils.Matrix,
+  @utils.Matrix,
+) {
+  let rng = @utils.Random::new(KERNEL_RIT_SEED)
+  let x : Array[Double] = []
+  let y : Array[Double] = []
+  let z : Array[Double] = []
+  let w : Array[Double] = []
+  for _ in 0..<KERNEL_RIT_ROWS {
+    let value = rng.next_normal()
+    x.push(@math.exp(value + rng.next_double()))
+    y.push(@math.exp(value + rng.next_double()))
+    z.push(value)
+    w.push(rng.next_normal())
+  }
+  (
+    @utils.Matrix::from_columns([x]),
+    @utils.Matrix::from_columns([y]),
+    @utils.Matrix::from_columns([z]),
+    @utils.Matrix::from_columns([w]),
+  )
+}
+
+///|
+/// The fixture of the randomised tests with two continuous variables that are
+/// dependent.
+fn kernel_rit_dependent_fixture() -> (
+  @utils.Matrix,
+  @utils.Matrix,
+  @utils.Matrix,
+) {
+  let rng = @utils.Random::new(KERNEL_RIT_SEED)
+  let x : Array[Double] = []
+  let y : Array[Double] = []
+  let z : Array[Double] = []
+  for _ in 0..<KERNEL_RIT_ROWS {
+    let value = rng.next_normal()
+    x.push(@math.exp(value + rng.next_double()))
+    y.push(@math.exp(value + rng.next_double()))
+    z.push(value)
+  }
+  (
+    @utils.Matrix::from_columns([x]),
+    @utils.Matrix::from_columns([y]),
+    @utils.Matrix::from_columns([z]),
+  )
+}
+
+///|
+/// The fixture of the randomised tests with two continuous variables that are
+/// independent.
+fn kernel_rit_independent_fixture() -> (@utils.Matrix, @utils.Matrix) {
+  let rng = @utils.Random::new(KERNEL_RIT_SEED)
+  let x : Array[Double] = []
+  let y : Array[Double] = []
+  for _ in 0..<KERNEL_RIT_ROWS {
+    x.push(rng.next_normal())
+    y.push(@math.exp(rng.next_double()))
+  }
+  (@utils.Matrix::from_columns([x]), @utils.Matrix::from_columns([y]))
+}
+
+///|
+/// The fixture of the randomised tests with a categorical variable.
+///
+/// The upstream draws the continuous variable from the normal distribution,
+/// the categorical variable holds the class of the sign of the continuous one,
+/// and the third variable is the class plus a normal deviate.
+fn kernel_rit_categorical_fixture() -> @api.DataFrame {
+  let rng = @utils.Random::new(KERNEL_RIT_SEED)
+  let x : Array[Double] = []
+  let y : Array[Double] = []
+  let labels : Array[String] = []
+  for _ in 0..<KERNEL_RIT_ROWS {
+    let value = rng.next_normal()
+    x.push(value)
+    if value > 0.0 {
+      labels.push("Class 1")
+      y.push(0.0 + rng.next_normal())
+    } else {
+      labels.push("Class 2")
+      y.push(1.0 + rng.next_normal())
+    }
+  }
+  @api.DataFrame::new(
+    ["X", "Y", "Z"],
+    Map([
+      ("X", @api.Column::numeric(x)),
+      ("Y", @api.Column::numeric(y)),
+      ("Z", @api.Column::discrete(labels)),
+    ]),
+  )
+}
+
+///|
+/// The fixture of the randomised tests with a categorical variable that does
+/// not depend on the continuous one.
+fn kernel_rit_categorical_independent_fixture() -> @api.DataFrame {
+  let rng = @utils.Random::new(KERNEL_RIT_SEED)
+  let x : Array[Double] = []
+  let labels : Array[String] = []
+  for _ in 0..<KERNEL_RIT_ROWS {
+    x.push(rng.next_normal())
+    if rng.next_int(2) == 0 {
+      labels.push("Class 1")
+    } else {
+      labels.push("Class 2")
+    }
+  }
+  @api.DataFrame::new(
+    ["X", "Y"],
+    Map([("X", @api.Column::numeric(x)), ("Y", @api.Column::discrete(labels))]),
+  )
+}
+
+///|
+/// The randomised independence test does not reject two continuous variables
+/// that are independent given the third one.
+///
+/// This is the port of the upstream test
+/// `test_given_continuous_conditionally_independent_data_when_perform_approx_kernel_based_test_then_not_reject`.
+/// The upstream uses ten random features for that case, and the port uses the
+/// same number.
+test "the randomised independence test does not reject two continuous variables that are independent given the third one" {
+  let (x, y, z, _) = kernel_rit_conditional_fixture()
+  let p_value = kernel_rit(
+    x,
+    y,
+    Some(z),
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    kernel_rit_merged_p_value,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+  assert_true(p_value > 0.05)
+}
+
+///|
+/// The randomised independence test rejects two continuous variables that are
+/// dependent given a third one that is independent of them.
+///
+/// This is the port of the upstream test
+/// `test_given_continuous_conditionally_dependent_data_when_perform_approx_kernel_based_test_then_reject`.
+/// The two variables of the upstream are dependent, and the conditioning one
+/// is independent of them, so the two are independent given the third one.
+test "the randomised independence test rejects two continuous variables that are dependent given a third one that is independent of them" {
+  let (x, y, _, w) = kernel_rit_conditional_fixture()
+  let p_value = kernel_rit(
+    x,
+    y,
+    Some(w),
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    kernel_rit_merged_p_value,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+  assert_true(p_value < 0.05)
+}
+
+///|
+/// The randomised independence test does not reject a categorical variable that
+/// is independent given the third one.
+///
+/// This is the port of the upstream test
+/// `test_given_categorical_conditionally_independent_data_when_perform_approx_kernel_based_test_then_not_reject`.
+test "the randomised independence test does not reject a categorical variable that is independent given the third one" {
+  let frame = kernel_rit_categorical_fixture()
+  let p_value = kernel_rit(
+    kernel_encoded_column(frame, "X"),
+    kernel_encoded_column(frame, "Y"),
+    Some(kernel_encoded_column(frame, "Z")),
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    kernel_rit_merged_p_value,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+  assert_true(p_value > 0.05)
+}
+
+///|
+/// The randomised independence test rejects a categorical variable that is
+/// dependent given the third one.
+///
+/// This is the port of the upstream test
+/// `test_given_categorical_conditionally_dependent_data_when_perform_approx_kernel_based_test_then_reject`.
+/// The upstream compares the continuous variable with the categorical one, with
+/// the third one as the conditioning variable.
+test "the randomised independence test rejects a categorical variable that is dependent given the third one" {
+  let frame = kernel_rit_categorical_fixture()
+  let p_value = kernel_rit(
+    kernel_encoded_column(frame, "X"),
+    kernel_encoded_column(frame, "Z"),
+    Some(kernel_encoded_column(frame, "Y")),
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    kernel_rit_merged_p_value,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+  assert_true(p_value < 0.05)
+}
+
+///|
+/// The randomised independence test does not reject two continuous variables
+/// that are independent.
+///
+/// This is the port of the upstream test
+/// `test_given_continuous_independent_data_when_perform_approx_kernel_based_test_then_not_reject`.
+test "the randomised independence test does not reject two continuous variables that are independent" {
+  let (x, y) = kernel_rit_independent_fixture()
+  let p_value = kernel_rit(
+    x,
+    y,
+    None,
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    kernel_rit_merged_p_value,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+  assert_true(p_value > 0.05)
+}
+
+///|
+/// The randomised independence test rejects two continuous variables that are
+/// dependent.
+///
+/// This is the port of the upstream test
+/// `test_given_continuous_dependent_data_when_perform_approx_kernel_based_test_then_reject`.
+test "the randomised independence test rejects two continuous variables that are dependent" {
+  let (x, y, _) = kernel_rit_dependent_fixture()
+  let p_value = kernel_rit(
+    x,
+    y,
+    None,
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    kernel_rit_merged_p_value,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+  assert_true(p_value < 0.05)
+}
+
+///|
+/// The randomised independence test does not reject a categorical variable
+/// that is independent of the continuous one.
+///
+/// This is the port of the upstream test
+/// `test_given_categorical_independent_data_when_perform_approx_kernel_based_test_then_not_reject`.
+test "the randomised independence test does not reject a categorical variable that is independent of the continuous one" {
+  let frame = kernel_rit_categorical_independent_fixture()
+  let p_value = kernel_rit(
+    kernel_encoded_column(frame, "X"),
+    kernel_encoded_column(frame, "Y"),
+    None,
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    kernel_rit_merged_p_value,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+  assert_true(p_value > 0.05)
+}
+
+///|
+/// The randomised independence test rejects a categorical variable that is
+/// dependent on the continuous one.
+///
+/// This is the port of the upstream test
+/// `test_given_categorical_dependent_data_when_perform_approx_kernel_based_test_then_reject`.
+test "the randomised independence test rejects a categorical variable that is dependent on the continuous one" {
+  let frame = kernel_rit_categorical_fixture()
+  let p_value = kernel_rit(
+    kernel_encoded_column(frame, "X"),
+    kernel_encoded_column(frame, "Z"),
+    None,
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    kernel_rit_merged_p_value,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+  assert_true(p_value < 0.05)
+}
+
+///|
+/// The randomised conditional independence test of the same data with the same
+/// seed gives the same p-value.
+///
+/// This is the port of the upstream test
+/// `test_given_random_seed_when_perform_conditional_approx_kernel_based_test_then_return_deterministic_result`.
+/// The upstream asserts that two runs of its generator without a seed give two
+/// different p-values and that two runs of its generator with the same seed
+/// give the same one.
+test "the randomised conditional independence test of the same data with the same seed gives the same p-value" {
+  let (x, y, z, _) = kernel_rit_conditional_fixture()
+  let first = kernel_rit(
+    x,
+    y,
+    Some(z),
+    1,
+    1,
+    1,
+    kernel_rit_mean_p_value,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+  let second = kernel_rit(
+    x,
+    y,
+    Some(z),
+    1,
+    1,
+    1,
+    kernel_rit_mean_p_value,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+  assert_true(kernel_same(first, second))
+}
+
+///|
+/// The randomised independence test of the same data with the same seed gives
+/// the same p-value.
+///
+/// This is the port of the upstream test
+/// `test_given_random_seed_when_perform_pairwise_approx_kernel_based_test_then_return_deterministic_result`.
+test "the randomised independence test of the same data with the same seed gives the same p-value" {
+  let (x, y) = kernel_rit_independent_fixture()
+  let first = kernel_rit(
+    x,
+    y,
+    None,
+    1,
+    1,
+    1,
+    kernel_rit_mean_p_value,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+  let second = kernel_rit(
+    x,
+    y,
+    None,
+    1,
+    1,
+    1,
+    kernel_rit_mean_p_value,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+  assert_true(kernel_same(first, second))
+}
+
+///|
+/// A constant variable makes the randomised independence test return the
+/// p-value of one.
+///
+/// This is the port of the upstream test
+/// `test_given_constant_data_when_perform_approx_kernel_based_test_then_returns_expected_result`.
+/// The upstream also asserts that a constant conditioning variable does not
+/// make the test return a value that is not a number.
+test "a constant variable makes the randomised independence test return the p-value of one" {
+  let (x, y) = kernel_rit_independent_fixture()
+  let constant = kernel_constant(KERNEL_RIT_ROWS)
+  assert_eq(
+    kernel_rit(
+      constant,
+      y,
+      None,
+      KERNEL_RIT_FEATURES,
+      KERNEL_RIT_FEATURES,
+      KERNEL_RIT_FEATURES,
+      kernel_rit_merged_p_value,
+      @utils.Random::new(KERNEL_RIT_SEED),
+    ),
+    1.0,
+  )
+  // A constant conditioning variable is removed before the test, so the test
+  // is the unconditional one and its p-value is the one of the pair.
+  let p_value = kernel_rit(
+    x,
+    y,
+    Some(constant),
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    KERNEL_RIT_FEATURES,
+    kernel_rit_merged_p_value,
+    @utils.Random::new(KERNEL_RIT_SEED),
+  )
+  assert_false(p_value != p_value)
 }

@@ -183,11 +183,13 @@ fn fold_p_values(
           select_rows(all, training_indices),
           adaptive,
           rng,
+          1.0 / all.ncols().to_double(),
         )
         let transformer_z = nystroem_fit(
           select_rows(conditioning, training_indices),
           adaptive / 2,
           rng,
+          1.0 / conditioning.ncols().to_double(),
         )
         let training_all = nystroem_transform(
           select_rows(all, training_indices),
@@ -219,6 +221,7 @@ fn fold_p_values(
           select_rows(inputs, training_indices),
           adaptive,
           rng,
+          1.0 / inputs.ncols().to_double(),
         )
         let training_all = nystroem_transform(
           select_rows(inputs, training_indices),
@@ -456,12 +459,12 @@ fn nystroem_fit(
   samples : @utils.Matrix,
   n_components : Int32,
   rng : @utils.Random,
+  gamma : Double,
 ) -> NystroemTransformer {
   let n_samples = samples.nrows()
   let count = if n_components > n_samples { n_samples } else { n_components }
   let order = random_permutation(rng, n_samples)
   let basis = select_rows(samples, first_indices(order, count))
-  let gamma = 1.0 / samples.ncols().to_double()
   let kernel = rbf_kernel(basis, basis, gamma)
   // The normalisation of the transformer, which is the square root of the
   // kernel matrix of the basis points.
