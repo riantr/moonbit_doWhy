@@ -695,6 +695,29 @@ statsmodels / scikit-learn conventions are deliberate:
   `tests/gcm/independence_test/test_generalised_cov_measure.py` and lead to the
   same decision on six seeds.
 
+- The default strength of the confounder of the `refuters` package is the port
+  of `_infer_default_kappa_t` and `_infer_default_kappa_y` of the upstream, and
+  three conventions of the upstream decide whether the port reproduces its
+  numbers:
+  - **the common causes are the adjustment set of the estimand, encoded and
+    standardised.** The discrete columns are one-hot encoded with the first
+    category of every column dropped, the way the upstream encodes them, and
+    every column is standardised with the mean and the standard deviation of its
+    rows, the way the `StandardScaler` of the upstream standardises them.
+  - **the `binary_flip` effect counts the flips of the predictions of a logistic
+    regression.** The regression is fitted on the standardised common causes
+    with the column as the response, the intercept is not penalised, the way
+    scikit-learn does not penalise it, and the strength of a common cause is
+    the share of the rows whose prediction changes when the common cause is set
+    to zero. The classification of a row is the one of scikit-learn: the class
+    of the larger probability, and the first class when the two probabilities
+    are the same.
+  - **the `linear` effect scales the correlation of every common cause with the
+    standard deviation of the column.** The upstream reads that standard
+    deviation with `np.std(t)[0]`, and the standard deviation of a column is a
+    number and not an array, so the branch raises an `IndexError` on the numpy
+    of today. The port computes the number the branch means to compute.
+
 ## Package layout
 
 | Package | Ports |

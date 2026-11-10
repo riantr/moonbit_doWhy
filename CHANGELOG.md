@@ -2114,3 +2114,59 @@ The E-value analysis of an unmeasured confounder.
   strengths of the confounder from the observed common causes.
 
 [0.0.41]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.41
+
+## [0.0.42] - 2026-11-10
+
+The default strength of the confounder that the unobserved common cause refuter
+infers from the observed common causes.
+
+### Added
+
+- `refuters.infer_default_kappa_t` and `refuters.infer_default_kappa_y`, the
+  port of `_infer_default_kappa_t` and `_infer_default_kappa_y` of
+  `dowhy.causal_refuters.add_unobserved_common_cause`. The upstream infers the
+  strength of the simulated confounder from the observed common causes when the
+  caller does not give one: a logistic regression of the column on the
+  standardised common causes is fitted and the share of the predictions that
+  flip when one common cause is set to zero is the strength of that common
+  cause, for the `binary_flip` effect, and the correlation of every common
+  cause with the column scaled with the standard deviation of the column is the
+  strength of that common cause, for the `linear` effect. The range of the
+  strengths is scaled with the fraction of the strength the caller gives and
+  the function returns ten values of it.
+- the port of the inference as `src/tests/kappa_inference.mbt`, seven cases
+  that compare the numbers of the port with the numbers of the upstream on the
+  same rows.
+- `_verify/kappa_inference_reference.py`, which runs the two functions of the
+  upstream on the rows of the port and prints their numbers.
+
+### Notes
+
+- The upstream never asks for the default strength in its own test suite, so
+  the numbers of the two are compared on the rows of the port: the reference
+  script hands the rows of the port to the upstream, so the numbers of the
+  upstream and the numbers of the port are the numbers of one data set. The
+  `binary_flip` effect on the treatment gives the ten strengths `0.079`,
+  `0.0924`, `0.1058`, `0.1192`, `0.1326`, `0.146`, `0.1594`, `0.1728`, `0.1862`
+  and `0.1996`, a tenth of the strength gives the same ten numbers divided by
+  ten, and one common cause gives the single strength `0.47`, because the range
+  of the upstream holds one number only.
+- The `linear` effect of the upstream reads the standard deviation of the
+  column with `np.std(t)[0]`, and the standard deviation of a column is a
+  number and not an array, so the branch raises an `IndexError` on the numpy of
+  today. The port computes the number that branch means to compute, the
+  correlation of every common cause with the column scaled with its standard
+  deviation, and the reference script asks the upstream for the numbers of that
+  branch with the indexing removed.
+- The `binary_flip` effect of the upstream fits a classifier on the column, and
+  a continuous column is refused with a `ValueError`. The port aborts with a
+  message of the same kind, because MoonBit cannot catch an error. The upstream
+  fits a multinomial model for a column with more levels, and the share of the
+  flips is then the distance between the classes rather than a share, so the
+  port refuses such a column as well.
+- The upstream returns the single strength of a range of one number as a number
+  and the range of many numbers as an array; the port returns an array in both
+  cases, so the caller of the port always gets a list of strengths.
+- The `non-parametric-partial-R2` analyzer of the upstream is not ported yet.
+
+[0.0.42]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.42
