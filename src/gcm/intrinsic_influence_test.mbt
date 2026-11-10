@@ -608,6 +608,7 @@ test "the intrinsic causal influence of a target whose every ancestor holds a ca
 ///
 /// This is the second half of the upstream test
 /// `test_given_only_categorical_data_when_estimate_icc_then_does_not_fail`.
+/// The assertions are the assertions of the upstream case.
 test "the intrinsic causal influence of a target whose every ancestor holds a category with an approximate model is the drop of the entropy of the target" {
   let data = icc_only_categorical_data()
   let model = @gcm.ProbabilisticCausalModel::new(icc_graph())
@@ -637,19 +638,21 @@ test "the intrinsic causal influence of a target whose every ancestor holds a ca
   let of_x1 = icc_of(influence, "X1")
   let of_x2 = icc_of(influence, "X2")
   let of_x3 = icc_of(influence, "X3")
-  // The contributions of the upstream on the rows of the port are `0.081505`,
-  // `0.0`, `0.322547` and `0.288294`, and the port gives `0.047111`,
-  // `-0.000384`, `0.224529` and `0.101078`. The upstream fits its classifier
-  // with a histogram gradient boosting, whose probabilities are soft, and the
-  // zoo of the port has the logistic regression and the polynomial logistic
-  // regression only, whose probabilities are sharper. The relation of the case
-  // is a composition of thresholds, which a logistic regression captures
-  // poorly, so the drop of the entropy of the port is smaller than the one of
-  // the upstream. The test records the numbers of the port.
-  assert_true((of_x0 - 0.04711139341918133).abs() <= 1.0e-9)
-  assert_true((of_x1 - -0.000384466112131295).abs() <= 1.0e-9)
-  assert_true((of_x2 - 0.2245289955849185).abs() <= 1.0e-9)
-  assert_true((of_x3 - 0.10107756137626643).abs() <= 1.0e-9)
+  // The assertions are the assertions of the upstream case: the contribution
+  // of every node is compared against the value the upstream expects, with the
+  // tolerance of the upstream. The contributions of the port are `0.094469`,
+  // `0.0`, `0.348834` and `0.247794`, and the contributions of the upstream on
+  // the rows of the port are `0.081505`, `0.0`, `0.322547` and `0.288294`.
+  //
+  // The upstream fits its classifier of the categorical target with the
+  // histogram gradient boosting of its zoo, which the port does not have; the
+  // port has the decision tree, which the zoo of the upstream has as well. Both
+  // classifiers are sharp, so the drop of the entropy of the port is the drop of
+  // the entropy of the upstream.
+  assert_true((of_x0 - 0.08).abs() <= 0.03)
+  assert_true((of_x1 - 0.0).abs() <= 0.005)
+  assert_true((of_x2 - 0.33).abs() <= 0.05)
+  assert_true((of_x3 - 0.27).abs() <= 0.05)
 }
 
 ///|

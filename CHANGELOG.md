@@ -3165,6 +3165,56 @@ The categorical noise dependent function.
 
 [0.0.61]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.61
 
+## [0.0.69] - 2026-11-11
+
+The decision tree classifier of the graphical causal models.
+
+### Added
+
+- the decision tree classifier of the `gcm` package, in the new file
+  `src/gcm/decision_tree.mbt`: the port of the `DecisionTreeClassifier` of
+  scikit-learn with its default parameters, which the upstream builds when it
+  selects the model of a node by cross validation and the zoo of its classifiers
+  holds the `decision_tree` estimator. The tree grows greedily with the gini
+  impurity as
+  its criterion, every feature of the design matrix is a candidate at every
+  split, the threshold of a feature is the middle of two consecutive values of
+  it and a node of a single class is a leaf.
+- the variant `ClassificationModel::decision_tree` of the `gcm` package and the
+  decision tree in the zoo of the selection of the model of a node, in the file
+  `src/gcm/auto_selection.mbt`. The zoo of the `GOOD` quality of the upstream
+  holds the histogram gradient boosting classifier, the logistic regression and
+  the decision tree classifier; the zoo of the port holds the decision tree, the
+  logistic regression and the polynomial logistic regression.
+- the case of the upstream test
+  `test_given_only_categorical_data_when_estimate_icc_then_does_not_fail` in the
+  file `src/gcm/intrinsic_influence_test.mbt`, whose assertions are the
+  assertions of the upstream case. The contributions of the port are `0.094469`,
+  `0.0`, `0.348834` and `0.247794`, and the assertions of the upstream expect
+  `0.08` within `0.03`, `0.0` within `0.005`, `0.33` within `0.05` and `0.27`
+  within `0.05`.
+- the tree of scikit-learn in the new reference script
+  `_verify/decision_tree_reference.py`, which fits the `DecisionTreeClassifier`
+  of scikit-learn on the fixture of the port and prints its nodes, its shape
+  and its predictions.
+
+### Notes
+
+- The tree of scikit-learn breaks the tie of two splits of the same impurity at
+  random, because it takes its randomness from the global generator of numpy,
+  which it does not seed. The tree of the port breaks the tie the other way:
+  the first feature and the first threshold of it win. The two trees therefore
+  differ at the nodes of the ties, and the fixture of the port has one of them;
+  the shape of the two trees and their predictions are the same.
+- The upstream fits the classifier of the categorical target of the intrinsic
+  causal influence with the histogram gradient boosting of its zoo, which the
+  port does not have. The decision tree of the zoo of the port is one of the
+  classifiers of the zoo of the upstream, and it is sharp like the histogram
+  gradient boosting, so the drop of the entropy of the port is the drop of the
+  entropy of the upstream.
+
+[0.0.69]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.69
+
 ## [0.0.68] - 2026-11-11
 
 The support vector regressor of the dummy outcome refuter.

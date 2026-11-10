@@ -1120,6 +1120,20 @@ statsmodels / scikit-learn conventions are deliberate:
   agree to `6.9e-8` on the fixture of
   `_verify/support_vector_machine_reference.py`.
 
+- The **decision tree** of the `gcm` package is the port of the
+  `DecisionTreeClassifier` of scikit-learn with its default parameters: the gini
+  impurity as the criterion, every feature of the design matrix at every split,
+  a node of at least two samples and a leaf of at least one sample. The tree
+  grows greedily and the threshold of a feature is the middle of two
+  consecutive values of it, so a row goes to the left child of a node when the
+  value of the feature is at most the threshold. The tree of scikit-learn breaks
+  the tie of two splits of the same impurity at random, because it takes its
+  randomness from the global generator of numpy, which it does not seed; the
+  tree of the port breaks the tie the other way, the first feature and the first
+  threshold of it win. The decision tree is the non-linear classifier of the zoo
+  of the port, the way the histogram gradient boosting classifier is the
+  non-linear classifier of the zoo of the upstream.
+
 ## Package layout
 
 | Package | Ports |

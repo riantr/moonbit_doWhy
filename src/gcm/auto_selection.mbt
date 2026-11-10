@@ -284,10 +284,13 @@ fn regressors_of(quality : AssignmentQuality) -> Array[PredictionModel] {
 /// quality. It adds the polynomial logistic regression to both lists when the
 /// encoded features hold at most five columns.
 ///
-/// The port has the logistic regression and the polynomial logistic
-/// regression, so its lists are the same for the three qualities.
+/// The port has the decision tree, the logistic regression and the polynomial
+/// logistic regression, so its lists are the same for the three qualities. The
+/// decision tree is the non-linear classifier of the port, the way the histogram
+/// gradient boosting classifier is the non-linear classifier of the upstream.
 fn classifiers_of(quality : AssignmentQuality) -> Array[ClassificationModel] {
   let models : Array[ClassificationModel] = [
+    ClassificationModel::decision_tree(),
     ClassificationModel::logistic(),
     ClassificationModel::polynomial(),
   ]

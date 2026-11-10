@@ -411,6 +411,8 @@ pub struct ClassificationModel {
   one_versus_rest : OneVersusRestModel?
   /// The nearest neighbour model, when the model is one.
   neighbours : KnnClassifier?
+  /// The decision tree, when the model is one.
+  tree : DecisionTreeClassifier?
 }
 
 ///|
@@ -426,11 +428,12 @@ pub fn ClassificationModel::logistic() -> ClassificationModel {
     degree: 0,
     one_versus_rest: None,
     neighbours: None,
+    tree: None,
   }
 }
 
 ///|
-/// A classification model of the nearest neighbours of a row.
+/// An unfitted nearest neighbour classification model.
 ///
 /// This is the port of
 /// `dowhy.gcm.ml.classification.create_knn_classifier`, which wraps
@@ -452,6 +455,7 @@ pub fn ClassificationModel::nearest_neighbour(
     degree: 0,
     one_versus_rest: None,
     neighbours: Some(KnnClassifier::new(k)),
+    tree: None,
   }
 }
 
@@ -493,6 +497,28 @@ pub fn ClassificationModel::polynomial(
     degree,
     one_versus_rest: None,
     neighbours: None,
+    tree: None,
+  }
+}
+
+///|
+/// An unfitted decision tree classification model.
+///
+/// This is the port of
+/// `dowhy.gcm.ml.classification.create_decision_tree_classifier`, which wraps
+/// `sklearn.tree.DecisionTreeClassifier` with its default parameters: the gini
+/// impurity as the criterion, every feature at every split, a node of at least
+/// two samples and a leaf of at least one sample.
+pub fn ClassificationModel::decision_tree() -> ClassificationModel {
+  {
+    coefficients: [],
+    intercept: 0.0,
+    classes: [],
+    fitted: false,
+    degree: 0,
+    one_versus_rest: None,
+    neighbours: None,
+    tree: Some(DecisionTreeClassifier::new()),
   }
 }
 
@@ -550,6 +576,23 @@ pub fn ClassificationModel::fit(
         degree: 0,
         one_versus_rest: None,
         neighbours: Some(neighbours.fit(x, y)),
+        tree: None,
+      }
+    None => ()
+  }
+  match self.tree {
+    Some(tree) =>
+      // A decision tree model is fitted by the fit of the decision tree
+      // classifier, which grows the tree of the samples.
+      return {
+        coefficients: [],
+        intercept: 0.0,
+        classes,
+        fitted: true,
+        degree: 0,
+        one_versus_rest: None,
+        neighbours: None,
+        tree: Some(tree.fit(x, y)),
       }
     None => ()
   }
@@ -589,6 +632,7 @@ pub fn ClassificationModel::fit(
     degree: self.degree,
     one_versus_rest: None,
     neighbours: None,
+    tree: None,
   }
 }
 
@@ -638,6 +682,7 @@ fn fit_one_versus_rest(
     degree: model.degree,
     one_versus_rest: Some({ coefficients, intercepts, }),
     neighbours: None,
+    tree: None,
   }
 }
 
@@ -655,6 +700,10 @@ pub fn ClassificationModel::predict_probabilities(
   }
   match self.neighbours {
     Some(neighbours) => return neighbours.predict_probabilities(x)
+    None => ()
+  }
+  match self.tree {
+    Some(tree) => return tree.predict_probabilities(x)
     None => ()
   }
   // A model of the polynomial features predicts with the expansion of the
@@ -751,6 +800,7 @@ pub fn ClassificationModel::clone(
       Some(neighbours) => Some(KnnClassifier::new(neighbours.k))
       None => None
     },
+    tree: None,
   }
 }
 
