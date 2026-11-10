@@ -11,9 +11,8 @@ samples of the upstream and of the port are different numbers. The script
 therefore prints the samples of the port, which the replica reproduces, and the
 samples of the upstream for the record.
 
-The upstream `BayesianGaussianMixtureDistribution` and the beta distribution
-are not part of the port, so the two tests of the upstream that use them have
-no counterpart here.
+The upstream `BayesianGaussianMixtureDistribution` is not part of the port, so
+the two tests of the upstream that use it have no counterpart here.
 
 Usage:
     python _verify/gcm_stochastic_models_reference.py
@@ -62,6 +61,23 @@ class Xorshift:
         u1 = 1.0e-12 if u1 < 1.0e-12 else u1
         return np.sqrt(-2.0 * np.log(u1)) * np.cos(2.0 * np.pi * u2)
 
+    def next_gamma(self, shape: float, scale: float) -> float:
+        """The gamma variate of `src/utils/random.mbt`."""
+        if shape < 1.0:
+            uniform = self.next_double()
+            powered = 1.0e-12 if uniform < 1.0e-12 else uniform ** (1.0 / shape)
+            return self.next_gamma(shape + 1.0, scale) * powered
+        d = shape - 1.0 / 3.0
+        c = 1.0 / np.sqrt(9.0 * d)
+        while True:
+            x = self.next_normal()
+            v = (1.0 + c * x) ** 3
+            if v > 0.0:
+                u = self.next_double()
+                log_u = -27.631021 if u < 1.0e-12 else np.log(u)
+                if log_u < 0.5 * x * x + d * (1.0 - v + np.log(v)):
+                    return d * v * scale
+
 
 # The seeds of the fixtures, the same as the ones of the MoonBit tests.
 SEED_FIT = 2030
@@ -70,6 +86,9 @@ SEED_AUTO_DRAW = 2032
 SEED_SCALED = 2033
 SEED_EMPIRICAL = 2034
 SEED_EMPIRICAL_DRAW = 2035
+SEED_BETA = 2036
+SEED_DETECT = 2037
+SEED_DETECT_DRAW = 2038
 
 # The number of rows of the fixtures.
 FIT_ROWS = 1000
@@ -77,11 +96,17 @@ AUTO_ROWS = 5000
 DRAWN_ROWS = 1000
 SCALED_ROWS = 10000
 EMPIRICAL_ROWS = 1000
+BETA_ROWS = 10000
+DETECT_ROWS = 2000
 
 # The location and the scale of the distribution the scaled fixture is drawn
 # from.
 SCALED_LOC = 3.0
 SCALED_SCALE = 2.0
+
+# The shapes of the beta distribution the beta fixture is drawn from.
+BETA_A = 2.0
+BETA_B = 2.0
 
 
 def normal_rows(seed: int, rows: int) -> np.ndarray:
@@ -94,6 +119,21 @@ def normal_samples(seed: int, rows: int, loc: float, scale: float) -> np.ndarray
     """The samples of a normal distribution, the way the port draws them."""
     rng = Xorshift(seed)
     return np.array([loc + scale * rng.next_normal() for _ in range(rows)])
+
+
+def beta_samples(seed: int, rows: int, a: float, b: float) -> np.ndarray:
+    """The samples of a beta distribution, the way the port draws them.
+
+    The port draws a beta variate as the ratio of two gamma variates, so the
+    replica draws it the same way.
+    """
+    rng = Xorshift(seed)
+    values = []
+    for _ in range(rows):
+        first = rng.next_gamma(a, 1.0)
+        second = rng.next_gamma(b, 1.0)
+        values.append(first / (first + second))
+    return np.array(values)
 
 
 def empirical_samples(data_seed: int, draw_seed: int, rows: int, size: int) -> np.ndarray:
@@ -109,8 +149,13 @@ def empirical_samples(data_seed: int, draw_seed: int, rows: int, size: int) -> n
 
 def main() -> None:
     # The upstream `dowhy.gcm.ml` has to be read before the modules that import
-    # the names it re-exports, so it is loaded first.
+    # the names it re-exports, so it is loaded first. The divergence module is
+    # loaded as well, because the automatic selection of the family of a
+    # distribution imports it while it runs.
     load("dowhy.gcm.ml")
+    load("dowhy.gcm.config")
+    load("dowhy.gcm.auto")
+    load("dowhy.gcm.divergence")
     models = load("dowhy.gcm.stochastic_models")
 
     # The fit of a normal distribution on the rows of the fixture.
@@ -175,6 +220,30 @@ def main() -> None:
     print("FIXED_PARAMETERS")
     print(f"  loc = {fixed.parameters['loc']:.12f}")
     print(f"  scale = {fixed.parameters['scale']:.12f}")
+
+    # The beta distribution and its fit on the rows of the port.
+    beta_rows = beta_samples(SEED_BETA, BETA_ROWS, BETA_A, BETA_B)
+    beta_distribution = models.ScipyDistribution(stats.beta)
+    beta_distribution.fit(beta_rows.reshape(-1, 1))
+    print("FIT_BETA")
+    print(f"  mean = {np.mean(beta_rows):.12f}")
+    print(f"  lowest = {np.min(beta_rows):.12f}")
+    print(f"  highest = {np.max(beta_rows):.12f}")
+    print(f"  upstream_a = {beta_distribution.parameters['a']:.12f}")
+    print(f"  upstream_b = {beta_distribution.parameters['b']:.12f}")
+    print(f"  upstream_loc = {beta_distribution.parameters['loc']:.12f}")
+    print(f"  upstream_scale = {beta_distribution.parameters['scale']:.12f}")
+
+    # The automatic selection of the family of a distribution.
+    detect_rows = normal_rows(SEED_DETECT, DETECT_ROWS)
+    detected = models.ScipyDistribution()
+    detected.fit(detect_rows.reshape(-1, 1))
+    print("AUTOMATIC_SELECTION")
+    print(f"  mean = {np.mean(detect_rows):.12f}")
+    print(f"  std = {np.std(detect_rows):.12f}")
+    print(f"  upstream_distribution = {detected.scipy_distribution.name}")
+    print(f"  upstream_loc = {detected.parameters['loc']:.12f}")
+    print(f"  upstream_scale = {detected.parameters['scale']:.12f}")
 
 
 if __name__ == "__main__":

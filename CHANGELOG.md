@@ -2898,3 +2898,74 @@ The randomised independence tests of the `gcm` package.
   the gate of the port needs on every backend.
 
 [0.0.56]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.56
+
+## [0.0.57] - 2026-11-12
+
+The beta distribution and the automatic selection of the family of a
+distribution.
+
+### Added
+
+- the beta distribution of the `gcm` package, in `src/gcm/causal_mechanisms.mbt`:
+  the new public function `StochasticModel::beta` is the port of
+  `dowhy.gcm.stochastic_models.ScipyDistribution(scipy.stats.beta, ...)`. The
+  support of the distribution is the interval that goes from the location to the
+  location plus the scale, like the support of scipy, and the samples of the
+  distribution are the ratio of two gamma variates with the shapes of the
+  distribution.
+- the gamma variate of the `utils` package, in `src/utils/random.mbt`: the new
+  public function `Random::next_gamma` is the port of the gamma variate of
+  numpy, which is drawn with the algorithm of Marsaglia and Tsang.
+- the parameters of a distribution, in `src/gcm/causal_mechanisms.mbt`: the new
+  public function `StochasticModel::parameters` is the port of the `parameters`
+  property of `dowhy.gcm.stochastic_models.ScipyDistribution`. The parameters of
+  a beta distribution are its two shapes, and every parametric distribution of the
+  port has a location and a scale.
+- the automatic selection of the family of a distribution, in
+  `src/gcm/causal_mechanisms.mbt`: the new public function
+  `find_suitable_continuous_distribution` is the port of
+  `dowhy.gcm.stochastic_models.ScipyDistribution.find_suitable_continuous_distribution`.
+  Every family the port knows is fitted on the samples, samples are drawn from
+  the fitted distribution, and the two samples are compared with the
+  Kullback-Leibler divergence of the nearest neighbour estimator.
+- four cases in `src/gcm/stochastic_models_test.mbt`: the parameters of a
+  distribution are the ones of its family, the samples of a beta distribution are
+  inside its support, a fitted beta distribution has the support and the shapes
+  of the data, and the automatic selection of the family of a distribution finds
+  the normal one. Six of the eight cases of the upstream test file
+  `tests/gcm/test_stochastic_models.py` have a counterpart now, and the two that
+  have none use the `BayesianGaussianMixtureDistribution` of the upstream, which
+  is not part of the port.
+- the numbers of the upstream on the fixtures of the port in
+  `_verify/gcm_stochastic_models_reference.py`: the sections `FIT_BETA` and
+  `AUTOMATIC_SELECTION` run the upstream on the very rows of the port. The
+  upstream fits the beta distribution with `a = 1.958702`, `b = 1.981424`,
+  `loc = 0.000554` and `scale = 0.999793`, and the port fits the same rows with
+  `a = 1.928557`, `b = 1.955700`, `loc = 0.003851` and `scale = 0.994229`, so
+  both are inside the tolerances of the test of the upstream. The upstream
+  selects the normal distribution for the rows of the automatic selection, and so
+  does the port.
+
+### Notes
+
+- The upstream estimates the four parameters of a beta distribution with the
+  maximum likelihood, and the port takes the support of the samples -- the
+  smallest and the largest of them -- and estimates the two shapes with the
+  method of moments. The two answers are inside the tolerances of the test of
+  the upstream, which asks for a location of zero within `0.1`, a scale of one
+  within `0.1` and the two shapes of two within `0.5`.
+- numpy draws its beta variates with the algorithm of Johnk, and the port draws
+  the ratio of two gamma variates, which has the same distribution. The samples
+  of the port and of the upstream are therefore different numbers of the same
+  distribution.
+- The upstream fits every continuous distribution of scipy when it selects the
+  family of a distribution automatically, and the port fits the four families it
+  knows: the normal, the Laplace, the uniform and the beta.
+- The divergence of the nearest neighbour estimator is noisy, so the fixture of
+  the automatic selection holds two thousand rows. With five hundred rows the
+  divergence of the normal distribution of the fixture is `0.058805`, which is
+  above the threshold of `0.01` of the upstream, and the selection continues
+  with the next family. The upstream selects the normal distribution on the
+  rows of the fixture of the port, and so does the port.
+
+[0.0.57]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.57

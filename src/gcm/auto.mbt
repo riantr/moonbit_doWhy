@@ -447,6 +447,7 @@ fn auto_root_model_name(
         Normal => "norm distribution"
         Laplace => "laplace distribution"
         Uniform => "uniform distribution"
+        Beta => "beta distribution"
       }
     None => "no distribution"
   }

@@ -294,6 +294,22 @@ statsmodels / scikit-learn conventions are deliberate:
   factorisation of the upstream. The upstream draws its randomness from the
   global generator of numpy, so the p-value of the port and the p-value of the
   upstream are different numbers that agree on the decision the tests assert.
+- The stochastic models of the `gcm` package are the port of the distributions of
+  `dowhy.gcm.stochastic_models`. The fit of the **beta** distribution takes the
+  support of the samples -- the smallest and the largest of them -- and estimates
+  the two shapes with the **method of moments**, where the upstream estimates the
+  four parameters with the maximum likelihood. Both answers are inside the
+  tolerances of the test of the upstream, which asks for a location of zero
+  within `0.1`, a scale of one within `0.1` and the two shapes of two within
+  `0.5`. The **automatic selection** of the family of a distribution fits every
+  family the port knows -- the normal, the Laplace, the uniform and the beta --
+  where the upstream fits every continuous distribution of scipy, and it keeps
+  the first family whose Kullback-Leibler divergence of the nearest neighbour
+  estimator is below the threshold. That divergence is noisy: with five hundred
+  rows the divergence of the normal distribution of the fixture of the port is
+  `0.058805`, which is above the threshold of `0.01` of the upstream, so the
+  fixture of the port holds two thousand rows, where the divergence stays below
+  the threshold and the normal distribution is selected like the upstream does.
 - The false discovery rate control of the `gcm` package is the
   Benjamini-Hochberg **step-up** procedure of
   `statsmodels.stats.multitest.multipletests(method="fdr_bh")`: the adjusted

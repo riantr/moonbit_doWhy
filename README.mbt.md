@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.56.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.57.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -26,7 +26,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph, its readers of a CSV and of a DOT, and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the **CatBoost encoder** of the categorical columns, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure, the **kernel based** one, **with categorical data**, and the **randomised** one), the prediction models -- the linear one and the **polynomial** ones --, the causal mechanisms, the stochastic models, the noise of a causal model, the **feature relevance**, the **intrinsic causal influence**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, **with the selection of the model of a node by cross validation** and the **test of a linear relationship**, the **what-if queries**, **with the categorical variables and with the discrete data**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution, **with a non-linear mechanism** and **without a causal model**), the **unit change** layer, **with the predicates of the exceptions of the upstream**, the **uncertainty** estimates, the **distribution change** layer -- the plain one and the **multiply-robust** one -- and the **arrow strength** layer are ported |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the **CatBoost encoder** of the categorical columns, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure, the **kernel based** one, **with categorical data**, and the **randomised** one), the prediction models -- the linear one and the **polynomial** ones --, the causal mechanisms, the stochastic models, **with the beta distribution and the automatic selection of the family**, the noise of a causal model, the **feature relevance**, the **intrinsic causal influence**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, **with the selection of the model of a node by cross validation** and the **test of a linear relationship**, the **what-if queries**, **with the categorical variables and with the discrete data**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution, **with a non-linear mechanism** and **without a causal model**), the **unit change** layer, **with the predicates of the exceptions of the upstream**, the **uncertainty** estimates, the **distribution change** layer -- the plain one and the **multiply-robust** one -- and the **arrow strength** layer are ported |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
@@ -154,6 +154,15 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   upstream draws its randomness from the global generator of numpy and the port
   draws it from the generator of the `utils` package, so the two p-values are
   different numbers that agree on the decision the tests assert.
+- The stochastic models of the `gcm` package are the port of the distributions of
+  `dowhy.gcm.stochastic_models`. The fit of the **beta** distribution takes the
+  support of the samples and estimates the two shapes with the **method of
+  moments**, where the upstream estimates the four parameters with the maximum
+  likelihood; both answers are inside the tolerances of the test of the upstream.
+  The **automatic selection** of the family of a distribution fits every family
+  the port knows -- the normal, the Laplace, the uniform and the beta -- where
+  the upstream fits every continuous distribution of scipy, and it keeps the
+  first family whose Kullback-Leibler divergence is below the threshold.
 - The one-hot encoder drops the first category of every column, like
   `pandas.get_dummies` and like the `Encoders` helper of upstream, and it
   learns its categories in lexicographic order, like `numpy.unique`.

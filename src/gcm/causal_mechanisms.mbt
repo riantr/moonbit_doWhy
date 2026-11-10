@@ -21,6 +21,9 @@ pub enum StochasticModelKind {
   /// The distribution is a uniform distribution.
   Uniform
   ///
+  /// The distribution is a beta distribution.
+  Beta
+  ///
   /// The distribution is represented by the categories it was fitted on.
   EmpiricalCategorical
 }
@@ -42,6 +45,10 @@ pub struct StochasticModel {
   loc : Double
   /// The scale of a parametric distribution.
   scale : Double
+  /// The first shape parameter of a beta distribution.
+  shape_a : Double
+  /// The second shape parameter of a beta distribution.
+  shape_b : Double
   /// Whether the parameters of a parametric distribution are fixed.
   fixed_parameters : Bool
   /// Whether the model has been fitted.
@@ -61,6 +68,8 @@ pub fn StochasticModel::empirical() -> StochasticModel {
     categories: [],
     loc: 0.0,
     scale: 0.0,
+    shape_a: 1.0,
+    shape_b: 1.0,
     fixed_parameters: false,
     fitted: false,
   }
@@ -79,6 +88,8 @@ pub fn StochasticModel::empirical_categorical() -> StochasticModel {
     categories: [],
     loc: 0.0,
     scale: 0.0,
+    shape_a: 1.0,
+    shape_b: 1.0,
     fixed_parameters: false,
     fitted: false,
   }
@@ -96,6 +107,8 @@ pub fn StochasticModel::normal(loc : Double, scale : Double) -> StochasticModel 
     categories: [],
     loc,
     scale,
+    shape_a: 1.0,
+    shape_b: 1.0,
     fixed_parameters: true,
     fitted: true,
   }
@@ -116,6 +129,8 @@ pub fn StochasticModel::laplace(
     categories: [],
     loc,
     scale,
+    shape_a: 1.0,
+    shape_b: 1.0,
     fixed_parameters: true,
     fitted: true,
   }
@@ -139,6 +154,30 @@ pub fn StochasticModel::uniform(
     categories: [],
     loc,
     scale,
+    shape_a: 1.0,
+    shape_b: 1.0,
+    fixed_parameters: true,
+    fitted: true,
+  }
+}
+
+///|
+/// A beta distribution with the given shapes.
+///
+/// This is the port of
+/// `dowhy.gcm.stochastic_models.ScipyDistribution(scipy.stats.beta, a=..., b=...)`.
+/// The support of the distribution is the interval that goes from the location
+/// to the location plus the scale, like the support of scipy, so that
+/// `beta(2.0, 2.0)` is the beta distribution on `[0, 1]`.
+pub fn StochasticModel::beta(a : Double, b : Double) -> StochasticModel {
+  {
+    kind: Beta,
+    samples: [],
+    categories: [],
+    loc: 0.0,
+    scale: 1.0,
+    shape_a: a,
+    shape_b: b,
     fixed_parameters: true,
     fitted: true,
   }
@@ -175,6 +214,41 @@ pub fn StochasticModel::scale(self : StochasticModel) -> Double {
 }
 
 ///|
+/// The first shape parameter of a beta distribution.
+pub fn StochasticModel::shape_a(self : StochasticModel) -> Double {
+  self.shape_a
+}
+
+///|
+/// The second shape parameter of a beta distribution.
+pub fn StochasticModel::shape_b(self : StochasticModel) -> Double {
+  self.shape_b
+}
+
+///|
+/// The parameters of the distribution.
+///
+/// This is the port of the `parameters` property of
+/// `dowhy.gcm.stochastic_models.ScipyDistribution`. The parameters of a beta
+/// distribution are its two shapes, and every parametric distribution of the
+/// port has a location and a scale.
+pub fn StochasticModel::parameters(
+  self : StochasticModel,
+) -> Map[String, Double] {
+  let parameters : Map[String, Double] = Map([])
+  match self.kind {
+    Beta => {
+      let _ = parameters.set("a", self.shape_a)
+      let _ = parameters.set("b", self.shape_b)
+    }
+    _ => ()
+  }
+  let _ = parameters.set("loc", self.loc)
+  let _ = parameters.set("scale", self.scale)
+  parameters
+}
+
+///|
 /// The distribution whose parameters are estimated when it is fitted.
 ///
 /// This is the port of
@@ -191,6 +265,8 @@ pub fn StochasticModel::with_estimated_parameters(
     categories: self.categories.copy(),
     loc: self.loc,
     scale: self.scale,
+    shape_a: self.shape_a,
+    shape_b: self.shape_b,
     fixed_parameters: false,
     fitted: false,
   }
@@ -216,6 +292,8 @@ pub fn StochasticModel::fit(
       categories: self.categories.copy(),
       loc: self.loc,
       scale: self.scale,
+      shape_a: self.shape_a,
+      shape_b: self.shape_b,
       fixed_parameters: true,
       fitted: true,
     }
@@ -228,6 +306,8 @@ pub fn StochasticModel::fit(
         categories: self.categories.copy(),
         loc: self.loc,
         scale: self.scale,
+        shape_a: self.shape_a,
+        shape_b: self.shape_b,
         fixed_parameters: false,
         fitted: true,
       }
@@ -238,6 +318,8 @@ pub fn StochasticModel::fit(
         categories: self.categories.copy(),
         loc: self.loc,
         scale: self.scale,
+        shape_a: self.shape_a,
+        shape_b: self.shape_b,
         fixed_parameters: false,
         fitted: true,
       }
@@ -250,6 +332,8 @@ pub fn StochasticModel::fit(
         categories: self.categories.copy(),
         loc,
         scale,
+        shape_a: self.shape_a,
+        shape_b: self.shape_b,
         fixed_parameters: false,
         fitted: true,
       }
@@ -267,6 +351,8 @@ pub fn StochasticModel::fit(
         categories: self.categories.copy(),
         loc,
         scale,
+        shape_a: self.shape_a,
+        shape_b: self.shape_b,
         fixed_parameters: false,
         fitted: true,
       }
@@ -292,6 +378,54 @@ pub fn StochasticModel::fit(
         categories: self.categories.copy(),
         loc: lowest,
         scale,
+        shape_a: self.shape_a,
+        shape_b: self.shape_b,
+        fixed_parameters: false,
+        fitted: true,
+      }
+    }
+    Beta => {
+      // The support of the fitted beta distribution is the range of the
+      // samples, and the shapes are the method of moments estimates of the
+      // samples that are normalised with that support. The upstream estimates
+      // the four parameters with the maximum likelihood, which gives the same
+      // shapes up to the tolerance of its test.
+      let mut lowest = x[0]
+      let mut highest = x[0]
+      for value in x {
+        if value < lowest {
+          lowest = value
+        }
+        if value > highest {
+          highest = value
+        }
+      }
+      let scale = highest - lowest
+      if scale <= 0.0 {
+        abort(
+          "the samples of a beta distribution have to hold two different values",
+        )
+      }
+      let normalised : Array[Double] = []
+      for value in x {
+        normalised.push((value - lowest) / scale)
+      }
+      let mean = @utils.mean(normalised)
+      let variance = @utils.variance(normalised, 0)
+      // The mean and the variance of a beta distribution with the shapes `a`
+      // and `b` are `a / (a + b)` and `a * b / ((a + b) * (a + b + 1))`, which
+      // gives the shapes of the method of moments.
+      let factor = mean * (1.0 - mean) / variance - 1.0
+      let a = mean * factor
+      let b = (1.0 - mean) * factor
+      {
+        kind: Beta,
+        samples: self.samples.copy(),
+        categories: self.categories.copy(),
+        loc: lowest,
+        scale,
+        shape_a: a,
+        shape_b: b,
         fixed_parameters: false,
         fitted: true,
       }
@@ -343,10 +477,72 @@ pub fn StochasticModel::draw_samples(
         // scipy.
         out.push(self.loc + self.scale * rng.next_double())
       }
+    Beta =>
+      for _ in 0..<num_samples {
+        // A beta variate is the ratio of two gamma variates with the shapes
+        // of the distribution, the way the ratio of two independent gamma
+        // variates has the beta distribution. numpy draws its beta variates
+        // with the algorithm of Johnk, so the samples of the port and of the
+        // upstream are different numbers of the same distribution.
+        let first = rng.next_gamma(self.shape_a, 1.0)
+        let second = rng.next_gamma(self.shape_b, 1.0)
+        out.push(self.loc + self.scale * first / (first + second))
+      }
     EmpiricalCategorical =>
       abort("a categorical distribution draws categorical samples")
   }
   out
+}
+
+///|
+/// The continuous distribution that fits the given samples the best.
+///
+/// This is the port of
+/// `dowhy.gcm.stochastic_models.ScipyDistribution.find_suitable_continuous_distribution`.
+/// Every family the port knows is fitted on the samples, samples are drawn
+/// from the fitted distribution, and the two samples are compared with the
+/// Kullback-Leibler divergence of the nearest neighbour estimator. The first
+/// family whose divergence is below the threshold is the one that is returned,
+/// and the family with the smallest divergence is the one that is returned when
+/// no family reaches the threshold.
+///
+/// The upstream fits every continuous distribution of scipy, the port fits the
+/// four families it knows.
+pub fn find_suitable_continuous_distribution(
+  samples : Array[Double],
+  rng : @utils.Random,
+  divergence_threshold : Double,
+) -> StochasticModel {
+  if samples.length() == 0 {
+    abort("the samples of a distribution cannot be empty")
+  }
+  let observed = @utils.Matrix::from_columns([samples])
+  let candidates : Array[StochasticModel] = [
+    StochasticModel::normal(0.0, 1.0),
+    StochasticModel::laplace(0.0, 1.0),
+    StochasticModel::uniform(0.0, 1.0),
+    StochasticModel::beta(1.0, 1.0),
+  ]
+  let mut best = candidates[0].with_estimated_parameters().fit(samples)
+  let mut smallest = 1.0e308
+  for candidate in candidates {
+    let fitted = candidate.with_estimated_parameters().fit(samples)
+    let generated = fitted.draw_samples(samples.length(), rng)
+    let divergence = estimate_kl_divergence_continuous_knn(
+      observed,
+      @utils.Matrix::from_columns([generated]),
+      1,
+      true,
+    )
+    if divergence < divergence_threshold {
+      return fitted
+    }
+    if divergence < smallest {
+      smallest = divergence
+      best = fitted
+    }
+  }
+  best
 }
 
 ///|
@@ -369,6 +565,8 @@ pub fn StochasticModel::fit_categorical(
     categories: x.copy(),
     loc: self.loc,
     scale: self.scale,
+    shape_a: self.shape_a,
+    shape_b: self.shape_b,
     fixed_parameters: false,
     fitted: true,
   }
@@ -415,6 +613,8 @@ pub fn StochasticModel::clone(self : StochasticModel) -> StochasticModel {
       categories: [],
       loc: self.loc,
       scale: self.scale,
+      shape_a: self.shape_a,
+      shape_b: self.shape_b,
       fixed_parameters: true,
       fitted: true,
     }
@@ -425,6 +625,8 @@ pub fn StochasticModel::clone(self : StochasticModel) -> StochasticModel {
     categories: [],
     loc: 0.0,
     scale: 0.0,
+    shape_a: 1.0,
+    shape_b: 1.0,
     fixed_parameters: false,
     fitted: false,
   }

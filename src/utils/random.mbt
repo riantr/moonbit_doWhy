@@ -56,6 +56,55 @@ pub fn Random::next_normal(self : Random) -> Double {
 }
 
 ///|
+/// The next value from a gamma distribution.
+///
+/// This is the port of the gamma variate of numpy, which is drawn with the
+/// algorithm of Marsaglia and Tsang. A gamma variate with the shape `a` and
+/// the scale `b` has the mean `a * b` and the variance `a * b * b`.
+///
+/// The shape has to be positive. A shape that is smaller than one is drawn
+/// from the shape that is one greater, which is the way the algorithm of
+/// Marsaglia and Tsang is extended to the shapes below one.
+pub fn Random::next_gamma(
+  self : Random,
+  shape : Double,
+  scale : Double,
+) -> Double {
+  if shape <= 0.0 {
+    abort("the shape of a gamma distribution has to be positive")
+  }
+  if shape < 1.0 {
+    // The algorithm of Marsaglia and Tsang needs a shape of at least one, so
+    // the variate of a smaller shape is the variate of the shape that is one
+    // greater, multiplied with the power of a uniform variate.
+    let uniform = self.next_double()
+    let powered = if uniform < 1.0e-12 {
+      1.0e-12
+    } else {
+      @math.pow(uniform, 1.0 / shape)
+    }
+    return self.next_gamma(shape + 1.0, scale) * powered
+  }
+  let d = shape - 1.0 / 3.0
+  let c = 1.0 / (9.0 * d).sqrt()
+  let mut value = 0.0
+  let mut accepted = false
+  while !accepted {
+    let x = self.next_normal()
+    let v = (1.0 + c * x) * (1.0 + c * x) * (1.0 + c * x)
+    if v > 0.0 {
+      let u = self.next_double()
+      let log_u = if u < 1.0e-12 { -27.631021 } else { @math.ln(u) }
+      if log_u < 0.5 * x * x + d * (1.0 - v + @math.ln(v)) {
+        value = d * v
+        accepted = true
+      }
+    }
+  }
+  value * scale
+}
+
+///|
 /// A random permutation of the given values.
 pub fn Random::shuffle(self : Random, values : Array[Double]) -> Array[Double] {
   let out = values.copy()
