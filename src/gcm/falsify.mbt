@@ -42,6 +42,11 @@
 /// constants of its `FalsifyConst` enumeration. The port reports them in
 /// structures, one for every validation.
 ///
+/// The upstream encodes the data of its independence tests with a one-hot
+/// encoder, so that a column that holds categories becomes one column per
+/// category. The port encodes the data of the tests at the call site, the
+/// way the other callers of the kernel based test of the package do it.
+///
 /// The plotting functions of the upstream are not ported: the port has no
 /// plotting.
 
@@ -719,16 +724,34 @@ fn falsify_compute_p_value(
   if z.length() > 0 {
     Some(
       conditional_independence_test(
-        data.design_matrix([x]),
-        data.design_matrix([y]),
-        Some(data.design_matrix(z)),
+        falsify_design_matrix(data, [x]),
+        falsify_design_matrix(data, [y]),
+        Some(falsify_design_matrix(data, z)),
       ),
     )
   } else {
     Some(
-      independence_test(data.design_matrix([x]), data.design_matrix([y]), None),
+      independence_test(
+        falsify_design_matrix(data, [x]),
+        falsify_design_matrix(data, [y]),
+        None,
+      ),
     )
   }
+}
+
+///|
+/// The design matrix of the data of the given nodes.
+///
+/// A column that holds categories is encoded with the one-hot encoder, the
+/// way the upstream encodes the data of its independence tests: the
+/// categories of a column are in lexicographic order and every category
+/// becomes a column of its own. The numeric columns keep their values.
+fn falsify_design_matrix(
+  data : @api.DataFrame,
+  names : Array[String],
+) -> @utils.Matrix {
+  one_hot_encode_frame(data.select(names))
 }
 
 ///|

@@ -9,9 +9,11 @@
 /// the port uses its own `generalised_cov_based`, which is the same measure
 /// with an ordinary least squares fit.
 ///
-/// The upstream test of the categorical fixture is not ported: the data frame
-/// of the port holds one numeric or one discrete column per name, and the
-/// kernel based test of the port takes numeric matrices only.
+/// The upstream test of the categorical fixture has a counterpart here: the
+/// falsification layer of the port encodes the columns that hold categories
+/// with the one-hot encoder, the way the upstream encodes the data of its
+/// independence tests, so the kernel based test of the port gets the same
+/// matrices the upstream gets.
 
 ///|
 /// The significance level of the tests.
@@ -45,6 +47,32 @@ fn falsify_near(a : Double, b : Double) -> Bool {
 fn falsify_p_value_near(actual : Double?, expected : Double) -> Bool {
   match actual {
     Some(value) => falsify_near(value, expected)
+    None => false
+  }
+}
+
+///|
+/// Whether a p-value of the kernel based test is close to the expected one.
+///
+/// The tolerance of the kernel based test is the tolerance of the kernel test
+/// of the package, `1e-10` relative, and not the tolerance of the other tests
+/// of the layer: the upstream draws its sample in a random order and the port
+/// draws it in the order of its indices, so the two p-values differ in their
+/// last digits.
+///
+/// A p-value that the upstream reports as zero is compared with an absolute
+/// tolerance, because the relative comparison of two zeros is not a number.
+fn falsify_kernel_p_value_near(actual : Double?, expected : Double) -> Bool {
+  match actual {
+    Some(value) => {
+      let difference = (value - expected).abs()
+      let scale = expected.abs()
+      if scale < 1.0e-300 {
+        difference <= KERNEL_TOLERANCE
+      } else {
+        difference <= KERNEL_TOLERANCE * scale
+      }
+    }
     None => false
   }
 }
@@ -210,6 +238,57 @@ fn falsify_cm_summary(summary : @gcm.ValidationResults) -> @gcm.CmSummary {
     Some(value) => value
     None => abort("the causal minimality was not validated")
   }
+}
+
+///|
+/// The graph of the categorical fixture, whose edges are `X -> Z` and `Z -> Y`.
+fn falsify_categorical_graph() -> @graph.DirectedGraph {
+  let graph = @graph.DirectedGraph::new()
+  graph.add_edge("X", "Z")
+  graph.add_edge("Z", "Y")
+  graph
+}
+
+///|
+/// The kernel based test of the package.
+///
+/// The upstream uses the kernel based test for its categorical fixture, and
+/// the port uses the same test with the same parameters: one run, at most two
+/// thousand rows and the p-value of the run.
+fn falsify_kernel_test(
+  x : @utils.Matrix,
+  y : @utils.Matrix,
+  z : @utils.Matrix?,
+) -> Double {
+  @gcm.kernel_based(
+    x,
+    y,
+    z,
+    false,
+    1,
+    2000,
+    kernel_first_p_value,
+    @utils.Random::new(KERNEL_SEED),
+  )
+}
+
+///|
+/// The methods of the validations of the categorical fixture.
+fn falsify_categorical_validation_methods(
+  causal_graph_reference : @graph.DirectedGraph,
+) -> Array[@gcm.ValidationMethod] {
+  [
+    @gcm.ValidationMethod::local_markov_condition(
+      falsify_kernel_test,
+      falsify_kernel_test,
+      FALSIFY_SIGNIFICANCE_LEVEL,
+    ),
+    @gcm.ValidationMethod::pairwise_dependencies(
+      falsify_kernel_test,
+      FALSIFY_SIGNIFICANCE_LEVEL,
+    ),
+    @gcm.ValidationMethod::parental_d_separations(causal_graph_reference),
+  ]
 }
 
 ///|
@@ -551,6 +630,43 @@ test "given wrong single edge when validating graph then report violations" {
   let tpa = falsify_tpa_summary(summary)
   assert_eq(tpa.n_violations(), 2)
   assert_eq(tpa.n_tests(), 2)
+}
+
+///|
+/// test "given correct categorical when validating graph then report no
+/// violations"
+///
+/// This is the port of the upstream test
+/// `test_given_correct_categorical_when_validating_graph_then_report_no_violations`.
+/// The upstream uses the kernel based test for its categorical fixture, and
+/// the port uses the same test.
+test "given correct categorical when validating graph then report no violations" {
+  let graph = falsify_categorical_graph()
+  let summary = @gcm.run_validations(
+    graph,
+    @gcm.kernel_categorical_frame(),
+    falsify_categorical_validation_methods(graph),
+  )
+  let lmc = falsify_lmc_summary(summary)
+  assert_true(
+    falsify_kernel_p_value_near(lmc.p_value_of("Y", "X"), 0.6974879214667442),
+  )
+  assert_eq(lmc.n_violations(), 0)
+  assert_eq(lmc.n_tests(), 1)
+  let pairwise = falsify_pairwise_summary(summary)
+  assert_true(
+    falsify_kernel_p_value_near(
+      pairwise.p_value_of("Y", "X"),
+      1.9984014443252818e-15,
+    ),
+  )
+  assert_true(falsify_kernel_p_value_near(pairwise.p_value_of("Y", "Z"), 0.0))
+  assert_true(falsify_kernel_p_value_near(pairwise.p_value_of("Z", "X"), 0.0))
+  assert_eq(pairwise.n_violations(), 0)
+  assert_eq(pairwise.n_tests(), 3)
+  let tpa = falsify_tpa_summary(summary)
+  assert_eq(tpa.n_violations(), 0)
+  assert_eq(tpa.n_tests(), 1)
 }
 
 ///|

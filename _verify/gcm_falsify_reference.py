@@ -65,6 +65,65 @@ SEED = gen_falsify_testdata.SEED
 # The number of rows of every fixture of the falsification layer.
 NUM_ROWS = gen_falsify_testdata.NUM_ROWS
 
+# The seed of the categorical fixture of the kernel test, the same as the one
+# of `src/gcm/kernel_testdata.mbt`.
+CATEGORICAL_SEED = 20240201
+
+# The number of the rows of the categorical fixture.
+CATEGORICAL_ROWS = 200
+
+MASK64 = (1 << 64) - 1
+
+
+class Xorshift:
+    """The generator of `src/utils/random.mbt`."""
+
+    def __init__(self, seed: int) -> None:
+        self.state = seed if seed != 0 else 0x9E3779B97F4A7C15
+
+    def next_u64(self) -> int:
+        x = self.state
+        x ^= (x << 13) & MASK64
+        x ^= x >> 7
+        x ^= (x << 17) & MASK64
+        self.state = x
+        return x
+
+    def next_double(self) -> float:
+        return (self.next_u64() >> 11) / 9007199254740992.0
+
+    def next_normal(self) -> float:
+        u1 = self.next_double()
+        u2 = self.next_double()
+        u1 = 1.0e-12 if u1 < 1.0e-12 else u1
+        return np.sqrt(-2.0 * np.log(u1)) * np.cos(2.0 * np.pi * u2)
+
+
+def categorical_frame() -> pd.DataFrame:
+    """The categorical fixture of the kernel test.
+
+    The fixture is the one of `src/gcm/kernel_testdata.mbt`: the column `X`
+    holds normal deviates, the column `Z` holds the class of the sign of `X`,
+    the column `Y` holds the number of the class of `Z` with a noise, and the
+    column `R` holds a class that does not depend on `X`.
+
+    The rows are the ones of the MoonBit test, so that the two sides work on
+    the same rows: the generator of the port is replicated here.
+    """
+    rng = Xorshift(CATEGORICAL_SEED)
+    first: list[float] = []
+    second: list[float] = []
+    third: list[str] = []
+    fourth: list[str] = []
+    for _ in range(CATEGORICAL_ROWS):
+        value = rng.next_normal()
+        klass = 0.0 if value > 0.0 else 1.0
+        first.append(value)
+        second.append(klass + rng.next_normal())
+        third.append("Class 1" if value > 0.0 else "Class 2")
+        fourth.append("Class 1" if rng.next_double() < 0.5 else "Class 2")
+    return pd.DataFrame({"X": first, "Y": second, "Z": third, "R": fourth})
+
 
 def register_missing_modules() -> None:
     """Registers the upstream modules the loader does not know.
@@ -303,6 +362,32 @@ def main() -> None:
     )
     run_case(falsify, "causal_minimality_non_minimal", non_minimality_graph, minimality_data, (cm,))
     run_case(falsify, "causal_minimality_minimal", minimality_graph, minimality_data, (cm,))
+
+    # ------------------------------------------------------------------
+    # A2. The validations of the categorical fixture.
+    #
+    # The upstream uses the kernel based test for its categorical fixture, and
+    # the port uses the same test.
+    # ------------------------------------------------------------------
+    categorical_graph = nx.DiGraph([("X", "Z"), ("Z", "Y")])
+    kernel = independence.kernel_based
+    kernel_lmc = partial(
+        falsify.validate_lmc,
+        independence_test=kernel,
+        conditional_independence_test=kernel,
+    )
+    kernel_pd = partial(falsify.validate_pd, independence_test=kernel)
+    run_case(
+        falsify,
+        "categorical",
+        categorical_graph,
+        categorical_frame(),
+        (
+            kernel_lmc,
+            kernel_pd,
+            partial(falsify.validate_tpa, causal_graph_reference=categorical_graph),
+        ),
+    )
 
     # ------------------------------------------------------------------
     # B. The falsification of the graph of the collider and of the chain.

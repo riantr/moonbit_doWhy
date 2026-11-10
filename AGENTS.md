@@ -964,6 +964,15 @@ statsmodels / scikit-learn conventions are deliberate:
   matrices of the port hold numbers only, so the encoding happens at the call
   site of the test. The p-values of the port and of the upstream differ by less than
   `5e-12` on the categorical fixture of the test.
+- The falsification layer of the `gcm` package encodes the columns that hold
+  categories with the one-hot encoder before it builds the design matrix of a
+  test, the way the upstream encodes every matrix of its independence test on
+  its own. The p-values of the port and of the upstream agree to `2e-12` on the
+  categorical fixture of the upstream test of the layer. The assertions of that
+  case use the tolerance of the kernel test of the package, which is `1e-10`
+  relative, and not the tolerance of the other tests of the layer, which is
+  `1e-12`: the upstream draws a random permutation of the rows and the port
+  draws them in the order of their indices.
 - The attribution of the anomalies without a causal model of the `gcm` package
   is the port of `dowhy.gcm.anomaly.attribute_anomaly_scores`. The set function
   of the score permutes the rows of the columns that are not in the subset, so

@@ -3165,6 +3165,46 @@ The categorical noise dependent function.
 
 [0.0.61]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.61
 
+## [0.0.63] - 2026-11-10
+
+The categorical falsification.
+
+### Added
+
+- the case of the upstream test
+  `test_given_correct_categorical_when_validating_graph_then_report_no_violations`
+  in the file `src/gcm/falsify_test.mbt`: the port validates the graph
+  `X -> Z -> Y` against the categorical fixture of the upstream with the
+  kernel based test of the package, and it reports no violation of the local
+  Markov condition, none of the pairwise dependencies and none of the parental
+  d-separations. Every case of the upstream test file
+  `tests/gcm/test_falsify.py` has a counterpart now.
+- the numbers of the upstream on the very rows of the port in
+  `_verify/gcm_falsify_reference.py`: the new section `categorical` runs the
+  upstream `dowhy.gcm.falsify` on the categorical fixture and shows that the
+  p-values of the four tests are the ones the port gives.
+
+### Fixed
+
+- The falsification layer of the `gcm` package built the design matrix of a
+  test with `DataFrame::design_matrix`, which aborts on a column that holds
+  categories. The layer encodes the categorical columns with the one-hot
+  encoder now, the way the upstream encodes every matrix of its independence
+  test on its own, so the falsification of a model whose data holds a
+  categorical column works.
+
+### Notes
+
+- The upstream draws a random permutation of the rows before it computes the
+  kernel based test, and its p-value moves with that permutation in its last
+  digits. The port draws the rows in the order of their indices, so its
+  p-values are the ones of the upstream in the canonical order of the rows;
+  the difference is of the order of `2e-12`, which is the noise of the
+  upstream itself. The assertions of the categorical case use the tolerance of
+  the kernel test of the package, which is `1e-10` relative.
+
+[0.0.63]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.63
+
 ## [0.0.62] - 2026-11-10
 
 The Bayesian Gaussian mixture distribution.
