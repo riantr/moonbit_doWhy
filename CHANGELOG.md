@@ -3125,3 +3125,42 @@ The categorical intrinsic causal influence.
   so that case has no counterpart.
 
 [0.0.60]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.60
+
+## [0.0.61] - 2026-11-10
+
+The categorical noise dependent function.
+
+### Added
+
+- the categorical noise dependent function of the `gcm` package, in
+  `src/gcm/noise.mbt`: the new public function
+  `categorical_noise_dependent_function` is the port of
+  `dowhy.gcm._noise.get_noise_dependent_function` for a target with a
+  categorical mechanism. The upstream returns the categories of the target, so
+  the function of the port takes a frame whose columns hold the noise of the
+  nodes and returns the classes of the target.
+- the categorical root of the noise of a causal model, in `src/gcm/noise.mbt`:
+  the column of a root node with a categorical distribution holds the
+  categories of the node now, and the samples of such a node are drawn from the
+  distribution of the node, so that the noise of a categorical root is the
+  category of the node, the way the upstream draws it.
+- one case in `src/gcm/noise_test.mbt`: the classes of the target of a graph
+  with a continuous root and a categorical root are the classes that the
+  upstream gives for the same noise. Six of the seven cases of the upstream
+  test file `tests/gcm/test_noise.py` have a counterpart now.
+- the numbers of the upstream on the fixtures of the port in
+  `_verify/gcm_noise_reference.py`: the new section runs the upstream on the
+  very rows of the port and shows that the classes of the target are the ones
+  the port gives, both for the exact function and for the approximate one.
+
+### Notes
+
+- The function of the upstream takes a numpy array whose columns hold the noise
+  of the nodes, and the noise of a node with a categorical distribution is the
+  category of the node, so the array of the upstream holds strings as well as
+  numbers. The port takes a frame instead, whose column of a node with a
+  categorical distribution holds the categories of the node.
+- The case of the upstream whose nodes are named with integers still has no
+  counterpart, because the nodes of the port are named with strings.
+
+[0.0.61]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.61

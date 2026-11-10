@@ -25,7 +25,13 @@ pub fn compute_data_from_noise(
   let mut frame = @api.DataFrame::new([], Map([]))
   for node in causal_model.graph.topological_order() {
     if is_root_node(causal_model, node) {
-      frame = frame.with_numeric(node, noise_data.numeric(node))
+      if is_categorical_root(causal_model, node) {
+        // The noise of a root node with a categorical distribution is the
+        // category of the node, the way the upstream draws it.
+        frame = frame.with_discrete(node, noise_data.discrete(node))
+      } else {
+        frame = frame.with_numeric(node, noise_data.numeric(node))
+      }
     } else {
       let parents = causal_model.graph.ordered_predecessors(node)
       let x = design_matrix_of(causal_model, node, frame, parents)
@@ -117,9 +123,17 @@ pub fn noise_samples_of_ancestors(
             " is a root and needs a distribution, but it has none",
           )
       }
-      let values = root_model.draw_samples(num_samples, rng)
-      samples = samples.with_numeric(node, values.copy())
-      noise_samples = noise_samples.with_numeric(node, values.copy())
+      if is_categorical_root(causal_model, node) {
+        // The noise of a root node with a categorical distribution is the
+        // category of the node, the way the upstream draws it.
+        let values = root_model.draw_category_samples(num_samples, rng)
+        samples = samples.with_discrete(node, values.copy())
+        noise_samples = noise_samples.with_discrete(node, values.copy())
+      } else {
+        let values = root_model.draw_samples(num_samples, rng)
+        samples = samples.with_numeric(node, values.copy())
+        noise_samples = noise_samples.with_numeric(node, values.copy())
+      }
     } else {
       let parents = causal_model.graph.ordered_predecessors(node)
       let x = design_matrix_of(causal_model, node, samples, parents)
@@ -168,6 +182,34 @@ pub fn noise_dependent_function(
   let function = fn(noise : @utils.Matrix) -> Array[Double] {
     let frame = noise_features_frame(noise, nodes_order)
     compute_data_from_noise(sub_model, frame).numeric(target_node)
+  }
+  (function, nodes_order)
+}
+
+///|
+/// The function that gives the class of the target node from the noise of its
+/// ancestors, and the order of the columns of its input.
+///
+/// This is the port of `dowhy.gcm._noise.get_noise_dependent_function` for a
+/// target with a categorical mechanism. The input of the function of the
+/// upstream is an array whose columns hold the noise of the nodes, and the
+/// noise of a node with a categorical distribution is the category of the node,
+/// so the array of the upstream holds strings as well as numbers. The port
+/// takes a frame instead, whose column of a node with a categorical
+/// distribution holds the categories of the node.
+///
+/// The result holds the function and the order of the columns of its input,
+/// which is the topological order of the nodes of the graph of the target node.
+/// The columns of the input hold the noise of the nodes in that order.
+pub fn categorical_noise_dependent_function(
+  causal_model : ProbabilisticCausalModel,
+  target_node : String,
+) -> ((@api.DataFrame) -> Array[String], Array[String]) {
+  validate_causal_dag(causal_model)
+  let sub_model = subgraph_of(causal_model, target_node)
+  let nodes_order = sub_model.graph.topological_order()
+  let function = fn(noise : @api.DataFrame) -> Array[String] {
+    compute_data_from_noise(sub_model, noise).discrete(target_node)
   }
   (function, nodes_order)
 }
@@ -225,6 +267,22 @@ fn design_matrix_of(
         node +
         " has parents and needs an encoder, but it has none; fit the causal model first",
       )
+  }
+}
+
+///|
+/// Whether the root node has a categorical distribution.
+fn is_categorical_root(
+  causal_model : ProbabilisticCausalModel,
+  node : String,
+) -> Bool {
+  match causal_model.root_model(node) {
+    Some(model) =>
+      match model.kind() {
+        EmpiricalCategorical => true
+        _ => false
+      }
+    None => false
   }
 }
 

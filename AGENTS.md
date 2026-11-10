@@ -323,6 +323,15 @@ statsmodels / scikit-learn conventions are deliberate:
   root node has a fitted distribution, because the view of the graph of the
   target node does not carry the distribution of the root node; the port copies
   the mechanisms of the model into the view, so its approximate branch works.
+- The **noise of a root node with a categorical distribution** is the category
+  of the node itself, the way the upstream draws it: the upstream copies the
+  column of the noise into the column of the node, so the noise of a
+  categorical root is a category and not a number. The port keeps the
+  categories in the discrete column of the node, so the frame of the noise
+  holds the numbers of the continuous nodes and the categories of the
+  categorical ones in two kinds of column. The function of the target node of a
+  categorical target therefore takes a frame and not an array of numbers, and it
+  returns the categories of the target.
 - The false discovery rate control of the `gcm` package is the
   Benjamini-Hochberg **step-up** procedure of
   `statsmodels.stats.multitest.multipletests(method="fdr_bh")`: the adjusted

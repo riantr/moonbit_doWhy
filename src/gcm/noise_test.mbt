@@ -3,11 +3,11 @@
 ///
 /// The expectations are the ones of the upstream tests of `dowhy.gcm._noise`,
 /// which are in `tests/gcm/test_noise.py`. Six of the seven tests of the
-/// upstream have a counterpart here. The two that have none are the test of the
-/// upstream whose target is a categorical variable, because the function of the
-/// upstream returns the categories of the target and the port returns numbers,
-/// and the test of the upstream whose nodes are named with integers, because
-/// the nodes of the port are named with strings.
+/// upstream have a counterpart here. The one that has none is the test of the
+/// upstream whose nodes are named with integers, because the nodes of the port
+/// are named with strings. The test of the upstream whose target is a
+/// categorical variable has a counterpart of its own, because the function of
+/// the port returns the categories of the target as well.
 ///
 /// The fixtures are drawn with the deterministic generator of the `utils`
 /// package, and the expected numbers are the ones the upstream `dowhy.gcm._noise`
@@ -38,6 +38,14 @@ const NOISE_SCALE : Double = 0.1
 ///|
 /// The tolerance of the comparison of the numbers of the reference script.
 const NOISE_TOLERANCE : Double = 1.0e-12
+
+///|
+/// The seed of the fixture of the categorical noise dependent function.
+const NOISE_CATEGORICAL_SEED : UInt64 = 2070UL
+
+///|
+/// The number of the rows of the categorical fixture.
+const NOISE_CATEGORICAL_ROWS : Int32 = 1000
 
 ///|
 /// Whether two numbers agree to the tolerance of the comparison.
@@ -128,6 +136,52 @@ fn noise_data_columns() -> (
     x3.push(0.5 * x2[i] + n3[i])
   }
   (x0, x1, x2, x3)
+}
+
+///|
+/// The data of the fixture of the categorical noise dependent function.
+///
+/// The fixture is the one of the upstream test file `tests/gcm/test_noise.py` in
+/// the case
+/// `test_given_continuous_and_categorical_variables_when_get_noise_dependent_function_then_represents_correct_function`:
+/// the root `X0` is continuous, the root `X1` is categorical, and the target
+/// `X3` is the class of its parent.
+fn noise_categorical_data() -> @api.DataFrame {
+  let rng = @utils.Random::new(NOISE_CATEGORICAL_SEED)
+  let x0 : Array[Double] = []
+  for _ in 0..<NOISE_CATEGORICAL_ROWS {
+    x0.push(rng.next_normal())
+  }
+  let x1 : Array[String] = []
+  for _ in 0..<NOISE_CATEGORICAL_ROWS {
+    if rng.next_int(2) == 0 {
+      x1.push("0")
+    } else {
+      x1.push("1")
+    }
+  }
+  let x2 : Array[String] = []
+  for i in 0..<NOISE_CATEGORICAL_ROWS {
+    let shift = if x1[i] == "0" { 0.0 } else { 1.0 }
+    let value = shift + rng.next_normal()
+    if value < 0.5 {
+      x2.push(if x0[i] + 2.0 > 0.0 { "True" } else { "False" })
+    } else {
+      x2.push(if x0[i] - 2.0 > 0.0 { "True" } else { "False" })
+    }
+  }
+  let x3 : Array[String] = []
+  for i in 0..<NOISE_CATEGORICAL_ROWS {
+    let shift = if x2[i] == "True" { 0.0 } else { 1.0 }
+    let value = shift + rng.next_normal()
+    if value < 0.5 {
+      x3.push("False")
+    } else {
+      x3.push("True")
+    }
+  }
+  let frame = @api.DataFrame::from_numeric(["X0"], Map([("X0", x0)]))
+  frame.with_discrete("X1", x1).with_discrete("X2", x2).with_discrete("X3", x3)
 }
 
 ///|
@@ -445,6 +499,70 @@ test "the function of a target node omits the nodes that have no path to it" {
   assert_true(
     noise_index_of(nodes_order, "X3") < noise_index_of(nodes_order, "X2"),
   )
+}
+
+///|
+/// test "given continuous and categorical variables when getting the noise dependent function then report the classes of the target"
+///
+/// This is the port of the upstream test
+/// `test_given_continuous_and_categorical_variables_when_get_noise_dependent_function_then_represents_correct_function`.
+/// The upstream compares the classes of the target with the classes its own
+/// function gives.
+test "given continuous and categorical variables when getting the noise dependent function then report the classes of the target" {
+  let data = noise_categorical_data()
+  let graph = @graph.DirectedGraph::new()
+  graph.add_edge("X0", "X2")
+  graph.add_edge("X1", "X2")
+  graph.add_edge("X2", "X3")
+  let model = @gcm.ProbabilisticCausalModel::new(graph)
+  let _ = @gcm.assign_causal_mechanisms(
+    model,
+    data,
+    @gcm.AssignmentQuality::good(),
+    false,
+  )
+  @gcm.fit(model, data)
+  let (function, parent_order) = @gcm.categorical_noise_dependent_function(
+    model, "X3",
+  )
+  assert_eq(parent_order.length(), 4)
+  let mut has_x0 = false
+  let mut has_x1 = false
+  let mut has_x2 = false
+  let mut has_x3 = false
+  for name in parent_order {
+    if name == "X0" {
+      has_x0 = true
+    } else if name == "X1" {
+      has_x1 = true
+    } else if name == "X2" {
+      has_x2 = true
+    } else if name == "X3" {
+      has_x3 = true
+    }
+  }
+  assert_true(has_x0)
+  assert_true(has_x1)
+  assert_true(has_x2)
+  assert_true(has_x3)
+  // The noise of the rows of the upstream: the value of the continuous root,
+  // the category of the categorical root and the noise of the two mechanisms.
+  let input = @api.DataFrame::from_numeric(
+    ["X0", "X2", "X3"],
+    Map([
+      ("X0", [0.0, 0.0, 0.0, 0.0]),
+      ("X2", [0.0, 0.0, 0.0, 1.0]),
+      ("X3", [1.0, 0.0, 0.6, 0.6]),
+    ]),
+  )
+  let input = input.with_discrete("X1", ["0", "0", "0", "0"])
+  let classes = function(input)
+  assert_eq(classes.length(), 4)
+  // The classes the upstream gives for the same noise.
+  assert_true(classes[0] == "True")
+  assert_true(classes[1] == "False")
+  assert_true(classes[2] == "True")
+  assert_true(classes[3] == "False")
 }
 
 ///|

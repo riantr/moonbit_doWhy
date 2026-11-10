@@ -96,6 +96,9 @@ class Xorshift:
     def next_double(self) -> float:
         return (self.next_u64() >> 11) / 9007199254740992.0
 
+    def next_int(self, bound: int) -> int:
+        return self.next_u64() % bound
+
     def next_normal(self) -> float:
         u1 = self.next_double()
         u2 = self.next_double()
@@ -106,6 +109,7 @@ class Xorshift:
 # The loader of `upstream_gcm.py` owns the list of the modules it reads, but it
 # does not know the module of the noise, so its list is only extended here.
 upstream_gcm._PATHS["dowhy.gcm._noise"] = "gcm/_noise.py"
+upstream_gcm._PATHS["dowhy.gcm.fitting_sampling"] = "gcm/fitting_sampling.py"
 upstream_gcm._PATHS["dowhy.causal_graph"] = "causal_graph.py"
 upstream_gcm._PATHS["dowhy.causal_model"] = "causal_model.py"
 
@@ -117,6 +121,12 @@ ROWS = 1000
 
 # The size of the noise of the fixtures.
 NOISE_SCALE = 0.1
+
+# The seed of the categorical fixture, the same as the one of the MoonBit test.
+CATEGORICAL_SEED = 2070
+
+# The number of rows of the categorical fixture.
+CATEGORICAL_ROWS = 1000
 
 
 def noise_rows() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -153,6 +163,37 @@ def two_parent_rows() -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
     noise = {"X0": n0, "X1": n1, "X2": n2, "X3": n3}
     data = {"X0": x0, "X1": x1, "X2": x2, "X3": x3}
     return noise, data
+
+
+def categorical_rows() -> dict[str, np.ndarray]:
+    """The data of the categorical fixture of the upstream test.
+
+    The fixture is the one of the upstream test file `tests/gcm/test_noise.py`
+    in the case
+    `test_given_continuous_and_categorical_variables_when_get_noise_dependent_function_then_represents_correct_function`:
+    the root `X0` is continuous, the root `X1` is categorical, `X2` is the
+    class of the two roots and the target `X3` is the class of `X2`.
+
+    The rows are the ones of the MoonBit test, so that the two sides work on
+    the same rows: the generator of the port is replicated here.
+    """
+    rng = Xorshift(CATEGORICAL_SEED)
+    x0 = np.array([rng.next_normal() for _ in range(CATEGORICAL_ROWS)])
+    x1 = np.array(["0" if rng.next_int(2) == 0 else "1" for _ in range(CATEGORICAL_ROWS)])
+    x2: list[str] = []
+    for index in range(CATEGORICAL_ROWS):
+        shift = 0.0 if x1[index] == "0" else 1.0
+        value = shift + rng.next_normal()
+        if value < 0.5:
+            x2.append("True" if x0[index] + 2.0 > 0.0 else "False")
+        else:
+            x2.append("True" if x0[index] - 2.0 > 0.0 else "False")
+    x3: list[str] = []
+    for index in range(CATEGORICAL_ROWS):
+        shift = 0.0 if x2[index] == "True" else 1.0
+        value = shift + rng.next_normal()
+        x3.append("False" if value < 0.5 else "True")
+    return {"X0": x0, "X1": x1, "X2": np.array(x2), "X3": np.array(x3)}
 
 
 def persist_parents(models, graph) -> None:
@@ -209,6 +250,14 @@ def main() -> None:
     stochastic = load("dowhy.gcm.stochastic_models")
     noise = load("dowhy.gcm._noise")
     regression = load("dowhy.gcm.ml.regression")
+    classification = load("dowhy.gcm.ml.classification")
+    config = load("dowhy.gcm.config")
+    # The selection of the upstream runs the candidates in a process pool, and
+    # the stubbed modules of the upstream cannot be pickled, so the pool is
+    # switched off.
+    config.set_default_n_jobs(1)
+    auto = load("dowhy.gcm.auto")
+    fitting = load("dowhy.gcm.fitting_sampling")
     # The constructor of `StructuralCausalModel` imports the two modules of the
     # wider package, which the stubbed packages do not reach.
     expose_upstream_packages()
@@ -289,6 +338,46 @@ def main() -> None:
             print(f"  value_{index} = {value:.12f}")
     except Exception as error:
         print("APPROX_NOISE_DEPENDENT_FUNCTION")
+        print(f"  upstream_error = {type(error).__name__}: {error}")
+
+
+    # ------------------------------------------------------------------
+    # D. The function that gives the class of the target node from the noise
+    #    of its ancestors.
+    # ------------------------------------------------------------------
+    categorical = categorical_rows()
+    data = pd.DataFrame(categorical)
+    graph = nx.DiGraph([("X0", "X2"), ("X1", "X2"), ("X2", "X3")])
+    causal_model = models.StructuralCausalModel(graph)
+    auto.assign_causal_mechanisms(causal_model, data, auto.AssignmentQuality.GOOD)
+    fitting.fit(causal_model, data)
+
+    function, parent_order = noise.get_noise_dependent_function(causal_model, "X3")
+    input_data = pd.DataFrame(
+        {
+            "X0": [0.0, 0.0, 0.0, 0.0],
+            "X1": ["0", "0", "0", "0"],
+            "X2": [0.0, 0.0, 0.0, 1.0],
+            "X3": [1.0, 0.0, 0.6, 0.6],
+        }
+    )[list(parent_order)]
+    print("CATEGORICAL_NOISE_DEPENDENT_FUNCTION")
+    print(f"  parent_order = {list(parent_order)}")
+    values = np.asarray(function(input_data.to_numpy())).reshape(-1)
+    for index, value in enumerate(values):
+        print(f"  class_{index} = {value}")
+
+    try:
+        approx_function, approx_order = noise.get_noise_dependent_function(
+            causal_model, "X3", approx_prediction_model=classification.create_logistic_regression_classifier()
+        )
+        approx_values = np.asarray(approx_function(input_data[list(approx_order)].to_numpy())).reshape(-1)
+        print("CATEGORICAL_APPROX_NOISE_DEPENDENT_FUNCTION")
+        print(f"  parent_order = {list(approx_order)}")
+        for index, value in enumerate(approx_values):
+            print(f"  class_{index} = {value}")
+    except Exception as error:
+        print("CATEGORICAL_APPROX_NOISE_DEPENDENT_FUNCTION")
         print(f"  upstream_error = {type(error).__name__}: {error}")
 
 
