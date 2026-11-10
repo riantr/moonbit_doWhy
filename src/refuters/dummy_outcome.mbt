@@ -63,6 +63,11 @@ pub enum Transformation {
   /// The outcome is estimated from the covariates with the k nearest
   /// neighbours.
   NearestNeighbour(Int32)
+  /// The outcome is estimated from the covariates with a random forest.
+  ///
+  /// The number is the depth of the trees of the forest, the way the upstream
+  /// gives the depth of its forest to scikit-learn.
+  RandomForest(Int32)
   /// The outcome is estimated from the covariates with the model the caller
   /// gives.
   ///
@@ -118,6 +123,15 @@ pub fn Transformation::nearest_neighbour(k : Int32) -> Transformation {
 }
 
 ///|
+/// A transformation that estimates the outcome with a random forest.
+///
+/// The depth of the trees is the one the caller gives, the way the upstream
+/// gives the depth of its forest to scikit-learn.
+pub fn Transformation::random_forest(max_depth : Int32) -> Transformation {
+  RandomForest(max_depth)
+}
+
+///|
 /// A transformation that predicts the outcome with the given model.
 pub fn Transformation::estimate(
   model : (@api.DataFrame, Array[Double], @api.DataFrame) -> (
@@ -144,7 +158,8 @@ fn has_estimator(transformations : Array[Transformation]) -> Bool {
   for transformation in transformations {
     match transformation {
       Zero | Noise(_) | Permute(_) => ()
-      LinearRegression | NearestNeighbour(_) | Estimate(_) => return true
+      LinearRegression | NearestNeighbour(_) | RandomForest(_) => return true
+      Estimate(_) => return true
     }
   }
   false
@@ -701,6 +716,15 @@ fn process_transformations(
           train = Some(knn_predict(x, y, x, k))
         }
         validation = knn_predict(x, y, x_validation, k)
+      }
+      RandomForest(max_depth) => {
+        let x = require_training_frame(x_train, "random_forest")
+        let y = require_training_outcome(train, "random_forest")
+        let forest = forest_fit(x, y, max_depth, random)
+        if train is Some(_) {
+          train = Some(forest_predict(forest, x))
+        }
+        validation = forest_predict(forest, x_validation)
       }
       Estimate(model) => {
         let x = require_training_frame(x_train, "estimate")

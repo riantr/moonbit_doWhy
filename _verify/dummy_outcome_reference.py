@@ -65,6 +65,18 @@ CASES = [
         2,
         False,
     ),
+    (
+        "internal_random_forest_continuous_treatment",
+        0.01,
+        "iv.instrumental_variable",
+        [
+            ("random_forest", {"max_depth": 20}),
+            ("zero", ""),
+            ("noise", {"std_dev": 1}),
+        ],
+        2,
+        False,
+    ),
 ]
 
 

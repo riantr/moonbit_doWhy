@@ -3165,6 +3165,48 @@ The categorical noise dependent function.
 
 [0.0.61]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.61
 
+## [0.0.66] - 2026-11-10
+
+The random forest of the dummy outcome refuter.
+
+### Added
+
+- the random forest of the `refuters` package, in the new file
+  `src/refuters/dummy_outcome_models.mbt`: the port of the
+  `RandomForestRegressor` of scikit-learn, which the upstream builds when the
+  transformation list of the dummy outcome refuter names the `random_forest`
+  estimator. The forest holds a hundred trees, every tree reads a sample of
+  the training rows with replacement, every split reads the square root of the
+  number of the features, the criterion of a split is the sum of the squared
+  errors and the value of a leaf is the mean of its samples.
+- the variant `Transformation::random_forest` of the `refuters` package and the
+  case of the upstream test
+  `test_refutation_dummy_outcome_refuter_internal_random_forest_continuous_treatment`
+  in the file `src/tests/dummy_outcome_refuter.mbt`. The port mirrors 11 of the
+  20 cases of the upstream test file
+  `tests/causal_refuters/test_dummy_outcome_refuter.py` now.
+- the case of the random forest in the reference script
+  `_verify/dummy_outcome_reference.py`, which runs the upstream on the rows of
+  the port and prints the refuted effects of every bucket. The upstream gives
+  the refuted effects 0.004666, 0.002557 and -0.002711 on the rows of the
+  port, and the port gives -0.000583, 0.000426 and -0.000017. The two are the
+  sampling error of the estimator of a white noise, and they are of the order
+  of the tolerance of the upstream case, which is one hundredth.
+
+### Notes
+
+- The transformation list of the upstream replaces the outcome by zero right
+  after the estimator, so the prediction of the estimator is discarded and the
+  dummy outcome is a white noise. The refuted effect is therefore the sampling
+  error of the estimator, and it does not depend on the model that the list
+  names.
+- The tolerance of the upstream case is one hundredth, the tightest of the
+  suite, so the case runs on the same rows as the other ones of the continuous
+  treatment: on a smaller fixture the sampling error of the estimator of the
+  last bucket is of the order of the tolerance.
+
+[0.0.66]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.66
+
 ## [0.0.65] - 2026-11-10
 
 The missing values of the automatic assignment.

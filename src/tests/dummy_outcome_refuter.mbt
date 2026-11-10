@@ -32,11 +32,15 @@
 /// * `custom_function_linear_regression_with_permute_continuous_treatment` —
 ///   `[permute(0.5), simple_linear_outcome_model, noise(1)]`, the linear
 ///   regression, tolerance 0.2.
+/// * `internal_random_forest_continuous_treatment` —
+///   `[random_forest(20), zero, noise(1)]`, the instrumental variable estimator,
+///   tolerance 0.01. The list carries an estimator, so the refuter buckets the
+///   treatment and reports one refutation per bucket.
 ///
 /// The cases that are not mirrored:
 ///
-/// * The six whose transformation list names an estimator the port does not have
-///   — `svm`, `random_forest` and `neural_network`, two treatments each.
+/// * The four whose transformation list names an estimator the port does not have
+///   — `svm` and `neural_network`, two treatments each.
 /// * `custom_function_linear_regression_with_noise_binary_treatment` and
 ///   `custom_function_linear_regression_with_permute_binary_treatment`, which the
 ///   upstream marks `xfail` itself.
@@ -317,6 +321,40 @@ test "the inner nearest neighbours report one refutation per bucket of the treat
   assert_eq(refutations.length(), 3)
   for refutation in refutations {
     assert_true(refutation.new_effect().abs() < 0.2)
+  }
+}
+
+///|
+/// test "the inner random forest reports one refutation per bucket of the
+/// treatment"
+///
+/// This is the port of the upstream test
+/// `test_refutation_dummy_outcome_refuter_internal_random_forest_continuous_treatment`.
+///
+/// The assertion is the tolerance of the upstream case, which the fixture of
+/// the port decides: the transformation list of the upstream replaces the
+/// outcome by zero right after the forest, so the dummy outcome is a white
+/// noise and the refuted effect is the sampling error of the estimator. That
+/// tolerance is one hundredth, the tightest of the suite, so the case runs on
+/// the same rows as the other ones of the continuous treatment: on a smaller
+/// fixture the sampling error of the estimator of the last bucket is of the
+/// order of the tolerance.
+test "the inner random forest reports one refutation per bucket of the treatment" {
+  let dataset = dummy_outcome_dataset(true, 20000)
+  let transformations = [
+    @refuters.Transformation::random_forest(20),
+    @refuters.Transformation::zero(),
+    @refuters.Transformation::noise(1.0),
+  ]
+  let refutations = dummy_outcome_refute(
+    dataset,
+    dummy_outcome_iv(dataset),
+    transformations,
+    31UL,
+  )
+  assert_eq(refutations.length(), 3)
+  for refutation in refutations {
+    assert_true(refutation.new_effect().abs() < 0.01)
   }
 }
 

@@ -1073,6 +1073,18 @@ statsmodels / scikit-learn conventions are deliberate:
   out are the rows of `DataFrame::complete_rows`, and both the selection of
   the model of a node and the fit of the mechanism of a node use them, so the
   two agree on the model they fit.
+- The **random forest** of the `refuters` package is the port of the
+  `RandomForestRegressor` of scikit-learn: a hundred trees, a sample of the
+  training rows with replacement for every tree, the square root of the number
+  of the features at every split, the sum of the squared errors as the
+  criterion of a split and the mean of the samples as the value of a leaf. The
+  upstream draws the samples of every tree and the features of every split
+  with the global generator of numpy, which it does not seed; the port draws
+  them with its own generator, so a forest of the port is the same forest on
+  every run. The nodes of a tree are held in one array and the children of a
+  node are named by their index in that array: the tree is grown with the
+  array as an argument, so the index of a node is known as soon as it is built
+  and the children of a node never have to be moved.
 
 ## Package layout
 
