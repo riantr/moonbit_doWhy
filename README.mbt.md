@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.66.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.67.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -18,7 +18,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators) |
 | Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
-| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome, **with its random forest**, and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis**, its **E-value analysis** and the **default strength** it infers for its confounder --, the **significance test** of the refutations, and the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules) |
+| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome, **with its random forest and its neural network**, and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis**, its **E-value analysis** and the **default strength** it infers for its confounder --, the **significance test** of the refutations, and the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset`, the **sales data set** and the fixtures the upstream tests use) |
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
 | Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
@@ -602,7 +602,8 @@ The `refuters` package differs from upstream in the following ways:
   another category and leaves the rows it does not change alone.
 - The dummy outcome refuter takes the list of transformations of the outcome
   as `Transformation` values: `zero`, `noise`, `permute`, `linear_regression`,
-  the k nearest neighbours and a model the caller gives. The default list is
+  the k nearest neighbours, a random forest, a neural network and a model the
+  caller gives. The default list is
   `[zero, noise(1)]`, the `DEFAULT_TRANSFORMATION` of the upstream, so the
   simulated outcome of the default refutation is zero followed by a normal
   noise, and not the uniform draw of `[0, 1]` the port used before 0.0.37.
@@ -620,13 +621,23 @@ The `refuters` package differs from upstream in the following ways:
   treatment lies at or below the first edge takes part in no bucket. A frame
   whose ranges do not increase makes the port abort with the message of
   `pandas.cut`, `bins must increase monotonically.`
-- `svm` and `neural_network` need the estimators the port does not have, so
-  `Transformation` has no variant for them and a list that names one of them
-  cannot be built. The `random_forest` of the upstream is the
-  `RandomForestRegressor` of scikit-learn; the port has a random forest of its
-  own, in the file `src/refuters/dummy_outcome_models.mbt`, with the hundred
-  trees, the sample of the training rows with replacement and the square root
-  of the number of the features at every split of scikit-learn.
+- `svm` needs the estimator the port does not have, so `Transformation` has no
+  variant for it and a list that names it cannot be built. The `random_forest`
+  of the upstream is the `RandomForestRegressor` of scikit-learn; the port has
+  a random forest of its own, in the file
+  `src/refuters/dummy_outcome_models.mbt`, with the hundred trees, the sample
+  of the training rows with replacement and the square root of the number of
+  the features at every split of scikit-learn.
+- The `neural_network` of the upstream is the `MLPRegressor` of scikit-learn;
+  the port has a network of its own, in the file
+  `src/refuters/dummy_outcome_network.mbt`, whose loss and whose gradient are
+  the ones of scikit-learn: they agree to `3.6e-15` and to `1.8e-15` on the
+  fixture of the reference script `_verify/neural_network_reference.py`, the
+  difference of the order of the summations. The optimiser of the port is a
+  limited memory BFGS with the two loop recursion and a backtracking line
+  search, which is the family of the L-BFGS-B of scipy that scikit-learn uses,
+  but the objective of a network with a ReLU activation is not convex, so the
+  two reach a nearby but not identical point of it.
 - The transformation list of the upstream replaces the outcome by zero right
   after the estimator, so the prediction of the estimator is discarded and the
   dummy outcome is a white noise. The refuted effect is therefore the sampling

@@ -3165,6 +3165,63 @@ The categorical noise dependent function.
 
 [0.0.61]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.61
 
+## [0.0.67] - 2026-11-11
+
+The neural network of the dummy outcome refuter.
+
+### Added
+
+- the neural network of the `refuters` package, in the new file
+  `src/refuters/dummy_outcome_network.mbt`: the port of the `MLPRegressor` of
+  scikit-learn, which the upstream builds when the transformation list of the
+  dummy outcome refuter names the `neural_network` estimator. The network has
+  the hidden layers of the caller, the ReLU activation on them, the identity
+  activation on its output, and it is fitted on the half of the mean of the
+  squared errors of the rows with the penalty of `alpha` on the weights.
+- the variant `Transformation::neural_network` of the `refuters` package and the
+  case of the upstream test
+  `test_refutation_dummy_outcome_refuter_internal_neural_network_continuous_treatment`
+  in the file `src/tests/dummy_outcome_refuter.mbt`. The port mirrors 12 of the
+  20 cases of the upstream test file
+  `tests/causal_refuters/test_dummy_outcome_refuter.py` now.
+- the loss and the gradient of the network in the new reference script
+  `_verify/neural_network_reference.py`, which computes them with the private
+  `_loss_grad_lbfgs` of the `MLPRegressor` of scikit-learn at the same
+  parameters and prints them next to the ones of the port. The two agree to
+  `3.6e-15` and to `1.8e-15`, the difference of the order of the summations.
+- the case of the neural network in the reference script
+  `_verify/dummy_outcome_reference.py`, which runs the upstream on the rows of
+  the port and prints the refuted effects of every bucket. The upstream gives
+  the refuted effects -0.002125, -0.003242 and 0.001715 on the rows of the
+  port, and the port gives 0.000180, -0.000578 and 0.000621.
+
+### Notes
+
+- The optimiser of the port is a limited memory BFGS with the two loop
+  recursion and a backtracking line search of the Armijo condition, which is
+  the family of the L-BFGS-B of scipy that scikit-learn uses. The objective of
+  a network with a ReLU activation is not convex, so the two reach a nearby but
+  not identical point of it, the way two optimisers of a non convex problem do.
+- The upstream draws the initialisation of Glorot of its network with the
+  global generator of numpy, which it does not seed; the port draws it with
+  its own generator, so a network of the port is the same network on every
+  run.
+- The transformation list of the upstream replaces the outcome by zero right
+  after the estimator, so the prediction of the estimator is discarded and the
+  dummy outcome is a white noise. The refuted effect is therefore the sampling
+  error of the estimator, and it does not depend on the model that the list
+  names.
+- The case of the upstream is flaky: with the two simulations of its harness
+  and the hundred thousand rows of its fixture, one of its three refuted
+  effects was -0.014132, which is outside the tolerance of one hundredth of
+  the case. The port runs ten simulations on twenty thousand rows, the way its
+  other continuous cases run, and its three refuted effects are of the order
+  of a thousandth.
+- The case is the slowest of the suite, because the network is fitted once per
+  bucket and per simulation, the way the upstream fits it.
+
+[0.0.67]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.67
+
 ## [0.0.66] - 2026-11-10
 
 The random forest of the dummy outcome refuter.

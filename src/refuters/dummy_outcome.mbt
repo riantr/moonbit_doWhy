@@ -14,6 +14,8 @@
 /// * `permute` permutes the rows,
 /// * `linear_regression` and the k nearest neighbours replace the outcome by
 ///   their prediction from the covariates,
+/// * `random_forest` and `neural_network` replace the outcome by the
+///   prediction of a forest or of a network,
 /// * `estimate` replaces the outcome by the prediction of a model the caller
 ///   gives.
 ///
@@ -68,6 +70,12 @@ pub enum Transformation {
   /// The number is the depth of the trees of the forest, the way the upstream
   /// gives the depth of its forest to scikit-learn.
   RandomForest(Int32)
+  /// The outcome is estimated from the covariates with a neural network.
+  ///
+  /// The array holds the sizes of the hidden layers of the network and the
+  /// number is the penalty of its weights, the way the upstream gives them to
+  /// scikit-learn.
+  NeuralNetwork(Array[Int32], Double)
   /// The outcome is estimated from the covariates with the model the caller
   /// gives.
   ///
@@ -132,6 +140,19 @@ pub fn Transformation::random_forest(max_depth : Int32) -> Transformation {
 }
 
 ///|
+/// A transformation that estimates the outcome with a neural network.
+///
+/// The hidden layers of the network have the given sizes and the penalty of its
+/// weights is the given number, the way the upstream gives them to
+/// scikit-learn.
+pub fn Transformation::neural_network(
+  hidden : Array[Int32],
+  alpha : Double,
+) -> Transformation {
+  NeuralNetwork(hidden, alpha)
+}
+
+///|
 /// A transformation that predicts the outcome with the given model.
 pub fn Transformation::estimate(
   model : (@api.DataFrame, Array[Double], @api.DataFrame) -> (
@@ -159,6 +180,7 @@ fn has_estimator(transformations : Array[Transformation]) -> Bool {
     match transformation {
       Zero | Noise(_) | Permute(_) => ()
       LinearRegression | NearestNeighbour(_) | RandomForest(_) => return true
+      NeuralNetwork(_, _) => return true
       Estimate(_) => return true
     }
   }
@@ -725,6 +747,15 @@ fn process_transformations(
           train = Some(forest_predict(forest, x))
         }
         validation = forest_predict(forest, x_validation)
+      }
+      NeuralNetwork(hidden, alpha) => {
+        let x = require_training_frame(x_train, "neural_network")
+        let y = require_training_outcome(train, "neural_network")
+        let network = network_fit(x, y, hidden, alpha, random)
+        if train is Some(_) {
+          train = Some(network_predict(network, x))
+        }
+        validation = network_predict(network, x_validation)
       }
       Estimate(model) => {
         let x = require_training_frame(x_train, "estimate")

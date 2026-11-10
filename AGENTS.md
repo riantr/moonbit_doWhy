@@ -1085,6 +1085,22 @@ statsmodels / scikit-learn conventions are deliberate:
   node are named by their index in that array: the tree is grown with the
   array as an argument, so the index of a node is known as soon as it is built
   and the children of a node never have to be moved.
+- The **neural network** of the `refuters` package is the port of the
+  `MLPRegressor` of scikit-learn: the loss is the half of the mean of the
+  squared errors of the rows plus the half of the penalty of the weights times
+  their squared length over the number of the rows, and the gradient is the one
+  of the backpropagation of scikit-learn, whose delta of the output layer
+  carries no factor of the number of the rows. The two agree with scikit-learn
+  to `3.6e-15` and to `1.8e-15` on the fixture of
+  `_verify/neural_network_reference.py`, the difference of the order of the
+  summations. The optimiser of the port is a limited memory BFGS with the two
+  loop recursion and a backtracking line search of the Armijo condition, which
+  is the family of the L-BFGS-B of scipy that scikit-learn uses; the objective
+  of a network with a ReLU activation is not convex, so the two reach a nearby
+  but not identical point of it. The upstream draws the initialisation of
+  Glorot of its network with the global generator of numpy, which it does not
+  seed; the port draws it with its own generator, so a network of the port is
+  the same network on every run.
 
 ## Package layout
 

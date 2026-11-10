@@ -77,6 +77,21 @@ CASES = [
         2,
         False,
     ),
+    (
+        "internal_neural_network_continuous_treatment",
+        0.01,
+        "iv.instrumental_variable",
+        [
+            (
+                "neural_network",
+                {"solver": "lbfgs", "alpha": 1e-5, "hidden_layer_sizes": (5, 2)},
+            ),
+            ("zero", ""),
+            ("noise", {"std_dev": 1}),
+        ],
+        2,
+        False,
+    ),
 ]
 
 

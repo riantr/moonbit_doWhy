@@ -36,11 +36,15 @@
 ///   `[random_forest(20), zero, noise(1)]`, the instrumental variable estimator,
 ///   tolerance 0.01. The list carries an estimator, so the refuter buckets the
 ///   treatment and reports one refutation per bucket.
+/// * `internal_neural_network_continuous_treatment` —
+///   `[neural_network([5, 2], 1e-5), zero, noise(1)]`, the instrumental variable
+///   estimator, tolerance 0.01. The list carries an estimator, so the refuter
+///   buckets the treatment and reports one refutation per bucket.
 ///
 /// The cases that are not mirrored:
 ///
-/// * The four whose transformation list names an estimator the port does not have
-///   — `svm` and `neural_network`, two treatments each.
+/// * The two whose transformation list names an estimator the port does not have
+///   — `svm`, one treatment each.
 /// * `custom_function_linear_regression_with_noise_binary_treatment` and
 ///   `custom_function_linear_regression_with_permute_binary_treatment`, which the
 ///   upstream marks `xfail` itself.
@@ -351,6 +355,42 @@ test "the inner random forest reports one refutation per bucket of the treatment
     dummy_outcome_iv(dataset),
     transformations,
     31UL,
+  )
+  assert_eq(refutations.length(), 3)
+  for refutation in refutations {
+    assert_true(refutation.new_effect().abs() < 0.01)
+  }
+}
+
+///|
+/// test "the inner neural network reports one refutation per bucket of the
+/// treatment"
+///
+/// This is the port of the upstream test
+/// `test_refutation_dummy_outcome_refuter_internal_neural_network_continuous_treatment`.
+///
+/// The network has the two hidden layers of the upstream case, of five and of two
+/// units, and the penalty of its weights is a hundredth of a ten-thousandth, the
+/// parameters the upstream gives to scikit-learn. The assertion is the tolerance
+/// of the upstream case, which is one hundredth: the transformation list of the
+/// upstream replaces the outcome by zero right after the network, so the dummy
+/// outcome is a white noise and the refuted effect is the sampling error of the
+/// estimator.
+///
+/// The case is the slowest of the suite, because the network is fitted once per
+/// bucket and per simulation, the way the upstream fits it.
+test "the inner neural network reports one refutation per bucket of the treatment" {
+  let dataset = dummy_outcome_dataset(true, 20000)
+  let transformations = [
+    @refuters.Transformation::neural_network([5, 2], 0.00001),
+    @refuters.Transformation::zero(),
+    @refuters.Transformation::noise(1.0),
+  ]
+  let refutations = dummy_outcome_refute(
+    dataset,
+    dummy_outcome_iv(dataset),
+    transformations,
+    32UL,
   )
   assert_eq(refutations.length(), 3)
   for refutation in refutations {
