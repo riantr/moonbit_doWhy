@@ -3165,6 +3165,46 @@ The categorical noise dependent function.
 
 [0.0.61]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.61
 
+## [0.0.64] - 2026-11-10
+
+The fully categorical intrinsic causal influence.
+
+### Added
+
+- the case of the upstream test
+  `test_given_only_categorical_data_when_estimate_icc_then_does_not_fail` in
+  the file `src/gcm/intrinsic_influence_test.mbt`: the port estimates the
+  intrinsic causal influence of a target whose every ancestor holds a category,
+  and the contributions of the exact prediction agree with the upstream within
+  the tolerance of the upstream test. Every test of the upstream test file
+  `tests/gcm/test_intrinsic_influence.py` has a counterpart now.
+- the numbers of the upstream on the very rows of the port in
+  `_verify/gcm_intrinsic_influence_reference.py`: the new section
+  `INTRINSIC_CAUSAL_INFLUENCE_ONLY_CATEGORICAL` runs the upstream
+  `dowhy.gcm.influence` on the categorical fixture and shows that the
+  contributions of the port are the ones of the upstream.
+
+### Fixed
+
+- The intrinsic causal influence of the `gcm` package aborted when the model
+  had a root node with a categorical distribution, because the noise of such a
+  root node is a category and the design matrix of the noise features holds
+  numbers only. The layer encodes the categorical noise terms with the one-hot
+  encoder now, the way the upstream encodes the data of its independence tests,
+  and it decodes them again when the noise is propagated through the model.
+
+### Notes
+
+- The approximate prediction of the case is further from the upstream than the
+  tolerance of the upstream test. The relation of the case is a composition of
+  thresholds, and the upstream fits its classifier with a histogram gradient
+  boosting, whose probabilities are soft; the zoo of the port has the logistic
+  regression and the polynomial logistic regression only, whose probabilities
+  are sharper, so the drop of the entropy of the port is smaller. The test of
+  the case records the numbers of the port.
+
+[0.0.64]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.64
+
 ## [0.0.63] - 2026-11-10
 
 The categorical falsification.

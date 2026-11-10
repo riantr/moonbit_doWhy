@@ -956,6 +956,14 @@ statsmodels / scikit-learn conventions are deliberate:
   whole column. That is the equation (1) of the CatBoost paper, the way
   `dowhy.gcm.util.catboost_encoder.CatBoostEncoder` computes it with a
   cumulative sum over the rows of the category.
+- The noise of a root node with a categorical distribution is a category, so
+  the noise samples of the ancestors of the target of the intrinsic causal
+  influence hold a column of categories. The layer encodes such a column with
+  the one-hot encoder, the way the upstream encodes the data of its
+  independence tests, and the layout of the encoding tells which columns of
+  the matrix hold the noise term of which node. The randomization of the noise
+  terms permutes the rows of all the columns of a node in the same way, so the
+  one-hot columns of a node stay consistent.
 - The categorical data of the kernel based independence test of the `gcm`
   package is encoded with the one-hot encoder of
   `sklearn.preprocessing.OneHotEncoder`, the way the upstream encodes every

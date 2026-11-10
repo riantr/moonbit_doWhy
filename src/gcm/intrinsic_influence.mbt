@@ -10,6 +10,13 @@
 /// The method is described in the research paper *Quantifying causal
 /// contributions via structure preserving interventions* of Dominik Janzing,
 /// Dominik K. and Bernhard Schölkopf (arXiv:2007.00714, 2021).
+///
+/// The noise of a root node with a categorical distribution is a category and
+/// not a number, so the noise samples of the ancestors hold a column of
+/// categories. The layer encodes such a column with the one-hot encoder, the
+/// way the upstream encodes the data of its independence tests, and the layout
+/// of the encoding tells which columns of the matrix hold the noise term of
+/// which node.
 
 ///|
 /// The way the target is predicted from the noise of its ancestors.
@@ -88,6 +95,142 @@ pub fn icc_entropy_attribution(
 }
 
 ///|
+/// The columns of the matrix of the noise features that hold the noise term of
+/// one node.
+///
+/// A noise term whose column holds categories is encoded with the one-hot
+/// encoder, so it has one column per category, and the categories are in the
+/// lexicographic order of the encoder.
+priv struct NoiseFeature {
+  /// The name of the node.
+  node : String
+  /// The first column of the node.
+  first_column : Int32
+  /// The number of the columns of the node.
+  width : Int32
+  /// The categories of the node, in the lexicographic order of the encoder.
+  /// The categories of a node whose noise term holds numbers are empty.
+  categories : Array[String]
+}
+
+///|
+/// The layout of the noise features of the ancestors of the target.
+///
+/// The layout tells which columns of the matrix of the noise features hold the
+/// noise term of which node, because a categorical noise term has one column
+/// per category.
+fn noise_feature_layout(
+  noise_samples : @api.DataFrame,
+  node_names : Array[String],
+) -> Array[NoiseFeature] {
+  let layout : Array[NoiseFeature] = []
+  let mut first_column = 0
+  for name in node_names {
+    if noise_samples.is_discrete(name) {
+      let categories = sorted_distinct_labels(noise_samples.discrete(name))
+      layout.push({
+        node: name,
+        first_column,
+        width: categories.length(),
+        categories,
+      })
+      first_column = first_column + categories.length()
+    } else {
+      layout.push({ node: name, first_column, width: 1, categories: [], })
+      first_column = first_column + 1
+    }
+  }
+  layout
+}
+
+///|
+/// The layout of the noise features of nodes whose noise term holds numbers.
+///
+/// Every node has one column, which is the layout of the noise features of a
+/// model whose noise terms are all numbers.
+fn numeric_noise_feature_layout(
+  node_names : Array[String],
+) -> Array[NoiseFeature] {
+  let layout : Array[NoiseFeature] = []
+  let mut first_column = 0
+  for name in node_names {
+    layout.push({ node: name, first_column, width: 1, categories: [], })
+    first_column = first_column + 1
+  }
+  layout
+}
+
+///|
+/// The matrix of the noise features of the given frame.
+///
+/// The columns of the matrix are the ones of the layout: a node whose noise
+/// term holds numbers has one column, and a node whose noise term holds
+/// categories has one column per category of the layout, in its order.
+fn encode_noise_features(
+  noise_samples : @api.DataFrame,
+  layout : Array[NoiseFeature],
+) -> @utils.Matrix {
+  let columns : Array[Array[Double]] = []
+  for feature in layout {
+    if feature.categories.length() == 0 {
+      columns.push(noise_samples.numeric(feature.node))
+    } else {
+      let values = noise_samples.discrete(feature.node)
+      for category in feature.categories {
+        let column : Array[Double] = []
+        for value in values {
+          column.push(if value == category { 1.0 } else { 0.0 })
+        }
+        columns.push(column)
+      }
+    }
+  }
+  if columns.length() == 0 {
+    return @utils.Matrix::zeros(noise_samples.nrows(), 0)
+  }
+  @utils.Matrix::from_columns(columns)
+}
+
+///|
+/// The frame of the encoded noise features.
+///
+/// The noise term of a node whose column holds categories is decoded from the
+/// one-hot columns of the encoder, so that the frame holds the categories
+/// again. The randomization of the noise terms keeps the one-hot columns of a
+/// node consistent, because it permutes the rows of all of them in the same
+/// way.
+fn decode_noise_features(
+  features : @utils.Matrix,
+  layout : Array[NoiseFeature],
+) -> @api.DataFrame {
+  let names : Array[String] = []
+  let columns : Map[String, @api.Column] = Map([])
+  for feature in layout {
+    names.push(feature.node)
+    if feature.categories.length() == 0 {
+      columns.set(
+        feature.node,
+        @api.Column::numeric(features.col(feature.first_column)),
+      )
+    } else {
+      let labels : Array[String] = []
+      for i in 0..<features.nrows() {
+        let mut best = 0
+        for j in 1..<feature.width {
+          if features.get(i, feature.first_column + j) >
+            features.get(i, feature.first_column) {
+            best = j
+          }
+        }
+        labels.push(feature.categories[best])
+      }
+      columns.set(feature.node, @api.Column::discrete(labels))
+    }
+  }
+  @api.DataFrame::new(names, columns)
+}
+
+///|
 /// The intrinsic causal influence of every ancestor of the target node.
 ///
 /// This is the port of `dowhy.gcm.influence.intrinsic_causal_influence`. The
@@ -129,8 +272,13 @@ pub fn intrinsic_causal_influence(
   // The upstream reads the kind of the target out of the dtype of its column,
   // so the port reads it out of the column of the samples of the target.
   let categorical = data_samples.is_discrete(target_node)
+  // The noise of a root node with a categorical distribution is a category, so
+  // the noise features are encoded with the one-hot encoder, the way the
+  // upstream encodes the data of its independence tests.
+  let layout = noise_feature_layout(noise_samples, node_names)
+  let features = encode_noise_features(noise_samples, layout)
   let prediction_method = prediction_method_of(
-    sub_model, target_node, prediction, noise_samples, data_samples, node_names,
+    sub_model, target_node, prediction, features, layout, noise_samples, data_samples,
     categorical, auto_assign_quality,
   )
   let attribution = match attribution_func {
@@ -148,7 +296,7 @@ pub fn intrinsic_causal_influence(
     num_samples_randomization + num_samples_baseline,
     rng,
   )
-  let noise = drawn.design_matrix(node_names)
+  let noise = encode_noise_features(drawn, layout)
   let randomization = first_rows(noise, num_samples_randomization)
   let baseline = @utils.Matrix::from_rows(
     rows_between(noise, num_samples_randomization, num_samples_baseline),
@@ -156,7 +304,8 @@ pub fn intrinsic_causal_influence(
   let target_values = prediction_method(baseline)
   let set_func = fn(subset : Array[Bool]) -> Double {
     let predictions = predictions_of_subset(
-      prediction_method, randomization, baseline, subset, target_values, rng,
+      prediction_method, randomization, baseline, subset, layout, target_values,
+      rng,
     )
     attribution(predictions, target_values)
   }
@@ -220,6 +369,7 @@ pub fn intrinsic_causal_influence_sample(
     sub_model,
     target_node,
     prediction,
+    noise_features,
     noise_features_frame(noise_features, node_names),
     feature_samples,
     node_names,
@@ -260,9 +410,10 @@ fn prediction_method_of(
   causal_model : ProbabilisticCausalModel,
   target_node : String,
   prediction : IccPrediction,
+  features : @utils.Matrix,
+  layout : Array[NoiseFeature],
   noise_samples : @api.DataFrame,
   data_samples : @api.DataFrame,
-  node_names : Array[String],
   categorical : Bool,
   quality : AssignmentQuality,
 ) -> (@utils.Matrix) -> @utils.Matrix {
@@ -274,7 +425,7 @@ fn prediction_method_of(
         // for the class of the row and a zero for the other classes.
         let classes = classes_of(causal_model, target_node)
         fn(inputs : @utils.Matrix) -> @utils.Matrix {
-          let frame = noise_features_frame(inputs, node_names)
+          let frame = decode_noise_features(inputs, layout)
           let labels = compute_data_from_noise(causal_model, frame).discrete(
             target_node,
           )
@@ -282,14 +433,14 @@ fn prediction_method_of(
         }
       } else {
         fn(inputs : @utils.Matrix) -> @utils.Matrix {
-          let frame = noise_features_frame(inputs, node_names)
+          let frame = decode_noise_features(inputs, layout)
           @utils.Matrix::from_columns([
             compute_data_from_noise(causal_model, frame).numeric(target_node),
           ])
         }
       }
     Approx => {
-      let x = noise_samples.design_matrix(node_names)
+      let x = features
       if categorical {
         // The upstream selects the model of the target with the model selection
         // of `dowhy.gcm.auto`, which picks the classifier with the smallest log
@@ -338,14 +489,22 @@ fn vector_prediction_method_of(
   causal_model : ProbabilisticCausalModel,
   target_node : String,
   prediction : IccPrediction,
+  features : @utils.Matrix,
   noise_samples : @api.DataFrame,
   data_samples : @api.DataFrame,
   node_names : Array[String],
   quality : AssignmentQuality,
 ) -> (@utils.Matrix) -> Array[Double] {
   let prediction = prediction_method_of(
-    causal_model, target_node, prediction, noise_samples, data_samples, node_names,
-    false, quality,
+    causal_model,
+    target_node,
+    prediction,
+    features,
+    numeric_noise_feature_layout(node_names),
+    noise_samples,
+    data_samples,
+    false,
+    quality,
   )
   fn(inputs : @utils.Matrix) -> Array[Double] { prediction(inputs).col(0) }
 }
@@ -427,10 +586,10 @@ fn predictions_of_subset(
   randomization : @utils.Matrix,
   baseline : @utils.Matrix,
   subset : Array[Bool],
+  layout : Array[NoiseFeature],
   target_values : @utils.Matrix,
   rng : @utils.Random,
 ) -> @utils.Matrix {
-  let num_features = randomization.ncols()
   let mut all = true
   let mut none = true
   for flag in subset {
@@ -458,10 +617,15 @@ fn predictions_of_subset(
     }
     return out
   }
+  // A node whose noise term holds categories has one column per category, so
+  // the columns of the node are the ones of the layout.
   let indices : Array[Int32] = []
-  for j in 0..<num_features {
+  for j in 0..<subset.length() {
     if subset[j] {
-      indices.push(j)
+      let feature = layout[j]
+      for k in 0..<feature.width {
+        indices.push(feature.first_column + k)
+      }
     }
   }
   marginal_expectation_matrix(

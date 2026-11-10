@@ -10,10 +10,9 @@ the contributions it computes and the contributions the port computes are
 different numbers. What the two share is the property the upstream test
 asserts: the contribution of a node is the variance of the noise of that node.
 
-The upstream `intrinsic_causal_influence` with a categorical target has no
-counterpart in the port, because the prediction method of the port returns one
-number per row and the predictions of a classifier are a probability per
-class.
+The predictions of a classifier are a probability per class, so the port
+measures the contribution of a categorical target with the drop of the entropy
+of the target, the way the upstream does.
 
 Usage:
     python _verify/gcm_intrinsic_influence_reference.py
@@ -124,6 +123,10 @@ CATEGORICAL_SEED = 2061
 # MoonBit test.
 COMPLEX_CATEGORICAL_SEED = 2062
 
+# The seed of the fixture of the fully categorical influence, the same as the
+# one of the MoonBit test.
+ONLY_CATEGORICAL_SEED = 2063
+
 # The number of rows of the fixture.
 ROWS = 1000
 
@@ -180,6 +183,30 @@ def complex_categorical_fixture() -> pd.DataFrame:
     median = float(np.median(values))
     x3 = np.array([value > median for value in values]).astype(str)
     return pd.DataFrame({"X0": x0, "X1": x1, "X2": x2, "X3": x3})
+
+
+def only_categorical_fixture() -> pd.DataFrame:
+    """The data of the fixture of the fully categorical influence.
+
+    The fixture is the one of the upstream test file
+    `tests/gcm/test_intrinsic_influence.py` in the case
+    `test_given_only_categorical_data_when_estimate_icc_then_does_not_fail`:
+    every node of the graph holds a category, and the category of a node is the
+    sign of the value of the node.
+    """
+    rng = Xorshift(ONLY_CATEGORICAL_SEED)
+    x0 = np.array([rng.next_normal() for _ in range(ROWS)])
+    x1 = np.array([x0[i] + 0.001 * rng.next_normal() for i in range(ROWS)])
+    x2 = np.array([x1[i] + 2.0 * rng.next_normal() for i in range(ROWS)])
+    x3 = np.array([(x2[i] + rng.next_normal()) >= 0.0 for i in range(ROWS)])
+    return pd.DataFrame(
+        {
+            "X0": (x0 >= 0.0).astype(str),
+            "X1": (x1 >= 0.0).astype(str),
+            "X2": (x2 >= 0.0).astype(str),
+            "X3": x3.astype(str),
+        }
+    )
 
 
 def main() -> None:
@@ -334,6 +361,51 @@ def main() -> None:
         print(f"  {key} = {complex_contributions_approx[key]:.12f}")
     print(
         f"  sum = {sum(complex_contributions_approx[key] for key in complex_contributions_approx):.12f}"
+    )
+
+    # The influence of a target whose every ancestor holds a category. The
+    # noise of the root node of the model is a category, so the noise samples
+    # of the ancestors hold a column of categories.
+    only_data = only_categorical_fixture()
+    only_model = models.StructuralCausalModel(
+        nx.DiGraph([("X0", "X1"), ("X1", "X2"), ("X2", "X3")])
+    )
+    np.random.seed(ONLY_CATEGORICAL_SEED)
+    auto.assign_causal_mechanisms(
+        only_model, only_data, auto.AssignmentQuality.GOOD
+    )
+    fitting.fit(only_model, only_data)
+
+    np.random.seed(ONLY_CATEGORICAL_SEED)
+    only_contributions = influence.intrinsic_causal_influence(
+        only_model,
+        "X3",
+        prediction_model="exact",
+        num_samples_randomization=RANDOMIZATION_SAMPLES,
+        num_samples_baseline=BASELINE_SAMPLES,
+        shapley_config=shapley.ShapleyConfig(n_jobs=1),
+    )
+    print("INTRINSIC_CAUSAL_INFLUENCE_ONLY_CATEGORICAL")
+    for key in ("X0", "X1", "X2", "X3"):
+        print(f"  {key} = {only_contributions[key]:.12f}")
+    print(
+        f"  sum = {sum(only_contributions[key] for key in only_contributions):.12f}"
+    )
+
+    np.random.seed(ONLY_CATEGORICAL_SEED)
+    only_contributions_approx = influence.intrinsic_causal_influence(
+        only_model,
+        "X3",
+        prediction_model="approx",
+        num_samples_randomization=RANDOMIZATION_SAMPLES,
+        num_samples_baseline=BASELINE_SAMPLES,
+        shapley_config=shapley.ShapleyConfig(n_jobs=1),
+    )
+    print("INTRINSIC_CAUSAL_INFLUENCE_ONLY_CATEGORICAL_APPROX")
+    for key in ("X0", "X1", "X2", "X3"):
+        print(f"  {key} = {only_contributions_approx[key]:.12f}")
+    print(
+        f"  sum = {sum(only_contributions_approx[key] for key in only_contributions_approx):.12f}"
     )
 
     # The sample wise influence of the linear model with the given mechanisms.
