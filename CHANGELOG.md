@@ -3165,6 +3165,90 @@ The categorical noise dependent function.
 
 [0.0.61]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.61
 
+## [0.0.71] - 2026-11-11
+
+The graph refutation.
+
+### Added
+
+- the tests of the conditional independence of the columns of a table, in the new
+  file `src/utils/cit.mbt`: the port of `dowhy.utils.cit`. The public functions
+  are `compute_ci`, `partial_corr`, `entropy` and `conditional_mi`, and the
+  public struct `PartialCorrelation` holds the number of the rows, the
+  coefficient, the confidence interval and the p-value of the partial
+  correlation.
+- five cases in the new file `src/utils/cit_test.mbt`: the partial correlation
+  of the upstream, the Spearman one, the confidence interval of a correlation,
+  the entropy of a categorical variable and the conditional mutual information.
+- the refuter of the conditional independences of a graph, in the new file
+  `src/refuters/graph_refuter.mbt`: the port of
+  `dowhy.causal_refuters.graph_refuter`. The public structs are
+  `GraphRefuter`, `GraphRefutation`, `Implication`, `IndependenceTest` and
+  `IndependenceTests`, and the public functions are `GraphRefuter::new`,
+  `GraphRefuter::refute_model`, `GraphRefuter::results`,
+  `GraphRefuter::true_implications`, `GraphRefuter::false_implications`,
+  `Implication::new` and `implication_key`.
+- the refutation of the graph of a model, in `src/causal_model.mbt`: the port of
+  `dowhy.causal_model.CausalModel.refute_graph`. It asks the graph for the
+  conditional independences the graph entails -- every pair of the observed
+  nodes and every set of `k` other nodes for which the pair is d-separated
+  given the set -- and it tests them against the data.
+- the data set of a random graph, in the new file `src/datasets/random_graph.mbt`:
+  the port of `dowhy.datasets.dataset_from_random_graph` and of the
+  `dowhy.datasets.generate_random_graph` it builds on. The public struct
+  `RandomGraphDataset` holds the frame, the outcome, the treatments, the graph
+  in the GML format, the discrete, the continuous and the binary columns and
+  the average treatment effect.
+- three cases in `src/tests/causal_model_graph_test.mbt`: the numbers of the
+  upstream on the fixture of the refutation, and the two cases of the upstream
+  test file `tests/test_causal_model.py` -- `test_graph_refutation` and
+  `test_graph_refutation2`.
+- the numbers of the upstream on the fixtures of the port in
+  `_verify/cit_reference.py` and in `_verify/graph_refuter_reference.py`: the
+  first runs the upstream `dowhy.utils.cit` on the very rows of the port, and
+  the second runs the upstream `dowhy.causal_refuters.graph_refuter` on them
+  and prints the p-value and the verdict of every conditional independence.
+
+### Notes
+
+- The upstream writes the binary column of a node of its random graph with
+  `numpy.vectorize(convert_to_binary)`, and the function it vectorizes returns
+  an array of one element instead of a number, so the call fails with the
+  numpy of the version two and the data set of the upstream cannot be built.
+  The port draws the column the way the upstream means it: one Bernoulli
+  variate per row, with the probability of the sigmoid of the value of the row.
+- The upstream draws the graph and the rows of its random graph with the global
+  generator of numpy and it seeds it with a number it draws at random, so its
+  own data set is not reproducible. The port takes the seed of its generator,
+  so the data set of the port is.
+- The upstream computes the average treatment effect of a random graph from the
+  two frames of the intervention, and the frames miss the outcome when a
+  treatment is a root of the graph, because the upstream does not generate the
+  columns that hang below a treatment of an intervention. The upstream raises a
+  `KeyError` there, and the port reports the effect as `None`.
+- The upstream reads the *names* of the columns of the two variables of a
+  constraint and not their values: it indexes the frame with a list, which
+  gives a frame and not a column, and it walks the names of that frame. The
+  entropy of the pairs and of the triples is therefore the entropy of a single
+  category, which is zero, and the conditional mutual information of the
+  upstream is the negative entropy of the conditioning columns. The port
+  reproduces that number, because the verdict of the graph refuter of the
+  upstream depends on it.
+- The upstream hashes the key of the result of a conditional independence, and
+  the key holds the list of the variables that are conditioned on, which cannot
+  be hashed. The constraints that `CausalModel.refute_graph` builds hold a
+  tuple, so the upstream works with them, and the constraints a caller writes
+  with a list make it raise a `TypeError`. The port keys the results with the
+  text of the two variables and of the variables that are conditioned on.
+- The upstream reads the kind of a column of its data from the type of the
+  column, so a column of integers is discrete, a column of integers that holds
+  only zeros and ones is binary and a column of floating point numbers is
+  continuous. The port reads the kind of a column from its payload, so a
+  column of text is discrete, a column of text that holds only zeros and ones
+  is binary and a column of numbers is continuous.
+
+[0.0.71]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.71
+
 ## [0.0.70] - 2026-11-11
 
 The plotting layer.

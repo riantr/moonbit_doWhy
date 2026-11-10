@@ -776,6 +776,106 @@ pub fn CausalModel::refute_e_value(
 }
 
 ///|
+/// Check the conditional independences of the graph against the data.
+///
+/// This is the port of `dowhy.causal_model.CausalModel.refute_graph`.
+///
+/// The upstream asks the graph for the conditional independences that it
+/// entails: every pair of observed nodes and every set of `k` other nodes for
+/// which the pair is d-separated given the set. The port does the same, and it
+/// tests the constraints of the caller when it is given some.
+///
+/// The upstream keeps the two variables and the variables that are conditioned
+/// on in one list of three values, and the port keeps them in an implication.
+pub fn CausalModel::refute_graph(
+  self : CausalModel,
+  k~ : Int32 = 1,
+  independence_test~ : @refuters.IndependenceTests? = None,
+  independence_constraints~ : Array[@refuters.Implication] = [],
+) -> @refuters.GraphRefutation {
+  let (continuous, discrete) = match independence_test {
+    Some(tests) => (tests.continuous(), tests.discrete())
+    None => ("partial_correlation", "conditional_mutual_information")
+  }
+  let refuter = @refuters.GraphRefuter::new(self.data, discrete, continuous)
+  let constraints = if independence_constraints.length() > 0 {
+    independence_constraints
+  } else {
+    self.conditional_independences(k)
+  }
+  refuter.refute_model(constraints)
+}
+
+///|
+/// The conditional independences the graph of the model entails.
+///
+/// This is the port of the constraints the upstream generates in
+/// `dowhy.causal_model.CausalModel.refute_graph`: every pair of the observed
+/// nodes of the graph and every set of `k` other nodes for which the pair is
+/// d-separated given the set.
+fn CausalModel::conditional_independences(
+  self : CausalModel,
+  k : Int32,
+) -> Array[@refuters.Implication] {
+  let causal = self.graph_with_roles()
+  let all_nodes = causal.get_all_nodes(false)
+  let out : Array[@refuters.Implication] = []
+  for i in 0..<all_nodes.length() {
+    for j in (i + 1)..<all_nodes.length() {
+      let a = all_nodes[i]
+      let b = all_nodes[j]
+      let others : Array[String] = []
+      for index in 0..<all_nodes.length() {
+        if index != i && index != j {
+          others.push(all_nodes[index])
+        }
+      }
+      for combination in combinations(others, k) {
+        if causal.check_dseparation([a], [b], combination, None) {
+          out.push(@refuters.Implication::new(a, b, combination))
+        }
+      }
+    }
+  }
+  out
+}
+
+///|
+/// Every set of the given number of the given values.
+///
+/// This is the port of the combinations of `itertools`, which the upstream uses
+/// to build the sets of the variables that are conditioned on.
+fn combinations(items : Array[String], k : Int32) -> Array[Array[String]] {
+  let out : Array[Array[String]] = []
+  if k <= 0 || k > items.length() {
+    return out
+  }
+  let indices : Array[Int32] = []
+  for i in 0..<k {
+    indices.push(i)
+  }
+  while true {
+    let combination : Array[String] = []
+    for index in indices {
+      combination.push(items[index])
+    }
+    out.push(combination)
+    let mut position = k - 1
+    while position >= 0 && indices[position] == items.length() - k + position {
+      position = position - 1
+    }
+    if position < 0 {
+      break
+    }
+    indices[position] = indices[position] + 1
+    for index in (position + 1)..<k {
+      indices[index] = indices[index - 1] + 1
+    }
+  }
+  out
+}
+
+///|
 /// The first segment of a dotted name.
 fn first_segment(name : String) -> String {
   let parts = name.split(".")

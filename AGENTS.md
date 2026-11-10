@@ -458,6 +458,25 @@ statsmodels / scikit-learn conventions are deliberate:
   of the data, and **not** the number of the input columns. `inputs_of` returns
   the columns of the data, so `background_inputs.length()` is the number of the
   inputs; the row count is `background_data.nrows()`.
+- The partial correlation of the `utils` package is the one of the upstream
+  `dowhy.utils.cit`: the covariance of the columns drops the degree of freedom,
+  the pseudo inverse of the covariance matrix cuts its eigenvalues off at
+  `1e-15` of the largest one, the p-value of the Student-t test is rounded to
+  five decimals and the confidence interval of the Fisher z transform to
+  three. The upstream writes the binary column of a node of its random graph
+  with `numpy.vectorize(convert_to_binary)`, and the function it vectorizes
+  returns an array of one element, so the call fails with the numpy of the
+  version two; the port draws the column the way the upstream means it, with
+  one Bernoulli variate per row.
+- The conditional mutual information of the `utils` package is the number of
+  the upstream: the upstream reads the *names* of the columns of the two
+  variables and not their values, so its number is the negative entropy of the
+  conditioning columns. The port reproduces that number, because the verdict
+  of the graph refuter of the upstream depends on it. The upstream hashes the
+  key of the result of a conditional independence with a list of the variables
+  that are conditioned on, which cannot be hashed, so the port keys the results
+  with the text of the two variables and of the variables that are conditioned
+  on.
 - The entropy of the `gcm` package is the entropy of `scipy.stats.entropy`, so
   it is measured in nats and the probabilities are normalised by their sum
   before the entropy is computed. The digamma function of the `utils` package
@@ -1158,16 +1177,16 @@ statsmodels / scikit-learn conventions are deliberate:
 | --- | --- |
 | the root package (`src/`) | `dowhy.causal_model`: the `CausalModel` entry point |
 | `api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder |
-| `utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics |
+| `utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, the tests of the conditional independence |
 | `graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
 | `identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `dowhy.causal_estimator` (the estimate objects) |
 | `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones and the two stage regression of the frontdoor and of the mediation estimand |
-| `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations |
+| `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations and the graph refutation |
 | `overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
 | `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the **CatBoost encoder** of the categorical columns, the prediction models, the causal mechanisms, the automatic assignment of the mechanisms with the selection of the model by cross validation and the test of a linear relationship, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
-| `datasets` | `dowhy.datasets` and the deterministic test fixtures |
+| `datasets` | `dowhy.datasets` (the random graph data set) and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
@@ -1249,6 +1268,17 @@ README makes, so they are tracked in the repository:
   cannot store the one element array that its `convert_to_binary` returns in
   the output of a scalar, so the script restores the behaviour of NumPy 1 for
   it.
+- `cit_reference.py` runs the upstream `dowhy.utils.cit` on the rows of the
+  fixture of the tests of the `utils` package and prints the partial
+  correlation, the Spearman one, the confidence interval of a correlation, the
+  entropy of a categorical variable and the conditional mutual information.
+  Every number of the script is the number of the port.
+- `graph_refuter_reference.py` runs the upstream
+  `dowhy.causal_refuters.graph_refuter` on the rows of the fixture of the
+  tests of the port and prints the p-value and the verdict of every
+  conditional independence, the number of the constraints the model entails and
+  the number of them the data satisfies. Every number of the script is the
+  number of the port.
 - `plotting_reference.py` runs the upstream `dowhy.utils.plotting` and the
   upstream `dowhy.utils.networkx_plotting` on the very graph and on the very
   values the port works on, and it prints the widths of the arrows, the

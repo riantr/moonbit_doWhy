@@ -7,11 +7,13 @@
 /// observed and the unobserved variables of
 /// `test_unobserved_graph_variables_log_warning`, the format check of
 /// `test_incorrect_graph_format`, the cache of the estimators of
-/// `test_causal_estimator_cache` and the conditional estimates of
-/// `test_cate_estimates_regression`.
+/// `test_causal_estimator_cache`, the conditional estimates of
+/// `test_cate_estimates_regression` and the refutation of the graph of
+/// `test_graph_refutation` and of `test_graph_refutation2`.
 ///
 /// The facts of the upstream that these tests compare against are computed by
-/// the script `_verify/causal_model_reference.py`.
+/// the script `_verify/causal_model_reference.py` and by the script
+/// `_verify/graph_refuter_reference.py`.
 
 ///|
 /// The seed of the fixture of the causal model tests.
@@ -488,4 +490,221 @@ test "the estimate of a model with an effect modifier has conditional estimates"
   // and estimates the effect on every one of them.
   let conditional = estimate.conditional_estimates()
   assert_eq(conditional.length(), 5)
+}
+
+///|
+/// The seed of the fixture of the refutation of a graph.
+const GRAPH_REFUTER_SEED : Int32 = 7
+
+///|
+/// The number of the rows of the fixture of the refutation of a graph.
+const GRAPH_REFUTER_NUM_ROWS : Int32 = 60
+
+///|
+/// The number of the samples of the data set of the refutation of a graph.
+///
+/// This is the number of the samples of the upstream tests
+/// `test_graph_refutation` and `test_graph_refutation2`.
+const GRAPH_REFUTER_NUM_SAMPLES : Int32 = 5000
+
+///|
+/// The frame of the fixture of the refutation of a graph.
+///
+/// This is the frame of the script `_verify/graph_refuter_reference.py`: sixty
+/// rows of four continuous columns and of two binary ones. The upstream reads
+/// the kind of a column from its type, so the two binary columns of the
+/// fixture hold the text of the zeros and of the ones.
+fn graph_refuter_frame() -> @api.DataFrame {
+  let x : Array[Double] = []
+  let y : Array[Double] = []
+  let z : Array[Double] = []
+  let w : Array[Double] = []
+  let d : Array[String] = []
+  let e : Array[String] = []
+  for i in 0..<GRAPH_REFUTER_NUM_ROWS {
+    let zi = (i % 7).to_double() - 3.0
+    let xi = 2.0 * zi + 0.5 * ((i % 5).to_double() - 2.0)
+    let yi = 1.5 * xi + 0.3 * ((i % 3).to_double() - 1.0)
+    z.push(zi)
+    x.push(xi)
+    y.push(yi)
+    w.push((i % 11).to_double() - 5.0)
+    d.push(if zi > 0.0 { "1" } else { "0" })
+    e.push(if xi > 0.0 { "1" } else { "0" })
+  }
+  let columns : Map[String, @api.Column] = Map([
+    ("x", @api.Column::numeric(x)),
+    ("y", @api.Column::numeric(y)),
+    ("z", @api.Column::numeric(z)),
+    ("w", @api.Column::numeric(w)),
+    ("d", @api.Column::discrete(d)),
+    ("e", @api.Column::discrete(e)),
+  ])
+  @api.DataFrame::new(["x", "y", "z", "w", "d", "e"], columns)
+}
+
+///|
+/// The constraints of the fixture of the refutation of a graph.
+fn graph_refuter_constraints() -> Array[@refuters.Implication] {
+  [
+    @refuters.Implication::new("x", "y", ["z"]),
+    @refuters.Implication::new("x", "y", ["w"]),
+    @refuters.Implication::new("x", "y", ["z", "w"]),
+    @refuters.Implication::new("x", "y", []),
+    @refuters.Implication::new("d", "e", ["x"]),
+    @refuters.Implication::new("d", "e", ["z"]),
+    @refuters.Implication::new("d", "e", []),
+    @refuters.Implication::new("x", "d", ["z"]),
+    @refuters.Implication::new("x", "d", ["y"]),
+  ]
+}
+
+///|
+/// The GML graph of the upstream test `test_graph_refutation2`.
+///
+/// The upstream writes the graph of ten nodes with eight edges, and the port
+/// writes the same graph.
+fn upstream_refutation_gml_graph() -> String {
+  let labels = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
+  let edges = [(0, 1), (0, 3), (3, 2), (7, 4), (6, 5), (7, 8), (9, 2), (9, 8)]
+  let mut out = "graph [\n  directed 1"
+  for i in 0..<labels.length() {
+    out = out +
+      "\n  node [\n    id " +
+      i.to_string() +
+      "\n    label \"" +
+      labels[i] +
+      "\"\n  ]"
+  }
+  for (source, target) in edges {
+    out = out +
+      "\n  edge [\n    source " +
+      source.to_string() +
+      "\n    target " +
+      target.to_string() +
+      "\n  ]"
+  }
+  out + "\n]"
+}
+
+///|
+/// Whether the refutation passed.
+fn refutation_passed(result : @refuters.GraphRefutation) -> Bool {
+  match result.refutation_result() {
+    Some(value) => value
+    None => false
+  }
+}
+
+///|
+/// The value and the verdict of one conditional independence.
+fn implication_result(
+  results : Map[String, @refuters.IndependenceTest],
+  key : String,
+) -> (Double, Bool) {
+  match results.get(key) {
+    Some(outcome) => {
+      let value = match outcome.value() {
+        Some(actual) => actual
+        None => abort("the implication " + key + " has no value")
+      }
+      let holds = match outcome.holds() {
+        Some(actual) => actual
+        None => abort("the implication " + key + " has no verdict")
+      }
+      (value, holds)
+    }
+    None => abort("the implication " + key + " has no result")
+  }
+}
+
+///|
+test "the refutation of a graph tests the conditional independences of the data" {
+  let refuter = @refuters.GraphRefuter::new(
+    graph_refuter_frame(),
+    "conditional_mutual_information",
+    "partial_correlation",
+  )
+  let result = refuter.refute_model(graph_refuter_constraints())
+  assert_eq(result.constraints_of_the_model(), 9)
+  assert_eq(result.constraints_satisfied_by_the_data(), 3)
+  assert_false(refutation_passed(result))
+  let results = result.results()
+  // The upstream rejects the independences of the continuous data that the data
+  // does not hold, and it accepts the one of the discrete data that holds
+  // without a condition.
+  let expected = [
+    ("x|y|z", 0.0, false),
+    ("x|y|w", 0.0, false),
+    ("x|y|z|w", 0.0, false),
+    ("x|y", 0.0, false),
+    ("d|e|x", 0.00002, false),
+    ("d|e|z", 0.00002, false),
+    ("d|e", 0.0, true),
+    ("x|d|z", 0.93963, true),
+    ("x|d|y", 0.80822, true),
+  ]
+  for (key, value, holds) in expected {
+    let (actual_value, actual_holds) = implication_result(results, key)
+    assert_true((actual_value - value).abs() < 0.000000001)
+    assert_eq(actual_holds, holds)
+  }
+}
+
+///|
+test "the refutation of the graph of a random graph passes" {
+  let dataset = @datasets.dataset_from_random_graph(
+    5,
+    num_samples=GRAPH_REFUTER_NUM_SAMPLES,
+    random_seed=GRAPH_REFUTER_SEED,
+  )
+  let model = @moonbit_dowhy.CausalModel::new_with_graph_string(
+    dataset.frame(),
+    dataset.treatments(),
+    [dataset.outcome()],
+    dataset.gml_graph(),
+    [],
+    [],
+    [],
+  )
+  let result = model.refute_graph(
+    k=1,
+    independence_test=Some(
+      @refuters.IndependenceTests::new(
+        "partial_correlation", "conditional_mutual_information",
+      ),
+    ),
+  )
+  // The data was drawn from the graph of the model, so the conditional
+  // independences the graph entails hold in the data.
+  assert_true(refutation_passed(result))
+}
+
+///|
+test "the refutation of a graph that does not fit the data fails" {
+  let dataset = @datasets.dataset_from_random_graph(
+    10,
+    num_samples=GRAPH_REFUTER_NUM_SAMPLES,
+    random_seed=GRAPH_REFUTER_SEED,
+  )
+  let model = @moonbit_dowhy.CausalModel::new_with_graph_string(
+    dataset.frame(),
+    dataset.treatments(),
+    [dataset.outcome()],
+    upstream_refutation_gml_graph(),
+    [],
+    [],
+    [],
+  )
+  let result = model.refute_graph(
+    k=2,
+    independence_test=Some(
+      @refuters.IndependenceTests::new(
+        "partial_correlation", "conditional_mutual_information",
+      ),
+    ),
+  )
+  // The data was drawn from another graph, so a conditional independence the
+  // graph entails does not hold in the data.
+  assert_false(refutation_passed(result))
 }
