@@ -2324,3 +2324,45 @@ The remaining cases of the statistics of the upstream.
   differences of the two classes. The logistic regression of the port and the
   one of scikit-learn reach the same coefficients to `1e-2` on that quantity,
   where the upstream asserts a tolerance of one.
+
+## [0.0.46] - 2026-11-10
+
+The sales data set of the upstream.
+
+### Added
+
+- the sales data set of the upstream, `dowhy.datasets.sales_dataset`, in the
+  `datasets` package: the daily rows of a single product with the columns
+  `Date`, `Shopping Event?`, `Ad Spend`, `Page Views`, `Unit Price`,
+  `Sold Units`, `Revenue`, `Operational Cost` and `Profit`.
+- the four cases of the upstream test file `tests/test_datasets.py` in
+  `src/datasets/datasets_test.mbt`: the shape of the frame, the number of the
+  shopping events, the relations of the two fixtures of the upstream and the
+  statistics of the frame.
+- the numbers of the upstream in `_verify/datasets_sales_reference.py`, which
+  runs the upstream and prints them.
+
+### Notes
+
+- The header of the test file of the data sets names the upstream test file it
+  mirrors now, and the counter of `_verify/upstream_test_coverage.py` counts 66
+  of the 74 test files of the upstream.
+- The port takes the number of the days of the range and a seed of its own,
+  where the upstream takes a pair of dates and draws its numbers with the global
+  generator of numpy. The `Date` column of the port holds the date of the day as
+  a string of the form `YYYY-MM-DD`, where the one of the upstream holds the
+  timestamps.
+- The Poisson draws of the port invert the cumulative distribution of the
+  Poisson, which is exact, and the inversion starts ten standard deviations
+  below the mean, where the probability of the distribution is below `1e-23` and
+  where the mass of the distribution is still representable. The means of the
+  frame of the port are within a percent of the ones of the upstream.
+- The upstream replaces a change of the price of zero by one, and the relations
+  of its case depend on that replacement: the discount of the second fixture has
+  to sell more units than the first one, because the elasticity of the demand
+  answers the smaller price of that fixture. The port reproduces the
+  replacement.
+- The link of the release 0.0.45 was missing in this file.
+
+[0.0.45]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.45
+[0.0.46]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.46

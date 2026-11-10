@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.45.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.46.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -19,7 +19,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
 | Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis**, its **E-value analysis** and the **default strength** it infers for its confounder --, the **significance test** of the refutations, and the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules) |
-| Synthetic data | `dowhy.datasets` | ported (`linear_dataset` and the fixtures the upstream tests use) |
+| Synthetic data | `dowhy.datasets` | ported (`linear_dataset`, the **sales data set** and the fixtures the upstream tests use) |
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
 | Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
 | Intervention sampling | `dowhy.do_sampler`, `dowhy.do_samplers` | ported (the weighting, multivariate weighting and kernel density samplers) -- the MCMC sampler is **not ported**, it needs an inference engine upstream takes from PyMC3 |
@@ -96,7 +96,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `estimators` | `riantr/moonbit_dowhy/estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones and the two stage regression of the frontdoor and of the mediation estimand |
 | `refuters` | `riantr/moonbit_dowhy/refuters` | `dowhy.causal_refuters` |
 | `overrule` | `riantr/moonbit_dowhy/overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
-| `datasets` | `riantr/moonbit_dowhy/datasets` | `dowhy.datasets` and the deterministic test fixtures |
+| `datasets` | `riantr/moonbit_dowhy/datasets` | `dowhy.datasets` (the `linear_dataset` generator and the sales data set) and the deterministic test fixtures |
 | `data_transformers` | `riantr/moonbit_dowhy/data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
@@ -335,6 +335,33 @@ statsmodels and scikit-learn are deliberate rather than accidental:
     standard error is therefore the standard deviation of the scores with
     `ddof = 0` divided by the square root of the number of the scores less one.
 
+- The sales data set of the `datasets` package is the port of
+  `dowhy.datasets.sales_dataset`, and four conventions of the upstream decide
+  whether the port reproduces its numbers:
+  - **the range is a number of days and not a pair of dates.** The upstream takes
+    a start date, an end date and a frequency and builds the range with
+    `pandas.date_range`; the port takes the number of the days and a seed of its
+    own, because it draws its numbers with the generator of the package and not
+    with the global generator of numpy. The `Date` column holds the date of the
+    day as a string of the form `YYYY-MM-DD`, where the one of the upstream holds
+    the timestamps.
+  - **the change of the price is measured against the original price and not
+    against the base price.** A day whose price is the original one therefore has
+    no change of the price at all, and the upstream replaces such a change by
+    one, which makes the ratio of the demand and of the change the elasticity of
+    the demand on those days. The port reproduces the replacement, because the
+    relations of the upstream case depend on it: the discount of the second
+    fixture has to sell *more* units than the first one, because the elasticity
+    answers the smaller price of that fixture.
+  - **the Poisson draws invert the cumulative distribution.** The inversion starts
+    ten standard deviations below the mean, where the probability of the
+    distribution is below `1e-23` and where the mass of the distribution is still
+    representable; a mean below thirty is drawn with the method of Knuth. The
+    means of the frame of the port are within a percent of the ones of the
+    upstream.
+  - **the days of the shopping events are drawn without replacement**, so every
+    day of the range holds at most one event.
+
 ## Deliberate differences from upstream
 
 Seven behaviours of the core differ on purpose, and each one is a case where
@@ -543,6 +570,11 @@ The `refuters` package differs from upstream in the following ways:
 - The `datasets` package takes the two noise parameters of the upstream,
   `stddev_treatment_noise` and `stddev_outcome_noise`. Their defaults are the
   values the port already used, so the fixtures of the port keep their rows.
+- The sales data set of the `datasets` package takes the number of the days of
+  the range and a seed of its own, where the upstream takes a pair of dates and
+  draws its numbers with the global generator of numpy. The `Date` column of the
+  port holds the date of the day as a string, where the one of the upstream holds
+  the timestamps.
 
 The `overrule` package differs from upstream in the following ways:
 

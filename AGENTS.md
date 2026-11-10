@@ -765,6 +765,33 @@ statsmodels / scikit-learn conventions are deliberate:
     the order of the set of the interpreter, and the port keeps the order of
     the entries.
 
+- The sales data set of the `datasets` package is the port of
+  `dowhy.datasets.sales_dataset`, and four conventions of the upstream decide
+  whether the port reproduces its numbers:
+  - **the range is a number of days and not a pair of dates.** The upstream takes
+    a start date, an end date and a frequency and builds the range with
+    `pandas.date_range`; the port takes the number of the days and a seed of its
+    own, because it draws its numbers with the generator of the package and not
+    with the global generator of numpy. The `Date` column holds the date of the
+    day as a string of the form `YYYY-MM-DD`, where the one of the upstream holds
+    the timestamps.
+  - **the change of the price is measured against the original price and not
+    against the base price.** A day whose price is the original one therefore has
+    no change of the price at all, and the upstream replaces such a change by
+    one, which makes the ratio of the demand and of the change the elasticity of
+    the demand on those days. The port reproduces the replacement, because the
+    relations of the upstream case depend on it: the discount of the second
+    fixture has to sell *more* units than the first one, because the elasticity
+    answers the smaller price of that fixture.
+  - **the Poisson draws invert the cumulative distribution.** The inversion starts
+    ten standard deviations below the mean, where the probability of the
+    distribution is below `1e-23` and where the mass of the distribution is still
+    representable; a mean below thirty is drawn with the method of Knuth. The
+    means of the frame of the port are within a percent of the ones of the
+    upstream.
+  - **the days of the shopping events are drawn without replacement**, so every
+    day of the range holds at most one event.
+
 ## Package layout
 
 | Package | Ports |
@@ -801,6 +828,14 @@ README makes, so they are tracked in the repository:
 - `pc_reference.py` re-implements the PC algorithm and the fixture generator
   of the `cm` package in Python, and the two agree on the skeleton, the
   directed edges, the undirected edges and the v-structures.
+- `datasets_sales_reference.py` runs the upstream `dowhy.datasets.sales_dataset`
+  the way the upstream test `tests/test_datasets.py` runs it and prints the
+  numbers of the two fixtures -- the number of the shopping events, the mean of
+  the profit, of the page views, of the sold units, of the ad spending, of the
+  price, of the revenue and of the operational cost -- which are the numbers the
+  tests of the `datasets` package compare against. It prints the draws of the
+  upstream as well, so that the sampler of the port can be checked against the
+  ones of SciPy.
 - `check_dataset_columns.py` prints the columns of the upstream
   `linear_dataset`, which is how the column count of the `datasets` package
   was pinned.

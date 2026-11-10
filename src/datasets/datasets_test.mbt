@@ -1,5 +1,8 @@
 /// Tests for the deterministic data sets that mirror the fixtures of DoWhy's
 /// test suite.
+///
+/// The sales data set of the port mirrors `tests/test_datasets.py`, whose case
+/// compares the two fixtures of the sales data set of the upstream.
 
 ///|
 /// Whether two numeric columns hold the same values.
@@ -276,4 +279,112 @@ test "the metadata of the data sets names the columns" {
   assert_eq(dataset.instrument_names, ["Z0"])
   assert_eq(dataset.effect_modifier_names, [])
   assert_eq(dataset.frontdoor_names, [])
+}
+
+///|
+/// The number of the shopping events of the frame.
+fn count_events(df : @api.DataFrame) -> Int32 {
+  let flags = df.discrete("Shopping Event?")
+  let mut count = 0
+  let mut i = 0
+  while i < flags.length() {
+    if flags[i] == "true" {
+      count = count + 1
+    }
+    i = i + 1
+  }
+  count
+}
+
+///|
+/// Whether two numbers are within a relative distance of each other.
+fn close_to(actual : Double, expected : Double, tolerance : Double) -> Bool {
+  (actual - expected).abs() <= tolerance * expected.abs()
+}
+
+///|
+test "the sales data set has the columns of the python fixture" {
+  let df = @datasets.sales_dataset(
+    2024,
+    365,
+    @datasets.SalesConfig::ten_events(),
+  )
+  assert_eq(df.nrows(), 365)
+  let columns = df.column_names()
+  assert_eq(columns.length(), 9)
+  assert_eq(columns[0], "Date")
+  assert_eq(columns[1], "Shopping Event?")
+  assert_eq(columns[2], "Ad Spend")
+  assert_eq(columns[3], "Page Views")
+  assert_eq(columns[4], "Unit Price")
+  assert_eq(columns[5], "Sold Units")
+  assert_eq(columns[6], "Revenue")
+  assert_eq(columns[7], "Operational Cost")
+  assert_eq(columns[8], "Profit")
+  // The range of the upstream runs over the year of 2021.
+  assert_eq(df.discrete("Date")[0], "2021-01-01")
+  assert_eq(df.discrete("Date")[364], "2021-12-31")
+}
+
+///|
+test "the sales data set holds the number of shopping events of the upstream" {
+  let first = @datasets.sales_dataset(
+    2024,
+    365,
+    @datasets.SalesConfig::ten_events(),
+  )
+  let second = @datasets.sales_dataset(
+    2024,
+    365,
+    @datasets.SalesConfig::discounted(),
+  )
+  assert_eq(count_events(first), 10)
+  assert_eq(count_events(second), 10)
+}
+
+///|
+test "the sales data set reproduces the relations of the upstream fixture" {
+  let first = @datasets.sales_dataset(
+    2024,
+    365,
+    @datasets.SalesConfig::ten_events(),
+  )
+  let second = @datasets.sales_dataset(
+    2024,
+    365,
+    @datasets.SalesConfig::discounted(),
+  )
+  // The discount makes the profit of the day smaller, the page visitors fewer
+  // and the sold units more numerous, which is what the upstream case of the
+  // sales data set asserts.
+  assert_true(first.mean("Profit") > second.mean("Profit"))
+  assert_true(first.mean("Page Views") > second.mean("Page Views"))
+  assert_true(first.mean("Sold Units") < second.mean("Sold Units"))
+}
+
+///|
+test "the sales data set has the statistics of the python fixture" {
+  let first = @datasets.sales_dataset(
+    2024,
+    365,
+    @datasets.SalesConfig::ten_events(),
+  )
+  let second = @datasets.sales_dataset(
+    2024,
+    365,
+    @datasets.SalesConfig::discounted(),
+  )
+  // The numbers of the upstream, which the reference script prints.  The
+  // upstream draws its numbers with the global generator of NumPy, so its own
+  // numbers move by less than a percent from one seed to the other.
+  assert_true(close_to(first.mean("Ad Spend"), 1332.72, 0.02))
+  assert_true(close_to(first.mean("Page Views"), 11973.82, 0.02))
+  assert_true(close_to(first.mean("Unit Price"), 996.74, 0.02))
+  assert_true(close_to(first.mean("Sold Units"), 2463.99, 0.02))
+  assert_true(close_to(first.mean("Revenue"), 2443307.50, 0.02))
+  assert_true(close_to(first.mean("Operational Cost"), 1733336.73, 0.02))
+  assert_true(close_to(first.mean("Profit"), 709970.77, 0.02))
+  assert_true(close_to(second.mean("Page Views"), 10177.26, 0.02))
+  assert_true(close_to(second.mean("Sold Units"), 2829.00, 0.02))
+  assert_true(close_to(second.mean("Profit"), 617295.22, 0.02))
 }
