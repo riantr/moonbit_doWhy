@@ -16,8 +16,9 @@ Two fixtures are used:
     coefficients of the node belong to the sorted parents and not to the
     parents in the order of the edges.
 
-The upstream `get_noise_dependent_function` is not part of the port, so the
-four tests of the upstream that use it have no counterpart here.
+The upstream `get_noise_dependent_function` is the port of the section `C`
+below: the function that gives the value of the target node from the noise of
+its ancestors, and the order of the columns of its input.
 
 Usage:
     python _verify/gcm_noise_reference.py
@@ -27,6 +28,7 @@ from __future__ import annotations
 
 import os
 import sys
+import types
 
 import networkx as nx
 import numpy as np
@@ -57,6 +59,24 @@ def expose_upstream_packages() -> None:
         ("dowhy.utils", os.path.join("dowhy", "utils")),
     ):
         sys.modules[name].__path__ = [str(root / relative)]
+
+
+def stub_causal_model() -> None:
+    """Stubs the upstream `dowhy.causal_model` with a placeholder class.
+
+    The constructor of `StructuralCausalModel` imports the module and uses its
+    `CausalModel` class for an `isinstance` check of the graph it is given. The
+    graph of the reference is a `networkx` graph, so the check is false with
+    the placeholder class as well. The real module is not loaded, because it
+    pulls in the whole graph learning stack of the upstream.
+    """
+    module = types.ModuleType("dowhy.causal_model")
+
+    class CausalModel:  # noqa: D101
+        """The placeholder of the class the upstream checks the graph against."""
+
+    module.CausalModel = CausalModel  # type: ignore[attr-defined]
+    sys.modules["dowhy.causal_model"] = module
 
 
 class Xorshift:
@@ -180,6 +200,7 @@ def deviation(left: np.ndarray, right: np.ndarray) -> float:
 
 
 def main() -> None:
+    stub_causal_model()
     # The upstream `dowhy.gcm.ml` has to be read before the modules that import
     # the names it re-exports, so it is loaded first.
     load("dowhy.gcm.ml")
@@ -192,7 +213,6 @@ def main() -> None:
     # wider package, which the stubbed packages do not reach.
     expose_upstream_packages()
     load("dowhy.causal_graph")
-    load("dowhy.causal_model")
 
     # ------------------------------------------------------------------
     # A. The fixture of the upstream test.
@@ -242,6 +262,34 @@ def main() -> None:
     for name in ("X0", "X1", "X2", "X3"):
         print(f"  {name} = {computed_noise[name].to_numpy().squeeze()[0]:.12f}")
     print(f"  max_deviation = {max(deviation(computed_noise[name].to_numpy().squeeze(), two_parent_noise[name]) for name in two_parent_noise):.3e}")
+
+    # ------------------------------------------------------------------
+    # C. The function that gives the value of the target node from the noise
+    #    of its ancestors.
+    # ------------------------------------------------------------------
+    graph = nx.DiGraph([("X0", "X1"), ("X0", "X2"), ("X2", "X3")])
+    causal_model = build_model(models, mechanisms, stochastic, regression, graph, [0.5])
+
+    function, parent_order = noise.get_noise_dependent_function(causal_model, "X3")
+    input_data = np.array([[0, 0, 0], [0, 0, 2], [1, 0, 0], [1, 2, 0]], dtype=float)
+    print("NOISE_DEPENDENT_FUNCTION")
+    print(f"  parent_order = {list(parent_order)}")
+    values = np.asarray(function(input_data)).reshape(-1)
+    for index, value in enumerate(values):
+        print(f"  value_{index} = {value:.12f}")
+
+    try:
+        approx_function, approx_order = noise.get_noise_dependent_function(
+            causal_model, "X3", approx_prediction_model=regression.create_linear_regressor()
+        )
+        approx_values = np.asarray(approx_function(input_data)).reshape(-1)
+        print("APPROX_NOISE_DEPENDENT_FUNCTION")
+        print(f"  parent_order = {list(approx_order)}")
+        for index, value in enumerate(approx_values):
+            print(f"  value_{index} = {value:.12f}")
+    except Exception as error:
+        print("APPROX_NOISE_DEPENDENT_FUNCTION")
+        print(f"  upstream_error = {type(error).__name__}: {error}")
 
 
 if __name__ == "__main__":

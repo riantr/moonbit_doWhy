@@ -39,6 +39,7 @@ from __future__ import annotations
 import math
 import os
 import sys
+import types
 
 import numpy as np
 import pandas as pd
@@ -75,6 +76,24 @@ AUTO = None
 SHAPLEY = None
 KERNEL = None
 DISTRIBUTION_CHANGE = None
+
+
+def stub_causal_model() -> None:
+    """Stubs the upstream `dowhy.causal_model` with a placeholder class.
+
+    The constructor of `StructuralCausalModel` imports the module and uses its
+    `CausalModel` class for an `isinstance` check of the graph it is given. The
+    graph of the reference is a `networkx` graph, so the check is false with
+    the placeholder class as well. The real module is not loaded, because it
+    pulls in the whole graph learning stack of the upstream.
+    """
+    module = types.ModuleType("dowhy.causal_model")
+
+    class CausalModel:  # noqa: D101
+        """The placeholder of the class the upstream checks the graph against."""
+
+    module.CausalModel = CausalModel  # type: ignore[attr-defined]
+    sys.modules["dowhy.causal_model"] = module
 
 
 class PortRandom:
@@ -277,6 +296,7 @@ def show_attributions(label: str, attributions: dict) -> None:
 
 
 def main() -> None:
+    stub_causal_model()
     """Runs every fixture of the layer."""
     load_upstream()
     mechanism_change_fixtures()

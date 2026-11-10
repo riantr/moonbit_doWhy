@@ -4,7 +4,8 @@
 /// This is the port of `dowhy.gcm._noise`. The two functions are the two
 /// directions of the relation between the data of a causal model and the
 /// noise of its nodes: the data follow from the noise, and the noise follows
-/// from the data.
+/// from the data. The third function is the one that gives the value of a
+/// node from the noise of its ancestors.
 
 ///|
 /// The data of the model, computed from the noise of every node.
@@ -120,6 +121,69 @@ pub fn noise_samples_of_ancestors(
     }
   }
   (samples, noise_samples)
+}
+
+///|
+/// The function that gives the value of the target node from the noise of its
+/// ancestors, and the order of the columns of its input.
+///
+/// This is the port of `dowhy.gcm._noise.get_noise_dependent_function` without
+/// the approximate prediction model. The function propagates the noise through
+/// the graph of the target node, so that every node that has no path to the
+/// target node is left out of it.
+///
+/// The result holds the function and the order of the columns of its input,
+/// which is the topological order of the nodes of the graph of the target node.
+/// The columns of the input hold the noise of the nodes in that order.
+pub fn noise_dependent_function(
+  causal_model : ProbabilisticCausalModel,
+  target_node : String,
+) -> ((@utils.Matrix) -> Array[Double], Array[String]) {
+  validate_causal_dag(causal_model)
+  let sub_model = subgraph_of(causal_model, target_node)
+  let nodes_order = sub_model.graph.topological_order()
+  let function = fn(noise : @utils.Matrix) -> Array[Double] {
+    let frame = noise_features_frame(noise, nodes_order)
+    compute_data_from_noise(sub_model, frame).numeric(target_node)
+  }
+  (function, nodes_order)
+}
+
+///|
+/// The function that approximates the value of the target node from the noise
+/// of its ancestors, and the order of the columns of its input.
+///
+/// This is the port of the branch of
+/// `dowhy.gcm._noise.get_noise_dependent_function` that takes an approximate
+/// prediction model. The model is fitted on the noise samples of the ancestors
+/// of the target node and on the samples of the target node itself, and it
+/// predicts the target from the noise. The model of the upstream is fitted on
+/// the samples of the global generator of numpy; the port draws them from the
+/// generator it is given.
+///
+/// The result holds the function and the order of the columns of its input,
+/// which is the topological order of the nodes of the graph of the target node.
+/// The columns of the input hold the noise of the nodes in that order.
+pub fn approx_noise_dependent_function(
+  causal_model : ProbabilisticCausalModel,
+  target_node : String,
+  prediction_model : PredictionModel,
+  num_training_samples : Int32,
+  rng : @utils.Random,
+) -> ((@utils.Matrix) -> Array[Double], Array[String]) {
+  validate_causal_dag(causal_model)
+  let sub_model = subgraph_of(causal_model, target_node)
+  let nodes_order = sub_model.graph.topological_order()
+  let (node_samples, noise_samples) = noise_samples_of_ancestors(
+    sub_model, target_node, num_training_samples, rng,
+  )
+  let x = noise_samples.design_matrix(nodes_order)
+  let y = node_samples.numeric(target_node)
+  let fitted = prediction_model.fit(x, y)
+  let function = fn(noise : @utils.Matrix) -> Array[Double] {
+    fitted.predict(noise)
+  }
+  (function, nodes_order)
 }
 
 ///|

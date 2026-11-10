@@ -310,6 +310,19 @@ statsmodels / scikit-learn conventions are deliberate:
   `0.058805`, which is above the threshold of `0.01` of the upstream, so the
   fixture of the port holds two thousand rows, where the divergence stays below
   the threshold and the normal distribution is selected like the upstream does.
+- The function of the `gcm` package that gives the value of a target node from
+  the noise of its ancestors is the port of
+  `dowhy.gcm._noise.get_noise_dependent_function`. The noise is propagated
+  through the graph of the target node, so that every node that has no path to
+  the target node is left out of it, and the columns of the input of the
+  function hold the noise of the nodes in the topological order of that graph.
+  The **approximate branch** of the upstream fits its model on the samples of
+  the **global generator of numpy**, while the port draws them from the
+  generator it is given. The upstream raises
+  `RuntimeError: EmpiricalDistribution has not been fitted!` on a model whose
+  root node has a fitted distribution, because the view of the graph of the
+  target node does not carry the distribution of the root node; the port copies
+  the mechanisms of the model into the view, so its approximate branch works.
 - The false discovery rate control of the `gcm` package is the
   Benjamini-Hochberg **step-up** procedure of
   `statsmodels.stats.multitest.multipletests(method="fdr_bh")`: the adjusted

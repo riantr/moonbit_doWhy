@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.57.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.58.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -163,6 +163,14 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   the port knows -- the normal, the Laplace, the uniform and the beta -- where
   the upstream fits every continuous distribution of scipy, and it keeps the
   first family whose Kullback-Leibler divergence is below the threshold.
+- The function of the `gcm` package that gives the value of a target node from
+  the noise of its ancestors is the port of
+  `dowhy.gcm._noise.get_noise_dependent_function`: the noise is propagated
+  through the graph of the target node, so that every node that has no path to
+  the target node is left out of it. The approximate branch of the upstream
+  fails on a model whose root node has a fitted distribution, because the view
+  of the graph does not carry the distribution of the root node; the port copies
+  the mechanisms into the view, so its approximate branch works.
 - The one-hot encoder drops the first category of every column, like
   `pandas.get_dummies` and like the `Encoders` helper of upstream, and it
   learns its categories in lexicographic order, like `numpy.unique`.

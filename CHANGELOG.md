@@ -2969,3 +2969,63 @@ distribution.
   rows of the fixture of the port, and so does the port.
 
 [0.0.57]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.57
+
+## [0.0.58] - 2026-11-12
+
+The function that gives the value of a target node from the noise of its
+ancestors.
+
+### Added
+
+- the function of the `gcm` package that gives the value of a target node from
+  the noise of its ancestors, in `src/gcm/noise.mbt`: the new public function
+  `noise_dependent_function` is the port of
+  `dowhy.gcm._noise.get_noise_dependent_function`. The function propagates the
+  noise through the graph of the target node, so that every node that has no
+  path to the target node is left out of it, and the result holds the order of
+  the columns of its input. The new public function
+  `approx_noise_dependent_function` is the port of the branch of the upstream
+  that takes an approximate prediction model: the model is fitted on the noise
+  samples of the ancestors of the target node and on the samples of the target
+  node itself.
+- three cases in `src/gcm/noise_test.mbt`: the value of a target node is
+  computed from the noise of its ancestors, the value of a target node is
+  approximated from the noise of its ancestors, and the function of a target
+  node omits the nodes that have no path to it. Six of the seven cases of the
+  upstream test file `tests/gcm/test_noise.py` have a counterpart now.
+- the numbers of the upstream on the fixtures of the port in
+  `_verify/gcm_noise_reference.py`: the section `NOISE_DEPENDENT_FUNCTION` runs
+  the upstream on the very rows of the port. The upstream takes the nodes in the
+  order `X0`, `X2`, `X3` and gives the values `0`, `2`, `0.25` and `1.25`, the
+  same numbers as the port.
+
+### Fixed
+
+- seven reference scripts of the `gcm` package loaded the real module
+  `dowhy.causal_model` of the upstream, which pulls in the whole graph learning
+  stack of the upstream and fails. The scripts are
+  `_verify/gcm_anomaly_reference.py`,
+  `_verify/gcm_distribution_change_reference.py`,
+  `_verify/gcm_equation_parser_reference.py`,
+  `_verify/gcm_influence_reference.py`,
+  `_verify/gcm_intrinsic_influence_reference.py`,
+  `_verify/gcm_model_evaluation_reference.py` and
+  `_verify/gcm_scm_reference.py`. They stub the module out now, the way the
+  other reference scripts do, and all twenty five reference scripts of the
+  package run again.
+
+### Notes
+
+- The approximate branch of the upstream fails on a model whose root node has a
+  fitted distribution: the view of the graph of the target node does not carry
+  the distribution of the root node, so the upstream raises
+  `RuntimeError: EmpiricalDistribution has not been fitted!`. The port copies
+  the mechanisms of the model into the view of the graph, so its approximate
+  branch works.
+- The two cases of the upstream that have no counterpart in the port are the one
+  whose target is a categorical variable, because the function of the upstream
+  returns the categories of the target and the port returns numbers, and the one
+  whose nodes are named with integers, because the nodes of the port are named
+  with strings.
+
+[0.0.58]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.58

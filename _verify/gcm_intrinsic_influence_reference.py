@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import os
 import sys
+import types
 
 import networkx as nx
 import numpy as np
@@ -34,6 +35,24 @@ import upstream_gcm  # noqa: E402
 from upstream_gcm import load, upstream_root  # noqa: E402
 
 MASK64 = (1 << 64) - 1
+
+
+def stub_causal_model() -> None:
+    """Stubs the upstream `dowhy.causal_model` with a placeholder class.
+
+    The constructor of `StructuralCausalModel` imports the module and uses its
+    `CausalModel` class for an `isinstance` check of the graph it is given. The
+    graph of the reference is a `networkx` graph, so the check is false with
+    the placeholder class as well. The real module is not loaded, because it
+    pulls in the whole graph learning stack of the upstream.
+    """
+    module = types.ModuleType("dowhy.causal_model")
+
+    class CausalModel:  # noqa: D101
+        """The placeholder of the class the upstream checks the graph against."""
+
+    module.CausalModel = CausalModel  # type: ignore[attr-defined]
+    sys.modules["dowhy.causal_model"] = module
 
 
 class Xorshift:
@@ -137,7 +156,7 @@ def main() -> None:
     shapley = load("dowhy.gcm.shapley")
     expose_upstream_packages()
     load("dowhy.causal_graph")
-    load("dowhy.causal_model")
+    stub_causal_model()
 
     data = fixture()
     causal_model = models.StructuralCausalModel(

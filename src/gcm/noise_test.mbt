@@ -2,9 +2,12 @@
 /// The tests of the noise of the `gcm` package.
 ///
 /// The expectations are the ones of the upstream tests of `dowhy.gcm._noise`,
-/// which are in `tests/gcm/test_noise.py`. The upstream
-/// `get_noise_dependent_function` is not part of the port, so the four tests
-/// of the upstream that use it have no counterpart here.
+/// which are in `tests/gcm/test_noise.py`. Six of the seven tests of the
+/// upstream have a counterpart here. The two that have none are the test of the
+/// upstream whose target is a categorical variable, because the function of the
+/// upstream returns the categories of the target and the port returns numbers,
+/// and the test of the upstream whose nodes are named with integers, because
+/// the nodes of the port are named with strings.
 ///
 /// The fixtures are drawn with the deterministic generator of the `utils`
 /// package, and the expected numbers are the ones the upstream `dowhy.gcm._noise`
@@ -22,6 +25,11 @@ const NOISE_ROWS : Int32 = 1000
 ///|
 /// The number of rows of the fixture of the single row.
 const NOISE_SINGLE_ROWS : Int32 = 10
+
+///|
+/// The number of the samples the approximate function of the target node is
+/// fitted on.
+const NOISE_APPROX_ROWS : Int32 = 2000
 
 ///|
 /// The size of the noise of the fixtures.
@@ -53,6 +61,17 @@ fn noise_columns_near(
     }
   }
   true
+}
+
+///|
+/// The position of a name in a list of names.
+fn noise_index_of(names : Array[String], name : String) -> Int32 {
+  for i in 0..<names.length() {
+    if names[i] == name {
+      return i
+    }
+  }
+  abort("the list of names does not hold " + name)
 }
 
 ///|
@@ -322,6 +341,109 @@ test "the noise of a causal model whose node has two parents is computed from th
   }
   assert_true(
     noise_near(computed.numeric("X3")[0], -0.009478057539, NOISE_TOLERANCE),
+  )
+}
+
+///|
+/// The value of a target node is computed from the noise of its ancestors.
+test "the value of a target node is computed from the noise of its ancestors" {
+  let (data, _) = noise_fixture()
+  let model = noise_model(data)
+  let (function, nodes_order) = @gcm.noise_dependent_function(model, "X3")
+  // The upstream asserts the same three nodes, the node `X1` has no path to
+  // the target node and is left out.
+  assert_eq(nodes_order.length(), 3)
+  assert_true(nodes_order.contains("X0"))
+  assert_true(nodes_order.contains("X2"))
+  assert_true(nodes_order.contains("X3"))
+  let noise = @utils.Matrix::from_rows([
+    [0.0, 0.0, 0.0],
+    [0.0, 0.0, 2.0],
+    [1.0, 0.0, 0.0],
+    [1.0, 2.0, 0.0],
+  ])
+  let values = function(noise)
+  // The upstream asserts the same four numbers with a tolerance of 0.1.
+  assert_true(noise_near(values[0], 0.0, NOISE_TOLERANCE))
+  assert_true(noise_near(values[1], 2.0, NOISE_TOLERANCE))
+  assert_true(noise_near(values[2], 0.25, NOISE_TOLERANCE))
+  assert_true(noise_near(values[3], 1.25, NOISE_TOLERANCE))
+}
+
+///|
+/// The value of a target node is approximated from the noise of its ancestors.
+test "the value of a target node is approximated from the noise of its ancestors" {
+  let (data, _) = noise_fixture()
+  let model = noise_model(data)
+  let (function, nodes_order) = @gcm.approx_noise_dependent_function(
+    model,
+    "X3",
+    @gcm.PredictionModel::linear(),
+    NOISE_APPROX_ROWS,
+    @utils.Random::new(NOISE_SEED),
+  )
+  assert_eq(nodes_order.length(), 3)
+  let noise = @utils.Matrix::from_rows([
+    [0.0, 0.0, 0.0],
+    [0.0, 0.0, 2.0],
+    [1.0, 0.0, 0.0],
+    [1.0, 2.0, 0.0],
+  ])
+  let values = function(noise)
+  // The upstream asserts the same four numbers with a tolerance of 0.1.
+  assert_true(noise_near(values[0], 0.0, 0.1))
+  assert_true(noise_near(values[1], 2.0, 0.1))
+  assert_true(noise_near(values[2], 0.25, 0.1))
+  assert_true(noise_near(values[3], 1.25, 0.1))
+}
+
+///|
+/// The function of a target node omits the nodes that have no path to it.
+test "the function of a target node omits the nodes that have no path to it" {
+  let rng = @utils.Random::new(NOISE_SEED)
+  let names = ["X0", "X1", "X2", "X3", "X4", "X5", "X6", "X7"]
+  let columns : Map[String, Array[Double]] = Map([])
+  for name in names {
+    let values : Array[Double] = []
+    for _ in 0..<NOISE_SINGLE_ROWS {
+      values.push(rng.next_normal())
+    }
+    columns.set(name, values)
+  }
+  let data = @api.DataFrame::from_numeric(names, columns)
+  let graph = @graph.DirectedGraph::new()
+  graph.add_edge("X0", "X1")
+  graph.add_edge("X1", "X2")
+  graph.add_edge("X3", "X2")
+  graph.add_edge("X4", "X5")
+  graph.add_edge("X6", "X5")
+  graph.add_node("X7")
+  let model = @gcm.ProbabilisticCausalModel::new(graph)
+  let _ = @gcm.assign_causal_mechanisms(
+    model,
+    data,
+    @gcm.AssignmentQuality::good(),
+    false,
+  )
+  @gcm.fit(model, data)
+  let (_, nodes_order) = @gcm.noise_dependent_function(model, "X2")
+  // The upstream asserts the same four nodes and the same order.
+  assert_eq(nodes_order.length(), 4)
+  assert_true(nodes_order.contains("X0"))
+  assert_true(nodes_order.contains("X1"))
+  assert_true(nodes_order.contains("X2"))
+  assert_true(nodes_order.contains("X3"))
+  assert_true(
+    noise_index_of(nodes_order, "X0") < noise_index_of(nodes_order, "X1"),
+  )
+  assert_true(
+    noise_index_of(nodes_order, "X0") < noise_index_of(nodes_order, "X2"),
+  )
+  assert_true(
+    noise_index_of(nodes_order, "X1") < noise_index_of(nodes_order, "X2"),
+  )
+  assert_true(
+    noise_index_of(nodes_order, "X3") < noise_index_of(nodes_order, "X2"),
   )
 }
 

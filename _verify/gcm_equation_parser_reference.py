@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import sys
+import types
 
 import networkx as nx
 import numpy as np
@@ -52,6 +53,24 @@ C = exp(A) + 5 * Z + parametric()
 
 # The design matrix the predictions of the custom function are computed on.
 DESIGN = np.array([[1.0, 4.0], [2.0, 5.0], [3.0, 6.0]])
+
+
+def stub_causal_model() -> None:
+    """Stubs the upstream `dowhy.causal_model` with a placeholder class.
+
+    The constructor of `StructuralCausalModel` imports the module and uses its
+    `CausalModel` class for an `isinstance` check of the graph it is given. The
+    graph of the reference is a `networkx` graph, so the check is false with
+    the placeholder class as well. The real module is not loaded, because it
+    pulls in the whole graph learning stack of the upstream.
+    """
+    module = types.ModuleType("dowhy.causal_model")
+
+    class CausalModel:  # noqa: D101
+        """The placeholder of the class the upstream checks the graph against."""
+
+    module.CausalModel = CausalModel  # type: ignore[attr-defined]
+    sys.modules["dowhy.causal_model"] = module
 
 
 def expose_upstream_packages() -> None:
@@ -94,7 +113,7 @@ def load_parser():
     upstream_gcm._PATHS["dowhy.causal_graph"] = "causal_graph.py"
     upstream_gcm._PATHS["dowhy.causal_model"] = "causal_model.py"
     load("dowhy.causal_graph")
-    load("dowhy.causal_model")
+    stub_causal_model()
     return load("dowhy.gcm.equation_parser")
 
 
