@@ -284,6 +284,42 @@ pub fn marginal_expectation(
   rng : @utils.Random,
   max_batch_size~ : Int32 = -1,
 ) -> @utils.Matrix {
+  marginal_expectation_matrix(
+    fn(inputs : @utils.Matrix) -> @utils.Matrix {
+      @utils.Matrix::from_columns([prediction_method(inputs)])
+    },
+    feature_samples,
+    baseline_samples,
+    baseline_feature_indices,
+    return_averaged_results,
+    feature_perturbation,
+    rng,
+    max_batch_size~,
+  )
+}
+
+///|
+/// The marginal expectation of a prediction method whose predictions hold one
+/// column per class.
+///
+/// This is the port of `dowhy.gcm.stats.marginal_expectation` for a prediction
+/// method that returns a matrix of predictions. The upstream evaluates the
+/// prediction method on the same rows as the vector variant and averages the
+/// predictions of every block of rows over their columns, so the result holds
+/// one row per baseline sample and one column per class.
+///
+/// The result of the vector variant is the result of this one for a prediction
+/// method with a single column, so the two agree.
+pub fn marginal_expectation_matrix(
+  prediction_method : (@utils.Matrix) -> @utils.Matrix,
+  feature_samples : @utils.Matrix,
+  baseline_samples : @utils.Matrix,
+  baseline_feature_indices : Array[Int32],
+  return_averaged_results : Bool,
+  feature_perturbation : FeaturePerturbation,
+  rng : @utils.Random,
+  max_batch_size~ : Int32 = -1,
+) -> @utils.Matrix {
   let _ = max_batch_size
   let n_features = feature_samples.nrows()
   let n_baseline = baseline_samples.nrows()
@@ -318,21 +354,29 @@ pub fn marginal_expectation(
     }
   }
   let predictions = prediction_method(inputs)
+  let n_predictions = predictions.ncols()
   if return_averaged_results {
-    let out = @utils.Matrix::zeros(n_baseline, 1)
+    let out = @utils.Matrix::zeros(n_baseline, n_predictions)
     for i = 0; i < n_baseline; i = i + 1 {
-      out.set(
-        i,
-        0,
-        mean_of_range(predictions, i * n_features, (i + 1) * n_features),
-      )
+      for c = 0; c < n_predictions; c = c + 1 {
+        out.set(
+          i,
+          c,
+          mean_of_column_range(
+            predictions,
+            i * n_features,
+            (i + 1) * n_features,
+            c,
+          ),
+        )
+      }
     }
     out
   } else {
     let out = @utils.Matrix::zeros(n_baseline, n_features)
     for i = 0; i < n_baseline; i = i + 1 {
       for j = 0; j < n_features; j = j + 1 {
-        out.set(i, j, predictions[i * n_features + j])
+        out.set(i, j, predictions.get(i * n_features + j, 0))
       }
     }
     out
@@ -541,6 +585,21 @@ fn sorted_p_values(p_values : Array[Double]) -> Array[Double] {
   }
   kept.sort_by(fn(a, b) { @utils.compare_double(a, b) })
   kept
+}
+
+///|
+/// The mean of the values of a column of the matrix between `start` and `end`.
+fn mean_of_column_range(
+  values : @utils.Matrix,
+  start : Int32,
+  end : Int32,
+  column : Int32,
+) -> Double {
+  let mut sum = 0.0
+  for i = start; i < end; i = i + 1 {
+    sum = sum + values.get(i, column)
+  }
+  sum / (end - start).to_double()
 }
 
 ///|

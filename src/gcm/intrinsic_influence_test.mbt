@@ -3,10 +3,11 @@
 ///
 /// The expectations are the ones of the upstream tests of
 /// `dowhy.gcm.influence`, which are in `tests/gcm/test_intrinsic_influence.py`.
-/// The three tests of the upstream that use a categorical target have no
-/// counterpart here, because the prediction method of the port returns one
-/// number per row and the predictions of a classifier are a probability per
-/// class.
+/// Two of the three tests of the upstream that use a categorical target have a
+/// counterpart here. The third one has every node of its graph categorical, so
+/// the root node of its model has a categorical distribution; the port has no
+/// categorical distribution that draws samples yet, so that case has no
+/// counterpart here.
 ///
 /// The fixtures are drawn with the deterministic generator of the `utils`
 /// package. The upstream draws its samples with the global generator of numpy
@@ -34,6 +35,15 @@ const ICC_RANDOMIZATION_SAMPLES : Int32 = 250
 ///|
 /// The number of the samples of the baseline.
 const ICC_BASELINE_SAMPLES : Int32 = 500
+
+///|
+/// The seed of the fixture of the categorical intrinsic causal influence.
+const ICC_CATEGORICAL_SEED : UInt64 = 2061UL
+
+///|
+/// The seed of the fixture of the complex categorical intrinsic causal
+/// influence.
+const ICC_COMPLEX_CATEGORICAL_SEED : UInt64 = 2062UL
 
 ///|
 /// The number of the noise samples of the sample wise influence.
@@ -77,6 +87,87 @@ fn icc_data() -> @api.DataFrame {
     ["X0", "X1", "X2", "X3"],
     Map([("X0", x0), ("X1", x1), ("X2", x2), ("X3", x3)]),
   )
+}
+
+///|
+/// The data of the fixture of the categorical intrinsic causal influence.
+///
+/// The target is the sign of the value of its parent plus its noise, the way
+/// the upstream builds it in the case
+/// `test_given_categorical_data_when_estimate_intrinsic_causal_influence_then_returns_expected_results`.
+fn icc_categorical_data() -> @api.DataFrame {
+  let rng = @utils.Random::new(ICC_CATEGORICAL_SEED)
+  let x0 : Array[Double] = []
+  for _ in 0..<ICC_ROWS {
+    x0.push(rng.next_normal())
+  }
+  let x1 : Array[Double] = []
+  for i in 0..<ICC_ROWS {
+    x1.push(x0[i] + 0.001 * rng.next_normal())
+  }
+  let x2 : Array[Double] = []
+  for i in 0..<ICC_ROWS {
+    x2.push(x1[i] + 2.0 * rng.next_normal())
+  }
+  let labels : Array[String] = []
+  for i in 0..<ICC_ROWS {
+    if x2[i] + rng.next_normal() >= 0.0 {
+      labels.push("True")
+    } else {
+      labels.push("False")
+    }
+  }
+  let frame = @api.DataFrame::from_numeric(
+    ["X0", "X1", "X2"],
+    Map([("X0", x0), ("X1", x1), ("X2", x2)]),
+  )
+  frame.with_discrete("X3", labels)
+}
+
+///|
+/// The data of the fixture of the complex categorical intrinsic causal
+/// influence.
+///
+/// The target is a mixture of three shifted Gaussians, cut at its median, the
+/// way the upstream builds it in the case
+/// `test_given_more_complex_categorical_data_when_estimate_intrinsic_causal_influence_then_returns_expected_results`.
+fn icc_complex_categorical_data() -> @api.DataFrame {
+  let rng = @utils.Random::new(ICC_COMPLEX_CATEGORICAL_SEED)
+  let x0 : Array[Double] = []
+  for _ in 0..<ICC_ROWS {
+    x0.push(rng.next_normal())
+  }
+  let x1 : Array[Double] = []
+  for i in 0..<ICC_ROWS {
+    x1.push(x0[i] + 0.001 * rng.next_normal())
+  }
+  let x2 : Array[Double] = []
+  for i in 0..<ICC_ROWS {
+    x2.push(x1[i] + 2.0 * rng.next_normal())
+  }
+  let values : Array[Double] = []
+  for i in 0..<ICC_ROWS {
+    let offset = match rng.next_int(3) {
+      0 => -5.0
+      1 => 10.0
+      _ => 5.0
+    }
+    values.push(x2[i] + offset + 0.5 * rng.next_normal())
+  }
+  let median = @utils.median(values)
+  let labels : Array[String] = []
+  for value in values {
+    if value > median {
+      labels.push("True")
+    } else {
+      labels.push("False")
+    }
+  }
+  let frame = @api.DataFrame::from_numeric(
+    ["X0", "X1", "X2"],
+    Map([("X0", x0), ("X1", x1), ("X2", x2)]),
+  )
+  frame.with_discrete("X3", labels)
 }
 
 ///|
@@ -172,10 +263,11 @@ test "the intrinsic causal influence of a chain with an approximate model is the
 ///
 /// The upstream asserts the equality of the two shapes inside the attribution
 /// function, which raises an error when they differ. The port records the
-/// difference of the two lengths instead, because the function of the upstream
+/// difference of the two shapes instead, because the function of the upstream
 /// is a plain function here and cannot raise.
 struct IccShapeRecorder {
-  mut difference : Int32
+  mut row_difference : Int32
+  mut column_difference : Int32
 }
 
 ///|
@@ -189,14 +281,17 @@ test "the attribution function of the intrinsic causal influence gets the predic
     false,
   )
   @gcm.fit(model, data)
-  let recorder = { difference: 0, }
+  let recorder = { row_difference: 0, column_difference: 0, }
   let attribution = fn(
-    predictions : Array[Double],
-    baseline : Array[Double],
+    predictions : @utils.Matrix,
+    baseline : @utils.Matrix,
   ) -> Double {
-    recorder.difference = recorder.difference +
-      predictions.length() -
-      baseline.length()
+    recorder.row_difference = recorder.row_difference +
+      predictions.nrows() -
+      baseline.nrows()
+    recorder.column_difference = recorder.column_difference +
+      predictions.ncols() -
+      baseline.ncols()
     0.0
   }
   let _ = @gcm.intrinsic_causal_influence(
@@ -214,7 +309,192 @@ test "the attribution function of the intrinsic causal influence gets the predic
     ),
     @utils.Random::new(ICC_SEED),
   )
-  assert_eq(recorder.difference, 0)
+  assert_eq(recorder.row_difference, 0)
+  assert_eq(recorder.column_difference, 0)
+}
+
+///|
+/// test "the intrinsic causal influence of a categorical target is the drop of the entropy of the target"
+///
+/// This is the port of the upstream test
+/// `test_given_categorical_data_when_estimate_intrinsic_causal_influence_then_returns_expected_results`.
+/// The upstream measures the contribution of a noise term with the drop of the
+/// entropy of the target, and the port does the same.
+test "the intrinsic causal influence of a categorical target is the drop of the entropy of the target" {
+  let data = icc_categorical_data()
+  let model = @gcm.ProbabilisticCausalModel::new(icc_graph())
+  let _ = @gcm.assign_causal_mechanisms(
+    model,
+    data,
+    @gcm.AssignmentQuality::good(),
+    false,
+  )
+  @gcm.fit(model, data)
+  let influence = @gcm.intrinsic_causal_influence(
+    model,
+    "X3",
+    @gcm.IccPrediction::exact(),
+    None,
+    ICC_TRAINING_SAMPLES,
+    ICC_RANDOMIZATION_SAMPLES,
+    ICC_BASELINE_SAMPLES,
+    100,
+    @gcm.AssignmentQuality::good(),
+    @gcm.ShapleyConfig::new(@gcm.ShapleyApproximationMethod::auto()).with_seed(
+      ICC_CATEGORICAL_SEED,
+    ),
+    @utils.Random::new(ICC_CATEGORICAL_SEED),
+  )
+  let of_x0 = icc_of(influence, "X0")
+  let of_x1 = icc_of(influence, "X1")
+  let of_x2 = icc_of(influence, "X2")
+  let of_x3 = icc_of(influence, "X3")
+  // The contributions of the upstream on the rows of the port are `0.158549`,
+  // `0.000032`, `0.402891` and `0.131163`; the port gives `0.148440`,
+  // `0.000034`, `0.413516` and `0.129589`. The upstream fits its classifier with
+  // a histogram gradient boosting and the port with the classifier of its own
+  // zoo, so the numbers differ a little. The tolerance is the one of the
+  // upstream.
+  assert_true((of_x0 - 0.158549414643).abs() <= 0.05)
+  assert_true((of_x1 - 0.000031541531).abs() <= 0.05)
+  assert_true((of_x2 - 0.402891197751).abs() <= 0.05)
+  assert_true((of_x3 - 0.131162939217).abs() <= 0.05)
+}
+
+///|
+/// test "the intrinsic causal influence of a categorical target with an approximate model is the drop of the entropy of the target"
+///
+/// This is the second half of the upstream test
+/// `test_given_categorical_data_when_estimate_intrinsic_causal_influence_then_returns_expected_results`.
+/// The upstream measures the contribution of a noise term with the drop of the
+/// entropy of the target, and the port does the same.
+test "the intrinsic causal influence of a categorical target with an approximate model is the drop of the entropy of the target" {
+  let data = icc_categorical_data()
+  let model = @gcm.ProbabilisticCausalModel::new(icc_graph())
+  let _ = @gcm.assign_causal_mechanisms(
+    model,
+    data,
+    @gcm.AssignmentQuality::good(),
+    false,
+  )
+  @gcm.fit(model, data)
+  let influence = @gcm.intrinsic_causal_influence(
+    model,
+    "X3",
+    @gcm.IccPrediction::approx(),
+    None,
+    ICC_TRAINING_SAMPLES,
+    ICC_RANDOMIZATION_SAMPLES,
+    ICC_BASELINE_SAMPLES,
+    100,
+    @gcm.AssignmentQuality::good(),
+    @gcm.ShapleyConfig::new(@gcm.ShapleyApproximationMethod::auto()).with_seed(
+      ICC_CATEGORICAL_SEED,
+    ),
+    @utils.Random::new(ICC_CATEGORICAL_SEED),
+  )
+  let of_x0 = icc_of(influence, "X0")
+  let of_x1 = icc_of(influence, "X1")
+  let of_x2 = icc_of(influence, "X2")
+  let of_x3 = icc_of(influence, "X3")
+  // The contributions of the upstream on the rows of the port are `0.127412`,
+  // `0.000000`, `0.388305` and `0.108831`; the port gives `0.116253`,
+  // `0.000000`, `0.374219` and `0.089314`. The tolerance is the one of the
+  // upstream.
+  assert_true((of_x0 - 0.127411940313).abs() <= 0.05)
+  assert_true((of_x1 - 0.0).abs() <= 0.05)
+  assert_true((of_x2 - 0.388304672417).abs() <= 0.05)
+  assert_true((of_x3 - 0.108830541288).abs() <= 0.05)
+}
+
+///|
+/// test "the intrinsic causal influence of a categorical target with a mixed relation is the drop of the entropy of the target"
+///
+/// This is the port of the upstream test
+/// `test_given_more_complex_categorical_data_when_estimate_intrinsic_causal_influence_then_returns_expected_results`.
+/// The relation of the target is a mixture of three shifted Gaussians, cut at
+/// its median.
+test "the intrinsic causal influence of a categorical target with a mixed relation is the drop of the entropy of the target" {
+  let data = icc_complex_categorical_data()
+  let model = @gcm.ProbabilisticCausalModel::new(icc_graph())
+  let _ = @gcm.assign_causal_mechanisms(
+    model,
+    data,
+    @gcm.AssignmentQuality::good(),
+    false,
+  )
+  @gcm.fit(model, data)
+  let influence = @gcm.intrinsic_causal_influence(
+    model,
+    "X3",
+    @gcm.IccPrediction::exact(),
+    None,
+    ICC_TRAINING_SAMPLES,
+    ICC_RANDOMIZATION_SAMPLES,
+    ICC_BASELINE_SAMPLES,
+    100,
+    @gcm.AssignmentQuality::good(),
+    @gcm.ShapleyConfig::new(@gcm.ShapleyApproximationMethod::auto()).with_seed(
+      ICC_COMPLEX_CATEGORICAL_SEED,
+    ),
+    @utils.Random::new(ICC_COMPLEX_CATEGORICAL_SEED),
+  )
+  let of_x0 = icc_of(influence, "X0")
+  let of_x1 = icc_of(influence, "X1")
+  let of_x2 = icc_of(influence, "X2")
+  let of_x3 = icc_of(influence, "X3")
+  // The contributions of the upstream on the rows of the port are `0.050641`,
+  // `0.000012`, `0.124818` and `0.515082`; the port gives `0.035892`,
+  // `0.000008`, `0.124807` and `0.530887`. The tolerance is the one of the
+  // upstream.
+  assert_true((of_x0 - 0.050641005772).abs() <= 0.05)
+  assert_true((of_x1 - 0.000011921169).abs() <= 0.05)
+  assert_true((of_x2 - 0.124817514226).abs() <= 0.05)
+  assert_true((of_x3 - 0.515082495248).abs() <= 0.1)
+}
+
+///|
+/// test "the intrinsic causal influence of a categorical target with a mixed relation and an approximate model is the drop of the entropy of the target"
+///
+/// This is the second half of the upstream test
+/// `test_given_more_complex_categorical_data_when_estimate_intrinsic_causal_influence_then_returns_expected_results`.
+test "the intrinsic causal influence of a categorical target with a mixed relation and an approximate model is the drop of the entropy of the target" {
+  let data = icc_complex_categorical_data()
+  let model = @gcm.ProbabilisticCausalModel::new(icc_graph())
+  let _ = @gcm.assign_causal_mechanisms(
+    model,
+    data,
+    @gcm.AssignmentQuality::good(),
+    false,
+  )
+  @gcm.fit(model, data)
+  let influence = @gcm.intrinsic_causal_influence(
+    model,
+    "X3",
+    @gcm.IccPrediction::approx(),
+    None,
+    ICC_TRAINING_SAMPLES,
+    ICC_RANDOMIZATION_SAMPLES,
+    ICC_BASELINE_SAMPLES,
+    100,
+    @gcm.AssignmentQuality::good(),
+    @gcm.ShapleyConfig::new(@gcm.ShapleyApproximationMethod::auto()).with_seed(
+      ICC_COMPLEX_CATEGORICAL_SEED,
+    ),
+    @utils.Random::new(ICC_COMPLEX_CATEGORICAL_SEED),
+  )
+  let of_x0 = icc_of(influence, "X0")
+  let of_x1 = icc_of(influence, "X1")
+  let of_x2 = icc_of(influence, "X2")
+  let of_x3 = icc_of(influence, "X3")
+  // The contributions of the upstream on the rows of the port are `0.036602`,
+  // `0.000000`, `0.109529` and `0.502962`; the port gives `0.016572`,
+  // `0.000000`, `0.095175` and `0.464068`. The tolerance is the one of the
+  // upstream.
+  assert_true((of_x0 - 0.036601813904).abs() <= 0.05)
+  assert_true((of_x1 - 0.0).abs() <= 0.05)
+  assert_true((of_x2 - 0.109528747032).abs() <= 0.05)
+  assert_true((of_x3 - 0.502961592549).abs() <= 0.1)
 }
 
 ///|

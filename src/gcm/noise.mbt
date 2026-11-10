@@ -12,8 +12,11 @@
 ///
 /// This is the port of `dowhy.gcm._noise.compute_data_from_noise`. The nodes
 /// are visited in the topological order of the graph, so the data of a node
-/// with parents are computed from the data of its parents. The noise of a root
-/// node is its value.
+/// with parents are computed from the data of its parents. /// The noise of a root node is its value.
+///
+/// The column of a node with a categorical mechanism holds the classes of the
+/// node, the way the column of the upstream holds the labels of a categorical
+/// variable.
 pub fn compute_data_from_noise(
   causal_model : ProbabilisticCausalModel,
   noise_data : @api.DataFrame,
@@ -27,10 +30,19 @@ pub fn compute_data_from_noise(
       let parents = causal_model.graph.ordered_predecessors(node)
       let x = design_matrix_of(causal_model, node, frame, parents)
       let mechanism = mechanism_of(causal_model, node)
-      frame = frame.with_numeric(
-        node,
-        mechanism.evaluate(x, noise_data.numeric(node)),
-      )
+      if is_classifier_kind(mechanism.kind()) {
+        // The node of a categorical mechanism holds the classes, so its column
+        // holds the labels and not numbers.
+        frame = frame.with_discrete(
+          node,
+          mechanism.evaluate_categorical(x, noise_data.numeric(node)),
+        )
+      } else {
+        frame = frame.with_numeric(
+          node,
+          mechanism.evaluate(x, noise_data.numeric(node)),
+        )
+      }
     }
   }
   frame
@@ -112,9 +124,20 @@ pub fn noise_samples_of_ancestors(
       let parents = causal_model.graph.ordered_predecessors(node)
       let x = design_matrix_of(causal_model, node, samples, parents)
       let mechanism = mechanism_of(causal_model, node)
-      let noise = mechanism.noise_model.draw_samples(num_samples, rng)
-      noise_samples = noise_samples.with_numeric(node, noise.copy())
-      samples = samples.with_numeric(node, mechanism.evaluate(x, noise))
+      if is_classifier_kind(mechanism.kind()) {
+        // The noise of a categorical mechanism is uniform on `[0, 1]` and it
+        // selects the class of the sample, the way the upstream does it.
+        let noise = mechanism.draw_categorical_noise(num_samples, rng)
+        noise_samples = noise_samples.with_numeric(node, noise.copy())
+        samples = samples.with_discrete(
+          node,
+          mechanism.evaluate_categorical(x, noise),
+        )
+      } else {
+        let noise = mechanism.noise_model.draw_samples(num_samples, rng)
+        noise_samples = noise_samples.with_numeric(node, noise.copy())
+        samples = samples.with_numeric(node, mechanism.evaluate(x, noise))
+      }
     }
     if node == target_node {
       break

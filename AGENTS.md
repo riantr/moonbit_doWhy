@@ -414,6 +414,18 @@ statsmodels / scikit-learn conventions are deliberate:
   mechanism has coefficients, which means every model of the port but the
   nearest neighbour one, because the linear attribution reads the coefficients
   of the mechanism.
+- The intrinsic causal influence of the `gcm` package is matrix valued: the
+  attribution function receives the predictions of the target as a matrix and
+  not as an array of numbers, the way the upstream shapes them with
+  `shape_into_2d`. The predictions of a continuous target hold one number per
+  row and the predictions of a categorical target hold one probability per class
+  and per row, so the attribution function of a categorical target is the
+  negative entropy of the probabilities of the classes.
+- The noise of a node with a categorical mechanism is uniform on `[0, 1]` and it
+  selects the class of the sample, and the column of such a node holds the
+  classes of the node and not numbers. The upstream draws the noise of a
+  categorical node from a uniform distribution and its column holds the labels
+  of the node.
 - The number of the rows of a unit change attribution is the number of the rows
   of the data, and **not** the number of the input columns. `inputs_of` returns
   the columns of the data, so `background_inputs.length()` is the number of the

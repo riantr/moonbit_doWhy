@@ -78,6 +78,11 @@ class Xorshift:
         u1 = 1.0e-12 if u1 < 1.0e-12 else u1
         return np.sqrt(-2.0 * np.log(u1)) * np.cos(2.0 * np.pi * u2)
 
+    def next_int(self, bound: int) -> int:
+        if bound <= 0:
+            return 0
+        return self.next_u64() % bound
+
 
 def expose_upstream_packages() -> None:
     """Points the stubbed packages at the real directories of the upstream.
@@ -112,6 +117,13 @@ upstream_gcm._PATHS["dowhy.causal_model"] = "causal_model.py"
 # The seed of the fixture, the same as the one of the MoonBit test.
 SEED = 2060
 
+# The seed of the categorical fixture, the same as the one of the MoonBit test.
+CATEGORICAL_SEED = 2061
+
+# The seed of the complex categorical fixture, the same as the one of the
+# MoonBit test.
+COMPLEX_CATEGORICAL_SEED = 2062
+
 # The number of rows of the fixture.
 ROWS = 1000
 
@@ -129,6 +141,44 @@ def fixture() -> pd.DataFrame:
     x1 = np.array([x0[i] + 0.001 * rng.next_normal() for i in range(ROWS)])
     x2 = np.array([x1[i] + 2.0 * rng.next_normal() for i in range(ROWS)])
     x3 = np.array([x2[i] + rng.next_normal() for i in range(ROWS)])
+    return pd.DataFrame({"X0": x0, "X1": x1, "X2": x2, "X3": x3})
+
+
+def categorical_fixture() -> pd.DataFrame:
+    """The data of the fixture of the categorical intrinsic causal influence.
+
+    The fixture is the one of the upstream test file
+    `tests/gcm/test_intrinsic_influence.py` in the case
+    `test_given_categorical_data_when_estimate_intrinsic_causal_influence_then_returns_expected_results`:
+    the target is the sign of the value of its parent plus its noise.
+    """
+    rng = Xorshift(CATEGORICAL_SEED)
+    x0 = np.array([rng.next_normal() for _ in range(ROWS)])
+    x1 = np.array([x0[i] + 0.001 * rng.next_normal() for i in range(ROWS)])
+    x2 = np.array([x1[i] + 2.0 * rng.next_normal() for i in range(ROWS)])
+    x3 = np.array([(x2[i] + rng.next_normal()) >= 0.0 for i in range(ROWS)])
+    return pd.DataFrame({"X0": x0, "X1": x1, "X2": x2, "X3": x3.astype(str)})
+
+
+def complex_categorical_fixture() -> pd.DataFrame:
+    """The data of the fixture of the complex categorical influence.
+
+    The fixture is the one of the upstream test file
+    `tests/gcm/test_intrinsic_influence.py` in the case
+    `test_given_more_complex_categorical_data_when_estimate_intrinsic_causal_influence_then_returns_expected_results`:
+    the target is a mixture of three shifted Gaussians, cut at its median.
+    """
+    rng = Xorshift(COMPLEX_CATEGORICAL_SEED)
+    x0 = np.array([rng.next_normal() for _ in range(ROWS)])
+    x1 = np.array([x0[i] + 0.001 * rng.next_normal() for i in range(ROWS)])
+    x2 = np.array([x1[i] + 2.0 * rng.next_normal() for i in range(ROWS)])
+    values = []
+    for i in range(ROWS):
+        choice = rng.next_int(3)
+        offset = -5.0 if choice == 0 else (10.0 if choice == 1 else 5.0)
+        values.append(x2[i] + offset + 0.5 * rng.next_normal())
+    median = float(np.median(values))
+    x3 = np.array([value > median for value in values]).astype(str)
     return pd.DataFrame({"X0": x0, "X1": x1, "X2": x2, "X3": x3})
 
 
@@ -198,6 +248,93 @@ def main() -> None:
     for key in ("X0", "X1", "X2", "X3"):
         print(f"  {key} = {contributions_approx[key]:.12f}")
     print(f"  sum = {sum(contributions_approx[key] for key in contributions_approx):.12f}")
+
+    # The influence of a categorical target, which is the drop of the entropy of
+    # the target.
+    categorical_data = categorical_fixture()
+    categorical_model = models.StructuralCausalModel(
+        nx.DiGraph([("X0", "X1"), ("X1", "X2"), ("X2", "X3")])
+    )
+    np.random.seed(CATEGORICAL_SEED)
+    auto.assign_causal_mechanisms(
+        categorical_model, categorical_data, auto.AssignmentQuality.GOOD
+    )
+    fitting.fit(categorical_model, categorical_data)
+
+    np.random.seed(CATEGORICAL_SEED)
+    categorical_contributions = influence.intrinsic_causal_influence(
+        categorical_model,
+        "X3",
+        prediction_model="exact",
+        num_samples_randomization=RANDOMIZATION_SAMPLES,
+        num_samples_baseline=BASELINE_SAMPLES,
+        shapley_config=shapley.ShapleyConfig(n_jobs=1),
+    )
+    print("INTRINSIC_CAUSAL_INFLUENCE_CATEGORICAL")
+    for key in ("X0", "X1", "X2", "X3"):
+        print(f"  {key} = {categorical_contributions[key]:.12f}")
+    print(
+        f"  sum = {sum(categorical_contributions[key] for key in categorical_contributions):.12f}"
+    )
+
+    np.random.seed(CATEGORICAL_SEED)
+    categorical_contributions_approx = influence.intrinsic_causal_influence(
+        categorical_model,
+        "X3",
+        prediction_model="approx",
+        num_samples_randomization=RANDOMIZATION_SAMPLES,
+        num_samples_baseline=BASELINE_SAMPLES,
+        shapley_config=shapley.ShapleyConfig(n_jobs=1),
+    )
+    print("INTRINSIC_CAUSAL_INFLUENCE_CATEGORICAL_APPROX")
+    for key in ("X0", "X1", "X2", "X3"):
+        print(f"  {key} = {categorical_contributions_approx[key]:.12f}")
+    print(
+        f"  sum = {sum(categorical_contributions_approx[key] for key in categorical_contributions_approx):.12f}"
+    )
+
+    # The influence of a categorical target whose relation is a mixture.
+    complex_data = complex_categorical_fixture()
+    complex_model = models.StructuralCausalModel(
+        nx.DiGraph([("X0", "X1"), ("X1", "X2"), ("X2", "X3")])
+    )
+    np.random.seed(COMPLEX_CATEGORICAL_SEED)
+    auto.assign_causal_mechanisms(
+        complex_model, complex_data, auto.AssignmentQuality.GOOD
+    )
+    fitting.fit(complex_model, complex_data)
+
+    np.random.seed(COMPLEX_CATEGORICAL_SEED)
+    complex_contributions = influence.intrinsic_causal_influence(
+        complex_model,
+        "X3",
+        prediction_model="exact",
+        num_samples_randomization=RANDOMIZATION_SAMPLES,
+        num_samples_baseline=BASELINE_SAMPLES,
+        shapley_config=shapley.ShapleyConfig(n_jobs=1),
+    )
+    print("INTRINSIC_CAUSAL_INFLUENCE_COMPLEX_CATEGORICAL")
+    for key in ("X0", "X1", "X2", "X3"):
+        print(f"  {key} = {complex_contributions[key]:.12f}")
+    print(
+        f"  sum = {sum(complex_contributions[key] for key in complex_contributions):.12f}"
+    )
+
+    np.random.seed(COMPLEX_CATEGORICAL_SEED)
+    complex_contributions_approx = influence.intrinsic_causal_influence(
+        complex_model,
+        "X3",
+        prediction_model="approx",
+        num_samples_randomization=RANDOMIZATION_SAMPLES,
+        num_samples_baseline=BASELINE_SAMPLES,
+        shapley_config=shapley.ShapleyConfig(n_jobs=1),
+    )
+    print("INTRINSIC_CAUSAL_INFLUENCE_COMPLEX_CATEGORICAL_APPROX")
+    for key in ("X0", "X1", "X2", "X3"):
+        print(f"  {key} = {complex_contributions_approx[key]:.12f}")
+    print(
+        f"  sum = {sum(complex_contributions_approx[key] for key in complex_contributions_approx):.12f}"
+    )
 
     # The sample wise influence of the linear model with the given mechanisms.
     from scipy import stats

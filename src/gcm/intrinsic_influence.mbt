@@ -37,6 +37,15 @@ pub fn IccPrediction::approx() -> IccPrediction {
 }
 
 ///|
+/// The seed of the cross validation of the model selection of the approximate
+/// prediction.
+///
+/// The upstream selects the model of the target with the global generator of
+/// numpy; the port selects it with a fixed seed, so that the selection does not
+/// depend on the order of the draws of the layer.
+const ICC_SELECTION_SEED : UInt64 = 2063UL
+
+///|
 /// The attribution function that measures the statistical property of the
 /// target.
 ///
@@ -44,17 +53,38 @@ pub fn IccPrediction::approx() -> IccPrediction {
 /// argument holds the predictions of the target when some of the noise terms
 /// are randomized, and the second one holds the predictions of the target when
 /// none of them is.
-pub type IccAttributionFunc = (Array[Double], Array[Double]) -> Double
+///
+/// The upstream shapes its predictions with `shape_into_2d`, so the attribution
+/// function receives a matrix for a continuous target and a matrix of class
+/// probabilities for a categorical one. The port does the same: the predictions
+/// of a continuous target hold one number per row and the predictions of a
+/// categorical target hold one probability per class and per row.
+pub type IccAttributionFunc = (@utils.Matrix, @utils.Matrix) -> Double
 
 ///|
 /// The variance of the predictions, which is the attribution function of the
 /// upstream for a continuous target.
 pub fn icc_variance_attribution(
-  predictions : Array[Double],
-  baseline : Array[Double],
+  predictions : @utils.Matrix,
+  baseline : @utils.Matrix,
 ) -> Double {
   let _ = baseline
-  estimate_variance(@utils.Matrix::from_columns([predictions]))
+  estimate_variance(predictions)
+}
+
+///|
+/// The negative entropy of the predictions, which is the attribution function of
+/// the upstream for a categorical target.
+///
+/// The upstream measures the entropy of the probabilities of the classes of
+/// every row and averages it over the rows, so the contribution of a noise term
+/// is the drop of the entropy of the target.
+pub fn icc_entropy_attribution(
+  predictions : @utils.Matrix,
+  baseline : @utils.Matrix,
+) -> Double {
+  let _ = baseline
+  -estimate_entropy_of_probabilities(predictions)
 }
 
 ///|
@@ -96,12 +126,21 @@ pub fn intrinsic_causal_influence(
     sub_model, target_node, num_training_samples, rng,
   )
   let node_names = noise_samples.column_names()
+  // The upstream reads the kind of the target out of the dtype of its column,
+  // so the port reads it out of the column of the samples of the target.
+  let categorical = data_samples.is_discrete(target_node)
   let prediction_method = prediction_method_of(
     sub_model, target_node, prediction, noise_samples, data_samples, node_names,
+    categorical, auto_assign_quality,
   )
   let attribution = match attribution_func {
     Some(func) => func
-    None => icc_variance_attribution
+    None =>
+      if categorical {
+        icc_entropy_attribution
+      } else {
+        icc_variance_attribution
+      }
   }
   let (_, drawn) = noise_samples_of_ancestors(
     sub_model,
@@ -175,13 +214,16 @@ pub fn intrinsic_causal_influence_sample(
     Some(frame) => frame.design_matrix(node_names)
     None => drawn.design_matrix(node_names)
   }
-  let prediction_method = prediction_method_of(
+  // The upstream refuses a categorical target in the sample wise influence, so
+  // the predictions of the port hold one number per row there as well.
+  let prediction_method = vector_prediction_method_of(
     sub_model,
     target_node,
     prediction,
     noise_features_frame(noise_features, node_names),
     feature_samples,
     node_names,
+    auto_assign_quality,
   )
   let baseline_noise = compute_noise_from_data(sub_model, baseline_samples)
   let relevance = feature_relevance_sample(
@@ -221,20 +263,147 @@ fn prediction_method_of(
   noise_samples : @api.DataFrame,
   data_samples : @api.DataFrame,
   node_names : Array[String],
-) -> (@utils.Matrix) -> Array[Double] {
+  categorical : Bool,
+  quality : AssignmentQuality,
+) -> (@utils.Matrix) -> @utils.Matrix {
   match prediction {
     Exact =>
-      fn(inputs : @utils.Matrix) -> Array[Double] {
-        let frame = noise_features_frame(inputs, node_names)
-        compute_data_from_noise(causal_model, frame).numeric(target_node)
+      if categorical {
+        // The upstream compares the classes the exact model predicts with the
+        // classes of the classifier of the target, so the predictions hold a one
+        // for the class of the row and a zero for the other classes.
+        let classes = classes_of(causal_model, target_node)
+        fn(inputs : @utils.Matrix) -> @utils.Matrix {
+          let frame = noise_features_frame(inputs, node_names)
+          let labels = compute_data_from_noise(causal_model, frame).discrete(
+            target_node,
+          )
+          one_hot_of(labels, classes)
+        }
+      } else {
+        fn(inputs : @utils.Matrix) -> @utils.Matrix {
+          let frame = noise_features_frame(inputs, node_names)
+          @utils.Matrix::from_columns([
+            compute_data_from_noise(causal_model, frame).numeric(target_node),
+          ])
+        }
       }
     Approx => {
       let x = noise_samples.design_matrix(node_names)
-      let y = data_samples.numeric(target_node)
-      let fitted = PredictionModel::linear().fit(x, y)
-      fn(inputs : @utils.Matrix) -> Array[Double] { fitted.predict(inputs) }
+      if categorical {
+        // The upstream selects the model of the target with the model selection
+        // of `dowhy.gcm.auto`, which picks the classifier with the smallest log
+        // loss in a cross validation; the port does the same with its own zoo
+        // of classifiers.
+        let labels = data_samples.discrete(target_node)
+        let target_frame = @api.DataFrame::new(
+          [target_node],
+          Map([(target_node, @api.Column::discrete(labels))]),
+        )
+        let selection = select_model(
+          noise_samples,
+          target_frame,
+          quality,
+          ICC_SELECTION_SEED,
+        )
+        let classifier = match selection.model() {
+          SelectedModel::Classification(model) => model
+          SelectedModel::Regression(_) =>
+            abort(
+              "the model selection did not pick a classifier for a categorical target",
+            )
+        }
+        let fitted = classifier.fit(x, labels)
+        fn(inputs : @utils.Matrix) -> @utils.Matrix {
+          probabilities_of(fitted, inputs)
+        }
+      } else {
+        let y = data_samples.numeric(target_node)
+        let fitted = PredictionModel::linear().fit(x, y)
+        fn(inputs : @utils.Matrix) -> @utils.Matrix {
+          @utils.Matrix::from_columns([fitted.predict(inputs)])
+        }
+      }
     }
   }
+}
+
+///|
+/// The way the target is predicted from the noise of its ancestors, with one
+/// number per row.
+///
+/// This is the prediction method of the sample wise influence, which the
+/// upstream refuses for a categorical target.
+fn vector_prediction_method_of(
+  causal_model : ProbabilisticCausalModel,
+  target_node : String,
+  prediction : IccPrediction,
+  noise_samples : @api.DataFrame,
+  data_samples : @api.DataFrame,
+  node_names : Array[String],
+  quality : AssignmentQuality,
+) -> (@utils.Matrix) -> Array[Double] {
+  let prediction = prediction_method_of(
+    causal_model, target_node, prediction, noise_samples, data_samples, node_names,
+    false, quality,
+  )
+  fn(inputs : @utils.Matrix) -> Array[Double] { prediction(inputs).col(0) }
+}
+
+///|
+/// The classes of the classifier of the target node.
+fn classes_of(
+  causal_model : ProbabilisticCausalModel,
+  target_node : String,
+) -> Array[String] {
+  let mechanism = mechanism_of(causal_model, target_node)
+  if !is_classifier_kind(mechanism.kind()) {
+    abort(
+      "the target node " +
+      target_node +
+      " has no classifier, so its classes are unknown",
+    )
+  }
+  mechanism.classifier_model().classes()
+}
+
+///|
+/// The one hot encoding of the given labels.
+///
+/// The columns are the classes in the order of the given list, the way the
+/// upstream encodes the classes of a categorical target.
+fn one_hot_of(labels : Array[String], classes : Array[String]) -> @utils.Matrix {
+  let out = @utils.Matrix::zeros(labels.length(), classes.length())
+  for i in 0..<labels.length() {
+    for k in 0..<classes.length() {
+      if labels[i] == classes[k] {
+        out.set(i, k, 1.0)
+      }
+    }
+  }
+  out
+}
+
+///|
+/// The probabilities of every class of every row of the design matrix.
+fn probabilities_of(
+  model : ClassificationModel,
+  x : @utils.Matrix,
+) -> @utils.Matrix {
+  let probabilities = model.predict_probabilities(x)
+  let columns = if probabilities.length() > 0 {
+    probabilities[0].length()
+  } else {
+    0
+  }
+  let out = @utils.Matrix::zeros(probabilities.length(), columns)
+  for i in 0..<probabilities.length() {
+    let row = probabilities[i]
+    for k in 0..<columns {
+      out.set(i, k, row[k])
+    }
+  }
+  out
 }
 
 ///|
@@ -254,13 +423,13 @@ fn noise_features_frame(
 /// The predictions of the target when the noise terms of the subset are kept
 /// and the other ones are randomized.
 fn predictions_of_subset(
-  prediction_method : (@utils.Matrix) -> Array[Double],
+  prediction_method : (@utils.Matrix) -> @utils.Matrix,
   randomization : @utils.Matrix,
   baseline : @utils.Matrix,
   subset : Array[Bool],
-  target_values : Array[Double],
+  target_values : @utils.Matrix,
   rng : @utils.Random,
-) -> Array[Double] {
+) -> @utils.Matrix {
   let num_features = randomization.ncols()
   let mut all = true
   let mut none = true
@@ -280,10 +449,12 @@ fn predictions_of_subset(
     // Every noise term is randomized, so the predictions are the same for
     // every sample of the baseline.
     let randomized = prediction_method(randomization)
-    let mean = @utils.mean(randomized)
-    let out : Array[Double] = []
-    for _ in 0..<baseline.nrows() {
-      out.push(mean)
+    let out = @utils.Matrix::zeros(baseline.nrows(), randomized.ncols())
+    for c in 0..<randomized.ncols() {
+      let mean = mean_of_column_range(randomized, 0, randomized.nrows(), c)
+      for i in 0..<baseline.nrows() {
+        out.set(i, c, mean)
+      }
     }
     return out
   }
@@ -293,7 +464,7 @@ fn predictions_of_subset(
       indices.push(j)
     }
   }
-  let predictions = marginal_expectation(
+  marginal_expectation_matrix(
     prediction_method,
     randomization,
     baseline,
@@ -302,7 +473,6 @@ fn predictions_of_subset(
     RandomizeColumnsJointly,
     rng,
   )
-  predictions.col(0)
 }
 
 ///|

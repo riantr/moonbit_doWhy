@@ -3060,3 +3060,68 @@ The dispatcher of the unit change layer.
   non-linear model of the port.
 
 [0.0.59]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.59
+
+## [0.0.60] - 2026-11-10
+
+The categorical intrinsic causal influence.
+
+### Added
+
+- the categorical target of the intrinsic causal influence of the `gcm` package,
+  in `src/gcm/intrinsic_influence.mbt`: the influence of a target with a
+  categorical mechanism is the drop of the entropy of the target, the way the
+  upstream measures it. The new public function `icc_entropy_attribution` is
+  the attribution function of the upstream for a categorical target, and the
+  influence of a categorical target is measured with it.
+- the matrix valued marginal expectation of the `gcm` package, in
+  `src/gcm/stats.mbt`: the new public function `marginal_expectation_matrix`
+  is the port of `dowhy.gcm.stats.marginal_expectation` for a prediction method
+  whose predictions hold one column per class. The result of the vector variant
+  is the result of this one for a prediction method with a single column.
+- the categorical node of the noise of a causal model, in `src/gcm/noise.mbt`:
+  the column of a node with a categorical mechanism holds the classes of the
+  node now, the way the column of the upstream holds the labels of a
+  categorical variable, and the noise of such a node is uniform on `[0, 1]`.
+- four cases in `src/gcm/intrinsic_influence_test.mbt`: the influence of a
+  categorical target is the drop of the entropy of the target, with the exact
+  model and with the approximate one, and the same holds for a target whose
+  relation is a mixture of three shifted Gaussians. Two of the three cases of
+  the upstream test file `tests/gcm/test_intrinsic_influence.py` that use a
+  categorical target have a counterpart now.
+- the numbers of the upstream on the fixtures of the port in
+  `_verify/gcm_intrinsic_influence_reference.py`: the sections
+  `INTRINSIC_CAUSAL_INFLUENCE_CATEGORICAL` and
+  `INTRINSIC_CAUSAL_INFLUENCE_COMPLEX_CATEGORICAL` run the upstream on the very
+  rows of the port. The upstream contributes `0.158549`, `0.000032`, `0.402891`
+  and `0.131163` to the four nodes of the simple fixture, and the port
+  `0.148440`, `0.000034`, `0.413516` and `0.129589`, so both are inside the
+  tolerances of the test of the upstream.
+
+### Changed
+
+- **breaking** the type of the attribution function of the intrinsic causal
+  influence of the `gcm` package: `IccAttributionFunc` holds a function of two
+  matrices now and not of two arrays of numbers. The upstream shapes its
+  predictions with `shape_into_2d`, so the attribution function of the upstream
+  receives a matrix for a continuous target and a matrix of class probabilities
+  for a categorical one; the port does the same. A user of the port that writes
+  its own attribution function has to take two matrices.
+
+### Notes
+
+- The upstream selects the model of the approximate prediction with the model
+  selection of `dowhy.gcm.auto`, which picks the classifier with the smallest
+  log loss in a cross validation; the port does the same with the classifiers of
+  its own zoo. The upstream selects it with the global generator of numpy; the
+  port selects it with a fixed seed, so that the selection does not depend on
+  the order of the draws of the layer.
+- The upstream fits its classifier with a histogram gradient boosting, which is
+  sharper than the classifiers of the port, so the contribution of the noise of
+  the target differs a little. The port and the upstream agree within the
+  tolerance of the upstream.
+- The third case of the upstream that uses a categorical target has every node of
+  its graph categorical, so the root node of its model has a categorical
+  distribution; the port has no categorical distribution that draws samples yet,
+  so that case has no counterpart.
+
+[0.0.60]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.60
