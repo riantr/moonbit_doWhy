@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.74.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.75.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -20,6 +20,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
 | Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome, **with its random forest, its neural network and its support vector regressor**, and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis**, its **E-value analysis** and the **default strength** it infers for its confounder --, the **significance test** of the refutations, the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules, and the **graph refutation**, which tests the conditional independences the graph entails against the data) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset`, the **sales data set**, the **random graph** data set and the fixtures the upstream tests use) |
+| Data generating processes | `dowhy.utils.dgp`, `dowhy.utils.dgps` | ported (the linear, the quadratic and the cubic process, the weights and the bias they draw, the binary treatment they convert and the value of the effect they compute) |
 | Randomness | the generator of numpy | ported (the Mersenne Twister of numpy with its double, its normal variate, its Bernoulli and its integer, so the port draws the numbers of the upstream for a seed) |
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
 | Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
@@ -99,7 +100,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `estimators` | `riantr/moonbit_dowhy/estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand and the **do operator** |
 | `refuters` | `riantr/moonbit_dowhy/refuters` | `dowhy.causal_refuters`, with the **graph refutation** |
 | `overrule` | `riantr/moonbit_dowhy/overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
-| `datasets` | `riantr/moonbit_dowhy/datasets` | `dowhy.datasets` (the `linear_dataset` generator, the sales data set and the **random graph** data set) and the deterministic test fixtures |
+| `datasets` | `riantr/moonbit_dowhy/datasets` | `dowhy.datasets` (the `linear_dataset` generator, the sales data set and the **random graph** data set), the **data generating processes** of `dowhy.utils.dgp` and of `dowhy.utils.dgps`, and the deterministic test fixtures |
 | `data_transformers` | `riantr/moonbit_dowhy/data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
@@ -473,6 +474,19 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   lexicographic order and every category becomes a column of its own. The
   p-values of the port and of the upstream differ by less than `5e-12` on the categorical
   fixture of the test.
+- The data generating processes of the `datasets` package are the port of
+  `dowhy.utils.dgp` and of the three processes of `dowhy.utils.dgps`. The
+  **order of the draws** of the upstream is a part of its numbers, and the port
+  follows it: the linear process draws the weights of the process, the
+  confounder and the noise of the treatment; the quadratic process draws the
+  confounder, the effect modifier, the weights and the noise of the treatment;
+  the cubic process draws the confounder, the effect modifier and then the
+  weights and the noise of the treatment of every power. The Bernoulli of the
+  generator of numpy follows the rule of the upstream: the binomial of numpy
+  takes the complement of the probability when the probability is greater than
+  one half, so a trial of a probability above one half is a one when the double
+  is at most the probability, and a trial of a probability of at most one half
+  is a one when the double is greater than the complement of the probability.
 
 ## Deliberate differences from upstream
 
@@ -1304,6 +1318,37 @@ following ways:
   `utils` package is the one the port used before, and it is the one the
   refuters and the `gcm` package still use, so their numbers are the numbers
   of the port and not the numbers of the upstream.
+- The data generating processes of the upstream draw their randomness from the
+  global generator of numpy, which every object of the program shares, and they
+  seed it in their constructor. The port gives every process its own generator
+  of numpy, so the data of the port does not depend on the other objects of the
+  program.
+- The upstream holds the weights of a process in a dictionary and the weights of
+  the quadratic and the cubic process in a list of the dictionaries of the
+  powers, and every dictionary of that list is the same dictionary, because the
+  upstream keeps a reference to one dictionary and rewrites it. The port holds
+  the set of the weights and the number of the sets, and `weights_of_powers`
+  gives the list of the sets.
+- The upstream raises a `ValueError` when a percentile is given for a treatment
+  that is not binary, and it holds the text `NA` as the percentile of such a
+  treatment. The port holds the percentile in every configuration and uses it
+  only for a binary treatment.
+- The deterministic conversion of the upstream passes the percentile of the
+  process, which is a fraction, to the percentile of numpy, which expects a
+  number between zero and a hundred, so the upstream takes the percentile of a
+  fraction of a percent. The port takes the same number.
+- The upstream converts the first column of the treatment and returns a
+  treatment of one column, so a binary treatment of the upstream has one
+  treatment column.
+- The upstream sorts the treatment with the quicksort of numpy, whose order of
+  the rows that hold the same value is not the order of the rows. The port
+  sorts the rows that hold the same value in the order of the rows, so the two
+  differ only when the treatment holds the same value twice.
+- The upstream computes the mean of a column with the pairwise sum of numpy and
+  the port computes it with a plain sum, and the upstream computes the product
+  of its matrices with the library of linear algebra and the port computes it
+  with a plain loop, so the numbers of the data generating processes differ in
+  the last digits.
 
 ## Development
 

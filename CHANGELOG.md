@@ -3152,6 +3152,84 @@ The generator of numpy.
 
 [0.0.74]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.74
 
+## [0.0.75] - 2026-11-11
+
+The data generating processes of the upstream.
+
+### Added
+
+- the data generating processes of the upstream, in the new files
+  `src/datasets/dgp.mbt`, `src/datasets/dgp_linear.mbt`,
+  `src/datasets/dgp_quadratic.mbt` and `src/datasets/dgp_cubic.mbt`: the port
+  of `dowhy.utils.dgp` and of the three processes of `dowhy.utils.dgps`. The
+  port holds the three of them in one structure, `DataGeneratingProcess`,
+  whose kind tells which one it is.
+- the public functions of the processes: `DataGeneratingProcess::new_linear`,
+  `new_quadratic` and `new_cubic`, which take the configuration `DgpConfig`,
+  `generate_data`, which draws the data, `effect`, which gives the value of
+  the effect of the treatment, `weights_of_powers` and `bias_of_powers`,
+  which give the weights and the bias of every power, and
+  `convert_to_binary`, which turns a continuous treatment into a binary one.
+- the nine cases of the new file `src/datasets/dgp_test.mbt`: the data, the
+  effect and the weights of the linear process, of the quadratic process and of
+  the cubic process are the ones of the upstream for the seed 42, the data of
+  the process with a binary treatment is the one of the upstream, and the
+  deterministic conversion of the treatment is the conversion of the upstream.
+- the numbers of the upstream in `_verify/dgp_reference.py`: the script prints
+  the data, the effect, the weights and the bias of the three processes, the
+  data of the process with a binary treatment and the numbers of the
+  deterministic conversion of the treatment.
+
+### Fixed
+
+- the Bernoulli of the generator of numpy follows the rule of the upstream
+  again. The binomial of numpy takes the complement of the probability when
+  the probability is greater than one half, so a trial of a probability above
+  one half is a one when the double is at most the probability, and the port
+  answered the opposite. The binary treatment of the data generating
+  processes depends on it.
+
+### Notes
+
+- The upstream draws its randomness from the global generator of numpy, which
+  every object of the program shares, and it seeds that generator in the
+  constructor of the process. The port gives every process its own generator,
+  so the data of the port does not depend on the other objects of the program.
+- The order of the draws of the upstream is a part of its numbers, and the port
+  follows it. The linear process draws the weights of the process, the
+  confounder and the noise of the treatment. The quadratic process draws the
+  confounder, the effect modifier, the weights and the noise of the treatment.
+  The cubic process draws the confounder, the effect modifier and then the
+  weights and the noise of the treatment of every power.
+- The upstream holds the weights of a process in a dictionary and the weights
+  of the quadratic and the cubic process in a list of the dictionaries of the
+  powers, and every dictionary of that list is the same dictionary, because the
+  upstream keeps a reference to one dictionary and rewrites it. The port holds
+  the set of the weights and the number of the sets, and `weights_of_powers`
+  gives the list.
+- The upstream raises a `ValueError` when a percentile is given for a
+  treatment that is not binary, and it holds the text `NA` as the percentile
+  of such a treatment. The port holds the percentile in every configuration
+  and uses it only for a binary treatment.
+- The deterministic conversion of the upstream passes the percentile of the
+  process, which is a fraction, to the percentile of numpy, which expects a
+  number between zero and a hundred, so the upstream takes the percentile of a
+  fraction of a percent. The port takes the same number.
+- The upstream converts the first column of the treatment and returns a
+  treatment of one column, so a binary treatment of the upstream has one
+  treatment column.
+- The upstream sorts the treatment with the quicksort of numpy, whose order of
+  the rows that hold the same value is not the order of the rows. The port
+  sorts the rows that hold the same value in the order of the rows, so the two
+  differ only when the treatment holds the same value twice.
+- The upstream computes the mean of a column with the pairwise sum of numpy and
+  the port computes it with a plain sum, and the upstream computes the product
+  of its matrices with the library of linear algebra and the port computes it
+  with a plain loop, so the numbers differ in the last digits and the tests
+  compare them with a tolerance.
+
+[0.0.75]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.75
+
 ## [0.0.73] - 2026-11-11
 
 The interpretation of an estimate.

@@ -1197,6 +1197,24 @@ statsmodels / scikit-learn conventions are deliberate:
   upstream is the maximum of the numbers of the layers and of their
   counts, because it takes the maximum of the pairs of the layer and of
   the count. The port does the same.
+- The data generating processes of the `datasets` package are the port of
+  `dowhy.utils.dgp` and of the three processes of `dowhy.utils.dgps`, and the
+  **order of the draws** of the upstream is a part of its numbers. The linear
+  process draws the weights of the process, the confounder and the noise of the
+  treatment. The quadratic process draws the confounder, the effect modifier,
+  the weights and the noise of the treatment. The cubic process draws the
+  confounder, the effect modifier and then the weights and the noise of the
+  treatment of every power. The linear process raises the weight of the first
+  confounder by a hundred, the quadratic and the cubic process do not.
+- The Bernoulli of the generator of numpy is the binomial of numpy with one
+  trial, and the binomial of numpy takes the complement of the probability when
+  the probability is greater than one half, so the trial of the complement runs
+  the other way. A trial of a probability of at most one half is a one when the
+  double is greater than the complement of the probability, and a trial of a
+  probability above one half is a one when the double is at most the
+  probability. The threshold of the comparison is the one of numpy, which
+  takes the logarithm of the probability and the exponential of it, so the
+  threshold and the probability differ by one unit in the last place.
 
 ## Package layout
 
@@ -1214,7 +1232,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
 | `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the **CatBoost encoder** of the categorical columns, the prediction models, the causal mechanisms, the automatic assignment of the mechanisms with the selection of the model by cross validation and the test of a linear relationship, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
-| `datasets` | `dowhy.datasets` (the random graph data set) and the deterministic test fixtures |
+| `datasets` | `dowhy.datasets` (the random graph data set), the **data generating processes** of `dowhy.utils.dgp` and of `dowhy.utils.dgps`, and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer) |
 | `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
 | `timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
@@ -1249,7 +1267,16 @@ README makes, so they are tracked in the repository:
   the normal variates, the Bernoulli trials, the integers and the permutation --
   and the values of the multivariate normal of numpy with the identity as its
   covariance. It is the evidence for the generator of numpy of the `utils`
-  package.
+  package. Its last section prints the Bernoulli trials of the probabilities
+  above one half and the Bernoulli trials of an array of the probabilities,
+  which are the numbers the rule of the complement of the binomial of numpy
+  gives.
+- `dgp_reference.py` runs the three data generating processes of the upstream
+  -- the linear, the quadratic and the cubic one -- with the seed 42, and
+  prints the data, the value of the effect, the weights and the bias of every
+  one of them, the data of the process with a binary treatment and the numbers
+  of the deterministic conversion of the treatment. It is the evidence for the
+  data generating processes of the `datasets` package.
 - `gcm_general_reference.py` runs the upstream `dowhy.gcm.util.general` on the
   fixtures of the tests of the port and prints the numbers it produces -- the
   geometric median, the set difference of the rows, the scaling of the columns

@@ -21,6 +21,14 @@
 /// The binomial of numpy is the port of the Bernoulli of one trial, which is
 /// the case the upstream uses. The binomial of more trials of numpy uses the
 /// algorithm of Kachitvichyanukul and Schmeiser, which is not ported.
+///
+/// The binomial of numpy with one trial takes the complement of the
+/// probability when the probability is greater than one half, and the trial of
+/// the complement runs the other way. A trial of a probability of at most one
+/// half is a one when the double is greater than the complement of the
+/// probability, and a trial of a probability above one half is a one when the
+/// double is at most the probability. The port follows that rule, because the
+/// upstream draws its binary treatment this way.
 
 ///|
 /// The number of the words of the state of the generator.
@@ -175,13 +183,85 @@ pub fn NumpyRandom::uniform(
 ///
 /// This is the port of the binomial of numpy with one trial. The upstream
 /// draws its binary treatment this way.
+///
+/// The binomial of numpy takes the complement of the probability when the
+/// probability is greater than one half, and the trial of the complement runs
+/// the other way. A trial of a probability of at most one half is a one when
+/// the double is greater than the complement of the probability, and a trial of
+/// a probability above one half is a one when the double is at most the
+/// probability.
+///
+/// The threshold of the comparison is the one of numpy, which takes the
+/// logarithm of the probability and the exponential of it. The two differ from
+/// the probability by one unit in the last place, so the two trials differ only
+/// when the double falls between them.
 pub fn NumpyRandom::bernoulli(self : NumpyRandom, p : Double) -> Int32 {
   let value = self.next_double()
-  if value <= 1.0 - p {
-    0
-  } else {
+  if p <= 0.5 {
+    if value > @math.exp(@math.ln(1.0 - p)) {
+      1
+    } else {
+      0
+    }
+  } else if value <= @math.exp(@math.ln(p)) {
     1
+  } else {
+    0
   }
+}
+
+///|
+/// The next Bernoulli trials with a probability of a one for every row.
+///
+/// This is the port of the binomial of numpy with one trial and an array of
+/// the probabilities. The upstream draws its binary treatment this way.
+pub fn NumpyRandom::bernoulli_array(
+  self : NumpyRandom,
+  probabilities : Array[Double],
+) -> Array[Int32] {
+  let values : Array[Int32] = []
+  for probability in probabilities {
+    values.push(self.bernoulli(probability))
+  }
+  values
+}
+
+///|
+/// The next Bernoulli trials with the same probability of a one.
+///
+/// This is the port of the binomial of numpy with one trial and a size.
+pub fn NumpyRandom::bernoulli_repeated(
+  self : NumpyRandom,
+  p : Double,
+  count : Int32,
+) -> Array[Int32] {
+  let values : Array[Int32] = []
+  for _ in 0..<count {
+    values.push(self.bernoulli(p))
+  }
+  values
+}
+
+///|
+/// The next values of the standard normal distribution in a matrix.
+///
+/// This is the port of `np.random.randn` of numpy. The matrix has one row per
+/// row of the sample and one column per column of the sample, and the variates
+/// are drawn in the order of the rows.
+pub fn NumpyRandom::randn(
+  self : NumpyRandom,
+  rows : Int32,
+  cols : Int32,
+) -> Matrix {
+  let values : Array[Array[Double]] = []
+  for _ in 0..<rows {
+    let row : Array[Double] = []
+    for _ in 0..<cols {
+      row.push(self.standard_normal())
+    }
+    values.push(row)
+  }
+  Matrix::from_rows(values)
 }
 
 ///|

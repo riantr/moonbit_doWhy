@@ -52,10 +52,34 @@ def show_multivariate(seed: int) -> None:
     print()
 
 
+def show_probabilities() -> None:
+    print("=" * 70)
+    print("the Bernoulli trials of numpy with the probabilities")
+    print("=" * 70)
+    np.random.seed(42)
+    print("the probability 0.3:")
+    print("   ", list(np.random.binomial(1, 0.3, 10)))
+    print("the probability 0.6:")
+    print("   ", list(np.random.binomial(1, 0.6, 10)))
+    print("the probability 0.9:")
+    print("   ", list(np.random.binomial(1, 0.9, 10)))
+    print("the array of the probabilities:")
+    print(
+        "   ",
+        list(
+            np.random.binomial(
+                1, [(index + 1) / 11.0 for index in range(10)], 10
+            )
+        ),
+    )
+    print()
+
+
 def main() -> None:
     for seed in (42, 7):
         show(seed)
     show_multivariate(42)
+    show_probabilities()
 
 
 if __name__ == "__main__":

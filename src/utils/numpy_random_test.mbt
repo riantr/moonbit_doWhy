@@ -90,6 +90,19 @@ fn at_the_trials(generator : @utils.NumpyRandom) -> @utils.NumpyRandom {
 }
 
 ///|
+/// The generator of numpy, at the point where the Bernoulli of the
+/// probabilities above one half starts.
+///
+/// The script of the reference draws the Bernoulli of the probability of
+/// three tenths before the Bernoulli of the other probabilities.
+fn at_the_high_trials(generator : @utils.NumpyRandom) -> @utils.NumpyRandom {
+  for _ in 0..<10 {
+    let _ = generator.bernoulli(0.3)
+  }
+  generator
+}
+
+///|
 test "the doubles of the generator are the doubles of numpy" {
   let generator = @utils.NumpyRandom::new(42)
   let expected = [
@@ -214,6 +227,51 @@ test "the generator of another seed is the generator of numpy" {
   let values = generator.permutation(10)
   for i in 0..<10 {
     assert_eq(values[i], permutation[i])
+  }
+}
+
+///|
+test "the Bernoulli trials of a probability above one half are the ones of numpy" {
+  let generator = at_the_high_trials(@utils.NumpyRandom::new(42))
+  let expected = [1, 0, 0, 1, 1, 1, 1, 1, 1, 1]
+  for i in 0..<10 {
+    assert_eq(generator.bernoulli(0.6), expected[i])
+  }
+}
+
+///|
+test "the Bernoulli trials of an array of the probabilities are the ones of numpy" {
+  let generator = @utils.NumpyRandom::new(42)
+  // The script of the reference draws the Bernoulli of the probability of
+  // three tenths, the Bernoulli of the probability of six tenths and the
+  // Bernoulli of the probability of nine tenths before the Bernoulli of the
+  // array of the probabilities.
+  for _ in 0..<10 {
+    let _ = generator.bernoulli(0.3)
+  }
+  for _ in 0..<10 {
+    let _ = generator.bernoulli(0.6)
+  }
+  for _ in 0..<10 {
+    let _ = generator.bernoulli(0.9)
+  }
+  let probabilities = [
+    1.0 / 11.0,
+    2.0 / 11.0,
+    3.0 / 11.0,
+    4.0 / 11.0,
+    5.0 / 11.0,
+    6.0 / 11.0,
+    7.0 / 11.0,
+    8.0 / 11.0,
+    9.0 / 11.0,
+    10.0 / 11.0,
+  ]
+  let expected = [0, 0, 0, 1, 1, 0, 1, 1, 1, 1]
+  let values = generator.bernoulli_array(probabilities)
+  assert_eq(values.length(), 10)
+  for i in 0..<10 {
+    assert_eq(values[i], expected[i])
   }
 }
 
