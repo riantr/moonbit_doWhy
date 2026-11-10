@@ -232,15 +232,41 @@ pub fn parent_relevance(
   }
   let parent_columns = columns_of_parents(samples, parents)
   let parent_matrix = @utils.Matrix::from_columns(parent_columns)
-  let noise = mechanism.noise_model.draw_samples(parent_matrix.nrows(), rng)
+  // The noise of a categorical mechanism is uniform on `[0, 1]`, and the noise
+  // of the other mechanisms comes from their distribution.
+  let classifier = is_classifier_kind(mechanism.kind())
+  let noise = if classifier {
+    mechanism.draw_categorical_noise(parent_matrix.nrows(), rng)
+  } else {
+    mechanism.noise_model.draw_samples(parent_matrix.nrows(), rng)
+  }
   let features = @utils.Matrix::from_columns(parent_columns + [noise])
   let num_parents = parents.length()
+  // The upstream compares the class labels of a categorical target; the port
+  // compares their indices, which is the same comparison.
+  let classes = if classifier {
+    Some(mechanism.classifier_model().classes())
+  } else {
+    None
+  }
   let prediction_method = fn(inputs : @utils.Matrix) -> Array[Double] {
     let parent_columns = @utils.Matrix::from_columns(
       first_columns(inputs, num_parents),
     )
     let noise_column = inputs.col(num_parents)
-    mechanism.evaluate(parent_columns, noise_column)
+    match classes {
+      Some(names) => {
+        let labels = mechanism.evaluate_categorical(
+          parent_columns, noise_column,
+        )
+        let out : Array[Double] = []
+        for label in labels {
+          out.push(class_index_of(names, label).to_double())
+        }
+        out
+      }
+      None => mechanism.evaluate(parent_columns, noise_column)
+    }
   }
   let relevance = feature_relevance_distribution(
     prediction_method, features, scoring, num_samples_randomization, num_samples_baseline,
@@ -313,6 +339,20 @@ fn rows_without_replacement(
     out.push(order[i])
   }
   out
+}
+
+///|
+/// The index of the given label in the given classes.
+///
+/// The upstream compares the class labels of a categorical target themselves;
+/// the port compares their indices, which is the same comparison.
+fn class_index_of(classes : Array[String], label : String) -> Int32 {
+  for i in 0..<classes.length() {
+    if classes[i] == label {
+      return i
+    }
+  }
+  abort("the causal mechanism returned a class it was not fitted on")
 }
 
 ///|

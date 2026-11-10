@@ -444,3 +444,48 @@ test "given a fitted mechanism and unchanged inputs when attributing the change 
     }
   }
 }
+
+///|
+/// test "given an unfitted mechanism when attributing the change of the output then the attribution is not possible"
+///
+/// This is the port of the upstream tests
+/// `test_given_unfitted_mechanisms_when_evaluate_unit_change_methods_then_raises_exception` and
+/// `test_given_unfitted_mechanisms_when_evaluate_unit_change_input_only_methods_then_raises_exception`.
+/// The upstream raises a `NotFittedError`, which MoonBit cannot catch, so the
+/// check of the mechanism is asserted on its own.
+test "given an unfitted mechanism when attributing the change of the output then the attribution is not possible" {
+  let unfitted = @gcm.PredictionModel::linear()
+  assert_false(@gcm.can_evaluate_unit_change_linear(unfitted))
+  assert_false(@gcm.can_evaluate_unit_change_nonlinear(unfitted))
+}
+
+///|
+/// test "given a non-linear mechanism when attributing the change of the output with the linear method then the attribution is not possible"
+///
+/// This is the port of the upstream tests
+/// `test_given_fitted_nonlinnear_mechanisms_when_evaluate_unit_change_linear_method_then_raises_exception` and
+/// `test_given_fitted_nonlinnear_mechanism_when_evaluate_unit_change_linear_input_only_method_then_raises_exception`.
+/// The upstream raises an `AttributeError`, because it reads the coefficients of
+/// the model of scikit-learn, and MoonBit cannot catch it, so the check of the
+/// mechanism is asserted on its own. The upstream uses a random forest for its
+/// non-linear model; the port uses the nearest neighbour regression, which is
+/// the non-linear model of the port.
+test "given a non-linear mechanism when attributing the change of the output with the linear method then the attribution is not possible" {
+  let fixture = unit_change_fixture()
+  let target = unit_change_sum(
+    unit_change_scaled(fixture.a1, 2.0),
+    unit_change_scaled(fixture.b1, 3.0),
+  )
+  let non_linear = @gcm.PredictionModel::nearest_neighbour(k=5).fit(
+    @utils.Matrix::from_columns([fixture.a1, fixture.b1]),
+    target,
+  )
+  assert_false(@gcm.can_evaluate_unit_change_linear(non_linear))
+  assert_true(@gcm.can_evaluate_unit_change_nonlinear(non_linear))
+  assert_true(
+    @gcm.can_evaluate_unit_change_linear(fixture.background_mechanism),
+  )
+  assert_true(
+    @gcm.can_evaluate_unit_change_nonlinear(fixture.background_mechanism),
+  )
+}

@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.54.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.55.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -26,7 +26,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Time series | `dowhy.timeseries` | ported (the temporal graph, its readers of a CSV and of a DOT, and the temporal shift) |
 | Causal discovery | `dowhy.graph_learners` | ported (the PC algorithm with the Fisher-z test of conditional independence) |
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
-| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the **CatBoost encoder** of the categorical columns, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure and the **kernel based** one, **with categorical data**), the prediction models -- the linear one and the **polynomial** ones --, the causal mechanisms, the stochastic models, the noise of a causal model, the **feature relevance**, the **intrinsic causal influence**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, **with the selection of the model of a node by cross validation** and the **test of a linear relationship**, the **what-if queries**, **with the categorical variables and with the discrete data**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution, **with a non-linear mechanism** and **without a causal model**), the **unit change** layer, the **uncertainty** estimates, the **distribution change** layer -- the plain one and the **multiply-robust** one -- and the **arrow strength** layer are ported |
+| Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the **CatBoost encoder** of the categorical columns, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure and the **kernel based** one, **with categorical data**), the prediction models -- the linear one and the **polynomial** ones --, the causal mechanisms, the stochastic models, the noise of a causal model, the **feature relevance**, the **intrinsic causal influence**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, **with the selection of the model of a node by cross validation** and the **test of a linear relationship**, the **what-if queries**, **with the categorical variables and with the discrete data**, the **validation** layer, the **falsification** layer, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution, **with a non-linear mechanism** and **without a causal model**), the **unit change** layer, **with the predicates of the exceptions of the upstream**, the **uncertainty** estimates, the **distribution change** layer -- the plain one and the **multiply-robust** one -- and the **arrow strength** layer are ported |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
 
 Everything that is listed as ported is covered by tests that compare against
@@ -219,6 +219,11 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   density is the sum of the Gaussian kernels of the samples divided by the
   number of the samples and by the bandwidth, which is the density of the
   `KernelDensity` of scikit-learn.
+- The uniform distribution of the `gcm` package is the one of `scipy.stats.uniform`,
+  whose support is the interval that goes **from the location to the location plus
+  the scale**, so that `uniform(0.0, 1.0)` is the uniform distribution on
+  `[0, 1]`. Its fit is the maximum likelihood estimate of scipy as well, so the
+  location is the smallest and the scale the range of the samples.
 - The anomaly scorers of the `gcm` package count the samples of the distribution
   that are equal to a sample, that are greater than it and that are smaller than
   it with a binary search over the sorted samples of the distribution, so the
@@ -963,6 +968,24 @@ following ways:
   unit change layer is used with the linear model of the port. The upstream
   test file `tests/gcm/test_unit_change.py` compares the linear attribution
   with the non-linear one, and the port compares them as well.
+- `gcm` cannot catch an exception, so the cases of the upstream test files that
+  expect one are ported as predicates: the unit change layer exposes
+  `can_evaluate_unit_change_linear` and `can_evaluate_unit_change_nonlinear`,
+  which are the `NotFittedError` and the `AttributeError` of the upstream, and
+  the attribution of the unit change aborts when the mechanism of a node has no
+  coefficients.
+- `gcm` estimates the relevance of the parents of a node with a categorical
+  target with the nearest neighbour classifier of one neighbour, while the
+  upstream uses its default classifier, which is the histogram gradient boosting
+  classifier. Both are sharp, so the noise of the mechanism does not change the
+  class of a sample and the relevance of the noise is zero; a soft classifier,
+  like the logistic regression of the port, lets the noise flip the class and
+  the relevance of the noise grows. The upstream and the port also differ in
+  the way they aggregate the samples of the baseline: the upstream evaluates the
+  set function once per subset and averages its values over the samples of the
+  baseline, while the port estimates the Shapley values of every sample on its
+  own and averages them, which is the same thing in expectation, because the
+  Shapley value is linear.
 - `gcm` takes a matrix where the upstream takes a numpy array, because
   `shape_into_2d` of the upstream turns every input into a two dimensional
   matrix anyway. A vector is a matrix with one column.

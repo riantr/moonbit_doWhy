@@ -266,7 +266,8 @@ pub fn permute_features(
 ///
 /// The upstream code evaluates the prediction method in batches, which is an
 /// optimisation only. The port evaluates the whole thing at once and returns
-/// the same numbers.
+/// the same numbers. The `max_batch_size` of the upstream is therefore
+/// accepted and ignored, like the one of the feature relevance.
 ///
 /// The upstream code returns a one dimensional array when the results are
 /// averaged and a three dimensional array when they are not. The port returns
@@ -281,7 +282,9 @@ pub fn marginal_expectation(
   return_averaged_results : Bool,
   feature_perturbation : FeaturePerturbation,
   rng : @utils.Random,
+  max_batch_size~ : Int32 = -1,
 ) -> @utils.Matrix {
+  let _ = max_batch_size
   let n_features = feature_samples.nrows()
   let n_baseline = baseline_samples.nrows()
   let n_columns = feature_samples.ncols()

@@ -3,10 +3,9 @@
 ///
 /// The expectations are the ones of the upstream tests of
 /// `dowhy.gcm.feature_relevance`, which are in
-/// `tests/gcm/test_feature_relevance.py`. The two tests of the upstream that
-/// use a classifier as the model have no counterpart here, because the
-/// predictions of a classifier are a probability per class and the port's
-/// prediction method returns one number per row.
+/// `tests/gcm/test_feature_relevance.py`. The upstream compares the class
+/// labels of a categorical target; the port compares their indices, which is
+/// the same comparison.
 ///
 /// The fixtures are drawn with the deterministic generator of the `utils`
 /// package. The upstream draws its samples with the global generator of numpy
@@ -25,6 +24,30 @@ const FEATURE_RELEVANCE_COEFFICIENT_SEED : UInt64 = 2051UL
 ///|
 /// The seed of the fixture of the parent relevance.
 const FEATURE_RELEVANCE_PARENT_SEED : UInt64 = 2052UL
+
+///|
+/// The seed of the fixture of the parent relevance of a classifier.
+const FEATURE_RELEVANCE_CATEGORICAL_SEED : UInt64 = 2053UL
+
+///|
+/// The number of the rows of the fixture of the parent relevance of a
+/// classifier.
+const FEATURE_RELEVANCE_CATEGORICAL_ROWS : Int32 = 200
+
+///|
+/// The number of the parents of the fixture of the parent relevance of a
+/// classifier.
+const FEATURE_RELEVANCE_CATEGORICAL_PARENTS : Int32 = 5
+
+///|
+/// The number of the samples of the randomization of the parent relevance of a
+/// classifier.
+const FEATURE_RELEVANCE_CATEGORICAL_RANDOMIZATION : Int32 = 100
+
+///|
+/// The number of the samples of the baseline of the parent relevance of a
+/// classifier.
+const FEATURE_RELEVANCE_CATEGORICAL_BASELINE : Int32 = 20
 
 ///|
 /// The number of rows of the fixture of the linear model.
@@ -182,6 +205,68 @@ fn feature_relevance_parent_data() -> @api.DataFrame {
 }
 
 ///|
+/// The data of the parent relevance of a classifier.
+///
+/// The fixture is the one of the upstream test file
+/// `tests/gcm/test_feature_relevance.py`: five parents with a uniform
+/// distribution and a target that holds the classes "0" and "1", the class "0"
+/// when the sum of the two first parents is larger than one.
+fn feature_relevance_categorical_data() -> @api.DataFrame {
+  let rng = @utils.Random::new(FEATURE_RELEVANCE_CATEGORICAL_SEED)
+  let columns : Array[Array[Double]] = []
+  for _ in 0..<FEATURE_RELEVANCE_CATEGORICAL_PARENTS {
+    let column : Array[Double] = []
+    for _ in 0..<FEATURE_RELEVANCE_CATEGORICAL_ROWS {
+      column.push(rng.next_double())
+    }
+    columns.push(column)
+  }
+  let labels : Array[String] = []
+  for i in 0..<FEATURE_RELEVANCE_CATEGORICAL_ROWS {
+    labels.push(if columns[0][i] + columns[1][i] > 1.0 { "0" } else { "1" })
+  }
+  let names : Array[String] = []
+  let payload : Map[String, @api.Column] = Map([])
+  for i in 0..<FEATURE_RELEVANCE_CATEGORICAL_PARENTS {
+    let name = "X" + i.to_string()
+    names.push(name)
+    payload.set(name, @api.Column::numeric(columns[i]))
+  }
+  names.push("Y")
+  payload.set("Y", @api.Column::discrete(labels))
+  @api.DataFrame::new(names, payload)
+}
+
+///|
+/// The model of the parent relevance of a classifier.
+///
+/// The model has five parents with a uniform distribution and a target that is
+/// a classifier.
+fn feature_relevance_categorical_model(
+  data : @api.DataFrame,
+) -> @gcm.ProbabilisticCausalModel {
+  let graph = @graph.DirectedGraph::new()
+  for i in 0..<FEATURE_RELEVANCE_CATEGORICAL_PARENTS {
+    graph.add_edge("X" + i.to_string(), "Y")
+  }
+  let model = @gcm.ProbabilisticCausalModel::new(graph)
+  for i in 0..<FEATURE_RELEVANCE_CATEGORICAL_PARENTS {
+    model.set_root_model(
+      "X" + i.to_string(),
+      @gcm.StochasticModel::uniform(0.0, 1.0),
+    )
+  }
+  model.set_causal_mechanism(
+    "Y",
+    @gcm.CausalMechanism::classifier(
+      @gcm.ClassificationModel::nearest_neighbour(k=1),
+    ),
+  )
+  @gcm.fit(model, data)
+  model
+}
+
+///|
 /// The relevance of a parent of the target node.
 fn feature_relevance_of_parent(
   relevance : Array[(String, Double)],
@@ -223,6 +308,64 @@ test "the feature relevance of the parents of a node is the variance of its cont
   // The contributions add up to the variance of the target.
   let variance = @utils.var_pop(data.numeric("X2"))
   assert_true((of_x0 + of_x1 + noise[0] - variance).abs() <= 1.5)
+}
+
+///|
+/// test "the feature relevance of the parents of a classifier is the relevance of the two parents that determine it"
+///
+/// This is the port of the upstream test
+/// `test_when_using_parent_relevance_with_categorical_data_then_returns_correct_results`.
+/// The upstream expects a relevance of about 0.125 for the two parents that
+/// determine the class of the target and a relevance of about zero for the
+/// other three. The upstream uses the histogram gradient boosting classifier;
+/// the port uses the nearest neighbour classifier with one neighbour, which is
+/// sharp in the same way: the class of a sample of the background is certain,
+/// so the noise of the mechanism does not change it and the relevance of the
+/// noise is zero. The reference script runs the upstream with the same
+/// classifier on the very rows of the port, and it gives a relevance of 0.120
+/// for `X0` and of 0.076 for `X1`.
+test "the feature relevance of the parents of a classifier is the relevance of the two parents that determine it" {
+  let data = feature_relevance_categorical_data()
+  let model = feature_relevance_categorical_model(data)
+  let (relevance, noise) = @gcm.parent_relevance(
+    model,
+    "Y",
+    None,
+    None,
+    FEATURE_RELEVANCE_CATEGORICAL_RANDOMIZATION,
+    FEATURE_RELEVANCE_CATEGORICAL_BASELINE,
+    100,
+    @gcm.ShapleyConfig::new(@gcm.ShapleyApproximationMethod::auto()).with_seed(
+      FEATURE_RELEVANCE_CATEGORICAL_SEED,
+    ),
+    @utils.Random::new(FEATURE_RELEVANCE_CATEGORICAL_SEED),
+  )
+  // The two first parents determine the class of the target.
+  assert_true(
+    feature_relevance_near(
+      feature_relevance_of_parent(relevance, "X0"),
+      0.125,
+      0.05,
+    ),
+  )
+  assert_true(
+    feature_relevance_near(
+      feature_relevance_of_parent(relevance, "X1"),
+      0.125,
+      0.05,
+    ),
+  )
+  // The other three do not.
+  for name in ["X2", "X3", "X4"] {
+    assert_true(
+      feature_relevance_near(
+        feature_relevance_of_parent(relevance, name),
+        0.0,
+        0.05,
+      ),
+    )
+  }
+  assert_true(feature_relevance_near(noise[0], 0.0, 0.05))
 }
 
 ///|

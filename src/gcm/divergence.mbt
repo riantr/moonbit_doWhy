@@ -37,6 +37,22 @@ pub fn is_probability_matrix(x : @utils.Matrix) -> Bool {
 }
 
 ///|
+/// Whether the values hold a probability vector.
+///
+/// This is the port of the branch of `dowhy.gcm.divergence.is_probability_matrix`
+/// that handles a one dimensional array: the absolute values of the array sum
+/// to one. The upstream converts the array to a float before it sums it, so an
+/// array of an object dtype does not raise; a matrix of the port holds numbers
+/// only, so the check is the sum of the absolute values of the vector.
+pub fn is_probability_vector(values : Array[Double]) -> Bool {
+  let mut total = 0.0
+  for value in values {
+    total = total + value.abs()
+  }
+  is_close(total, 1.0)
+}
+
+///|
 /// The Kullback-Leibler divergence of two samples of categories.
 ///
 /// This is the port of

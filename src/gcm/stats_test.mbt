@@ -799,6 +799,62 @@ test "the marginal expectation of a non-linear classifier matches the one featur
 }
 
 ///|
+/// test "the marginal expectation of the identity is the baseline itself"
+///
+/// This is the port of the upstream test
+/// `test_given_different_batch_sizes_when_estimating_marginal_expectation_then_returns_correct_marginal_expectations`.
+/// The upstream evaluates the prediction method in batches, which is an
+/// optimisation only, so the port accepts the batch size and ignores it. The
+/// substance of the case is the identity: the marginal expectation of a
+/// prediction that reads the baseline feature is the prediction of the
+/// baseline sample, and the result that is not averaged repeats it for every
+/// sample of the features.
+test "the marginal expectation of the identity is the baseline itself" {
+  let (x, _) = marginal_fixture()
+  let identity = fn(samples : @utils.Matrix) -> Array[Double] {
+    let out : Array[Double] = []
+    for i in 0..<samples.nrows() {
+      out.push(samples.get(i, 0))
+    }
+    out
+  }
+  for batch_size in [1, 10, 100, 1000, STATS_MARGINAL_ROWS] {
+    let averaged = @gcm.marginal_expectation(
+      identity,
+      x,
+      x,
+      [0],
+      true,
+      @gcm.FeaturePerturbation::independently(),
+      @utils.Random::new(STATS_SEED_MARGINAL),
+      max_batch_size=batch_size,
+    )
+    assert_eq(averaged.nrows(), STATS_MARGINAL_ROWS)
+    assert_eq(averaged.ncols(), 1)
+    for i in 0..<STATS_MARGINAL_ROWS {
+      assert_true(stats_near(averaged.get(i, 0), x.get(i, 0)))
+    }
+    let not_averaged = @gcm.marginal_expectation(
+      identity,
+      x,
+      x,
+      [0],
+      false,
+      @gcm.FeaturePerturbation::independently(),
+      @utils.Random::new(STATS_SEED_MARGINAL),
+      max_batch_size=batch_size,
+    )
+    assert_eq(not_averaged.nrows(), STATS_MARGINAL_ROWS)
+    assert_eq(not_averaged.ncols(), STATS_MARGINAL_ROWS)
+    for i in 0..<STATS_MARGINAL_ROWS {
+      for j in 0..<STATS_MARGINAL_ROWS {
+        assert_true(stats_near(not_averaged.get(i, j), x.get(i, 0)))
+      }
+    }
+  }
+}
+
+///|
 /// test "the marginal expectation has the expected shape"
 ///
 /// The upstream code returns a three dimensional array when the results are

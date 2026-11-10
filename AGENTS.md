@@ -322,6 +322,21 @@ statsmodels / scikit-learn conventions are deliberate:
   density is the sum of the Gaussian kernels of the samples divided by the
   number of the samples and by the bandwidth, which is the density of the
   `KernelDensity` of scikit-learn.
+- The uniform distribution of the `gcm` package is the one of
+  `scipy.stats.uniform`, whose support is the interval that goes **from the
+  location to the location plus the scale**, so that `uniform(0.0, 1.0)` is the
+  uniform distribution on `[0, 1]`. The port used to draw it on `[loc - scale,
+  loc + scale]`, which is the convention of a symmetric uniform, and the
+  upstream draws it on `[0, 1]`. The difference is invisible in the tests that
+  compare the parameters of a distribution, but it moves every number that
+  depends on the samples of a uniform root node: with the old convention the
+  fraction of the samples of a node whose parents are uniform on `[0, 1]` and
+  whose class is `"0"` when the sum of its two first parents is larger than one
+  was `0.125` -- the fraction of the pairs of the uniform distribution on
+  `[-1, 1]` whose sum is larger than one -- and it is `0.5` with the convention
+  of scipy. The fit of a uniform is the maximum likelihood estimate of scipy as
+  well, so the location is the smallest and the scale the range of the
+  samples.
 - The anomaly scorers of the `gcm` package count the samples of the distribution
   that are equal to a sample, that are greater than it and that are smaller than
   it with a binary search over the sorted samples of the distribution, so the
@@ -871,6 +886,34 @@ statsmodels / scikit-learn conventions are deliberate:
   not seed its generator, so the contributions of the upstream and of the port
   are different numbers; the two make the same decision on the fixture of the
   port.
+- The feature relevance of the parents of a node with a categorical target of the
+  `gcm` package is the port of `dowhy.gcm.feature_relevance.parent_relevance`.
+  The upstream evaluates the set function once per subset, with one permutation
+  of the background that it shares with every sample of the baseline, and it
+  averages the values of the set function over the samples of the baseline; the
+  port estimates the Shapley values of every sample of the baseline on its own
+  and averages them, which is the same thing in expectation, because the
+  Shapley value is linear. The port compares the **indices** of the classes of
+  the target and the upstream compares the labels themselves, which is the same
+  comparison.
+- The **sharpness** of the classifier decides the relevance of the noise of a
+  categorical target. The upstream draws the class of a sample with a uniform
+  noise, so a classifier whose probabilities are certain leaves the noise
+  without any influence and the relevance of the noise is zero, while a soft
+  classifier lets the noise flip the class and the relevance of the noise grows.
+  The upstream uses its default classifier in that case, which is the histogram
+  gradient boosting classifier, and the port uses the nearest neighbour
+  classifier with one neighbour, which is sharp in the same way. The logistic
+  regression of the port is too soft for that case: its relevance of the noise
+  is `0.093` and its relevance of the two parents that determine the class is
+  `0.070` and `0.062`, while the nearest neighbour classifier gives `0.000` for
+  the noise and `0.114` and `0.091` for the two parents.
+- The upstream cannot catch an exception, so the cases of the upstream test files
+  that expect one are ported as **predicates**. The unit change layer exposes
+  `can_evaluate_unit_change_linear` and `can_evaluate_unit_change_nonlinear`,
+  which are the `AttributeError` and the `NotFittedError` of the upstream, and
+  the layer aborts when the mechanism of a node is not fitted or when it has no
+  coefficients, which is the `AttributeError` of the upstream.
 - The mechanism of a node of the `gcm` package can be the model of an equation
   of the port, which is the relation of the node itself and not a fit of it.
   The upstream sets such a mechanism to a model of its own, and the port
@@ -1198,9 +1241,12 @@ README makes, so they are tracked in the repository:
   permutations with the global generator of numpy, so the relevance it computes
   and the relevance the port computes are different numbers; the script prints
   the relevance of the upstream next to the relation the upstream test asserts,
-  and the two agree to `3.9e-15`. The workers of the process pool of the
-  upstream cannot import the stubbed packages, so the number of the jobs has to
-  be set to one.
+  and the two agree to `3.9e-15`. The script runs the case with a categorical
+  target with the classifier of the port as well, so that the numbers of the two
+  sides can be compared: the upstream gives a relevance of `0.120` for the first
+  parent and of `0.076` for the second one, where the port gives `0.114` and
+  `0.091`. The workers of the process pool of the upstream cannot import the
+  stubbed packages, so the number of the jobs has to be set to one.
 - `gcm_intrinsic_influence_reference.py` computes the numbers of the intrinsic
   causal influence -- the contribution of the noise of every ancestor of the
   target node to the variance of the target, and the contribution of the noise

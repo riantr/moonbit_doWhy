@@ -335,6 +335,22 @@ test "the probability matrix check accepts the valid and rejects the invalid inp
 }
 
 ///|
+/// test "the probability vector check rejects the vectors that do not sum to one"
+///
+/// This is the port of the upstream test
+/// `test_given_numpy_array_with_object_dtype_when_check_is_probability_matrix_then_does_not_raise_error`.
+/// The upstream has a branch of its own for a one dimensional array, and the
+/// branch converts the array to a float before it sums it, so an array of an
+/// object dtype does not raise; a matrix of the port holds numbers only, so
+/// the check of the port is the sum of the absolute values of the vector.
+test "the probability vector check rejects the vectors that do not sum to one" {
+  assert_false(@gcm.is_probability_vector([0.0, 1.0, 2.0]))
+  assert_true(@gcm.is_probability_vector([0.25, 0.75]))
+  assert_true(@gcm.is_probability_vector([1.0]))
+  assert_false(@gcm.is_probability_vector([]))
+}
+
+///|
 /// test "the nearest neighbour divergence of two samples that share rows"
 ///
 /// The rows that the two samples share are removed first, so the estimate stays

@@ -40,6 +40,8 @@ pub fn unit_change_linear(
   check_input_columns(background_data, foreground_data, input_column_names)
   check_fitted(background_mechanism)
   check_fitted(foreground_mechanism)
+  check_coefficients(background_mechanism)
+  check_coefficients(foreground_mechanism)
   let background_coefficients = background_mechanism.coefficients()
   let foreground_coefficients = foreground_mechanism.coefficients()
   let background_inputs = inputs_of(background_data, input_column_names)
@@ -88,6 +90,7 @@ pub fn unit_change_linear_input_only(
 ) -> @api.DataFrame {
   check_input_columns(background_data, foreground_data, input_column_names)
   check_fitted(mechanism)
+  check_coefficients(mechanism)
   let coefficients = mechanism.coefficients()
   let background_inputs = inputs_of(background_data, input_column_names)
   let foreground_inputs = inputs_of(foreground_data, input_column_names)
@@ -261,6 +264,27 @@ fn frame_of(
 }
 
 ///|
+/// Whether the given mechanism can be used by the linear attribution.
+///
+/// The upstream raises a `NotFittedError` when the mechanism has not been
+/// fitted and an `AttributeError` when it is not a linear model, because it
+/// reads the coefficients of the model of scikit-learn. MoonBit cannot catch
+/// either of them, so the check is available on its own.
+pub fn can_evaluate_unit_change_linear(mechanism : PredictionModel) -> Bool {
+  mechanism.is_fitted() && !mechanism.is_nearest_neighbour()
+}
+
+///|
+/// Whether the given mechanism can be used by the non-linear attribution.
+///
+/// The upstream raises a `NotFittedError` when the mechanism has not been
+/// fitted, because the set function of the attribution evaluates the model.
+/// MoonBit cannot catch it, so the check is available on its own.
+pub fn can_evaluate_unit_change_nonlinear(mechanism : PredictionModel) -> Bool {
+  mechanism.is_fitted()
+}
+
+///|
 /// Check that the given mechanism has been fitted.
 ///
 /// The upstream raises `NotFittedError` when the mechanism of a linear
@@ -269,6 +293,21 @@ fn frame_of(
 fn check_fitted(mechanism : PredictionModel) -> Unit {
   if !mechanism.is_fitted() {
     abort("the prediction model has not been fitted")
+  }
+}
+
+///|
+/// Check that the given mechanism has the coefficients the linear attribution
+/// needs.
+///
+/// The upstream raises an `AttributeError` when the mechanism of a linear
+/// attribution is not a linear model, because it reads the coefficients of the
+/// model of scikit-learn; the port raises here for the same reason.
+fn check_coefficients(mechanism : PredictionModel) -> Unit {
+  if mechanism.is_nearest_neighbour() {
+    abort(
+      "the linear attribution needs the coefficients of the mechanism, and the nearest neighbour model has none",
+    )
   }
 }
 

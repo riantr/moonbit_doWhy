@@ -126,6 +126,9 @@ pub fn StochasticModel::laplace(
 ///
 /// This is the port of
 /// `dowhy.gcm.stochastic_models.ScipyDistribution(scipy.stats.uniform, ...)`.
+/// The support of the distribution is the interval that goes from the location
+/// to the location plus the scale, like the one of scipy, so that
+/// `uniform(0.0, 1.0)` is the uniform distribution on `[0, 1]`.
 pub fn StochasticModel::uniform(
   loc : Double,
   scale : Double,
@@ -269,7 +272,9 @@ pub fn StochasticModel::fit(
       }
     }
     Uniform => {
-      let loc = @utils.mean(x)
+      // The maximum likelihood estimate of the uniform distribution of scipy
+      // is the smallest and the largest of the samples, so that the support of
+      // the fitted distribution is the range of the samples.
       let mut lowest = x[0]
       let mut highest = x[0]
       for value in x {
@@ -280,12 +285,12 @@ pub fn StochasticModel::fit(
           highest = value
         }
       }
-      let scale = (highest - lowest) / 2.0
+      let scale = highest - lowest
       {
         kind: Uniform,
         samples: self.samples.copy(),
         categories: self.categories.copy(),
-        loc,
+        loc: lowest,
         scale,
         fixed_parameters: false,
         fitted: true,
@@ -333,7 +338,10 @@ pub fn StochasticModel::draw_samples(
       }
     Uniform =>
       for _ in 0..<num_samples {
-        out.push(self.loc + self.scale * (2.0 * rng.next_double() - 1.0))
+        // The support of the uniform distribution is the interval that goes
+        // from the location to the location plus the scale, like the one of
+        // scipy.
+        out.push(self.loc + self.scale * rng.next_double())
       }
     EmpiricalCategorical =>
       abort("a categorical distribution draws categorical samples")
@@ -760,6 +768,28 @@ pub fn CausalMechanism::draw_samples(
 }
 
 ///|
+/// The noise of a categorical mechanism, drawn uniformly on `[0, 1]`.
+///
+/// This is the port of
+/// `dowhy.gcm.causal_mechanisms.ClassifierFCM.draw_noise_samples`. The noise of
+/// a categorical mechanism is uniform on `[0, 1]`, which is what the upstream
+/// does as well.
+pub fn CausalMechanism::draw_categorical_noise(
+  self : CausalMechanism,
+  count : Int32,
+  rng : @utils.Random,
+) -> Array[Double] {
+  if !is_classifier_kind(self.kind) {
+    abort("a continuous mechanism has no categorical noise")
+  }
+  let noise : Array[Double] = []
+  for _ in 0..<count {
+    noise.push(rng.next_double())
+  }
+  noise
+}
+
+///|
 /// Draw samples of the class of the target for the given parents.
 ///
 /// The noise of a categorical mechanism is uniform on `[0, 1]`, which is what
@@ -772,11 +802,7 @@ pub fn CausalMechanism::draw_categorical_samples(
   if !is_classifier_kind(self.kind) {
     abort("a continuous mechanism draws continuous samples")
   }
-  let noise : Array[Double] = []
-  for _ in 0..<x.nrows() {
-    noise.push(rng.next_double())
-  }
-  self.evaluate_categorical(x, noise)
+  self.evaluate_categorical(x, self.draw_categorical_noise(x.nrows(), rng))
 }
 
 ///|

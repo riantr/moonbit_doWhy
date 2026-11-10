@@ -13,9 +13,15 @@ difference of the sample and the mean of the column. The script prints the
 relevance of the upstream and the value of that relation, so that the two can
 be compared.
 
-The two tests of the upstream that use a classifier have no counterpart in the
-port, because the prediction method of the port returns one number per row and
-the predictions of a classifier are a probability per class.
+The case with a categorical target is the one of the upstream test
+`test_when_using_parent_relevance_with_categorical_data_then_returns_correct_results`.
+The upstream uses its default classifier there, which is the histogram gradient
+boosting classifier, and the port uses the nearest neighbour classifier with one
+neighbour, which is the model of the port that is sharp in the same way: the
+class of a sample is certain, so the noise of the mechanism does not change it
+and the relevance of the noise is zero. The section `PARENT_RELEVANCE_CATEGORICAL_KNN`
+runs the upstream with that classifier on the very rows of the port, so that the
+numbers of the two can be compared.
 
 Usage:
     python _verify/gcm_feature_relevance_reference.py
@@ -25,6 +31,7 @@ from __future__ import annotations
 
 import os
 import sys
+import types
 
 import networkx as nx
 import numpy as np
@@ -68,6 +75,24 @@ class Xorshift:
         return self.next_u64() % bound
 
 
+def stub_causal_model() -> None:
+    """Stubs the upstream `dowhy.causal_model` with a placeholder class.
+
+    The constructor of `StructuralCausalModel` imports the module and uses its
+    `CausalModel` class for an `isinstance` check of the graph it is given. The
+    graph of the reference is a `networkx` graph, so the check is false with
+    the placeholder class as well. The real module is not loaded, because it
+    pulls in the whole graph learning stack of the upstream.
+    """
+    module = types.ModuleType("dowhy.causal_model")
+
+    class CausalModel:  # noqa: D101
+        """The placeholder of the class the upstream checks the graph against."""
+
+    module.CausalModel = CausalModel  # type: ignore[attr-defined]
+    sys.modules["dowhy.causal_model"] = module
+
+
 def expose_upstream_packages() -> None:
     """Points the stubbed packages at the real directories of the upstream.
 
@@ -99,10 +124,15 @@ upstream_gcm._PATHS["dowhy.causal_model"] = "causal_model.py"
 SEED = 2050
 COEFFICIENT_SEED = 2051
 PARENT_SEED = 2052
+CATEGORICAL_SEED = 2053
 
 # The number of rows of the fixtures.
 ROWS = 200
 PARENT_ROWS = 1000
+CATEGORICAL_ROWS = 200
+
+# The number of the parents of the fixture with the categorical data.
+CATEGORICAL_PARENTS = 5
 
 # The number of the inputs of the linear model.
 INPUTS = 5
@@ -132,7 +162,29 @@ def parent_data() -> pd.DataFrame:
     return pd.DataFrame({"X0": x0, "X1": x1, "X2": x2})
 
 
+def categorical_data() -> pd.DataFrame:
+    """The data of the fixture with the categorical data.
+
+    The parents hold a uniform distribution and the target holds the classes
+    "0" and "1", the class "0" when the sum of the two first parents is larger
+    than one.
+    """
+    rng = Xorshift(CATEGORICAL_SEED)
+    columns = [
+        np.array([rng.next_double() for _ in range(CATEGORICAL_ROWS)])
+        for _ in range(CATEGORICAL_PARENTS)
+    ]
+    labels = [
+        "0" if columns[0][i] + columns[1][i] > 1.0 else "1"
+        for i in range(CATEGORICAL_ROWS)
+    ]
+    frame = {f"X{i}": columns[i] for i in range(CATEGORICAL_PARENTS)}
+    frame["Y"] = np.array(labels)
+    return pd.DataFrame(frame)
+
+
 def main() -> None:
+    stub_causal_model()
     # The upstream `dowhy.gcm.ml` has to be read before the modules that import
     # the names it re-exports, so it is loaded first.
     load("dowhy.gcm.ml")
@@ -149,7 +201,6 @@ def main() -> None:
     shapley = load("dowhy.gcm.shapley")
     expose_upstream_packages()
     load("dowhy.causal_graph")
-    load("dowhy.causal_model")
 
     # ------------------------------------------------------------------
     # A. The relevance of the inputs of a linear model.
@@ -201,6 +252,76 @@ def main() -> None:
         print(f"  {key} = {parents[key]:.12f}")
     print(f"  noise = {float(np.asarray(noise).reshape(-1)[0]):.12f}")
     print(f"  variance = {np.var(data['X2'].to_numpy()):.12f}")
+
+    # ------------------------------------------------------------------
+    # C. The relevance of the parents of a node with a categorical target.
+    #
+    # The upstream test
+    # `test_when_using_parent_relevance_with_categorical_data_then_returns_correct_results`
+    # expects a relevance of about 0.125 for the two parents that determine the
+    # class of the target and a relevance of about zero for the other three.
+    # The case is marked as flaky by the upstream, because the relevance is
+    # estimated with a random permutation of the parents.
+    # ------------------------------------------------------------------
+    categorical = categorical_data()
+    graph = nx.DiGraph(
+        [(f"X{i}", "Y") for i in range(CATEGORICAL_PARENTS)]
+    )
+    causal_model = models.StructuralCausalModel(graph)
+    for i in range(CATEGORICAL_PARENTS):
+        causal_model.set_causal_mechanism(
+            f"X{i}", stochastic.ScipyDistribution(stats.uniform, loc=0, scale=1)
+        )
+    causal_model.set_causal_mechanism("Y", mechanisms.ClassifierFCM())
+    fitting.fit(causal_model, categorical)
+    np.random.seed(CATEGORICAL_SEED)
+    parents, noise = relevance.parent_relevance(
+        causal_model,
+        "Y",
+        num_samples_randomization=500,
+        num_samples_baseline=50,
+    )
+    print("PARENT_RELEVANCE_CATEGORICAL")
+    for key in sorted(parents):
+        print(f"  {key} = {parents[key]:.12f}")
+    print(f"  noise = {float(np.asarray(noise).reshape(-1)[0]):.12f}")
+
+    # ------------------------------------------------------------------
+    # D. The same fixture with the classifier of the port.
+    #
+    # The upstream case uses the default classifier of the upstream, which is
+    # the histogram gradient boosting classifier. The port uses the nearest
+    # neighbour classifier with one neighbour, which is sharp in the same way:
+    # the class of a sample of the background is certain, so the noise of the
+    # mechanism does not change it and the relevance of the noise is zero.
+    # The upstream is run with the same classifier here, so that the numbers of
+    # the two sides can be compared.
+    # ------------------------------------------------------------------
+    knn_model = models.StructuralCausalModel(graph)
+    for i in range(CATEGORICAL_PARENTS):
+        knn_model.set_causal_mechanism(
+            f"X{i}", stochastic.ScipyDistribution(stats.uniform, loc=0, scale=1)
+        )
+    knn_model.set_causal_mechanism(
+        "Y",
+        mechanisms.ClassifierFCM(
+            classifier_model=load("dowhy.gcm.ml.classification").create_knn_classifier(
+                n_neighbors=1
+            )
+        ),
+    )
+    fitting.fit(knn_model, categorical)
+    np.random.seed(CATEGORICAL_SEED)
+    parents, noise = relevance.parent_relevance(
+        knn_model,
+        "Y",
+        num_samples_randomization=500,
+        num_samples_baseline=50,
+    )
+    print("PARENT_RELEVANCE_CATEGORICAL_KNN")
+    for key in sorted(parents):
+        print(f"  {key} = {parents[key]:.12f}")
+    print(f"  noise = {float(np.asarray(noise).reshape(-1)[0]):.12f}")
 
 
 if __name__ == "__main__":

@@ -2763,3 +2763,83 @@ The what-if queries with the categorical variables and with the discrete data.
   `-1.9943` on the side of the upstream and `-1.9974` on the side of the port.
 
 [0.0.54]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.54
+
+## [0.0.55] - 2026-11-12
+
+The remaining cases of the upstream test files of the `gcm` package, and the
+uniform distribution of the package.
+
+### Added
+
+- the case of the upstream test file `tests/gcm/test_feature_relevance.py` that
+  estimates the relevance of the parents of a node with a categorical target,
+  in `src/gcm/feature_relevance_test.mbt`. The relevance of the two parents
+  that determine the class of the target is `0.114` and `0.091`, the relevance
+  of the three other parents is about `0.01` and the relevance of the noise of
+  the mechanism is zero, which is the relation the upstream test asserts.
+- the four cases of the upstream test file `tests/gcm/test_unit_change.py` that
+  expect an exception, in `src/gcm/unit_change_test.mbt`. MoonBit cannot catch
+  an exception, so the layer exposes the two predicates
+  `can_evaluate_unit_change_linear` and `can_evaluate_unit_change_nonlinear`,
+  which are the `NotFittedError` and the `AttributeError` of the upstream, and
+  the attribution of the unit change aborts when the mechanism of a node is not
+  fitted or when it has no coefficients.
+- the case of the upstream test file `tests/gcm/test_divergence.py` that checks
+  a probability vector, in `src/gcm/divergence_test.mbt`, with the new public
+  function `is_probability_vector`, which is the branch of the upstream
+  `is_probability_matrix` that handles a one dimensional array.
+- the case of the upstream test file `tests/gcm/test_stats.py` that estimates the
+  marginal expectation with the five batch sizes of the upstream, in
+  `src/gcm/stats_test.mbt`. The batch size is an optimisation of the evaluation
+  of the prediction model, so the port accepts it and ignores it, the way it
+  accepts the one of the feature relevance.
+- the noise of a categorical mechanism as a function of its own, in
+  `src/gcm/causal_mechanisms.mbt`: `CausalMechanism::draw_categorical_noise`
+  is the port of the `draw_noise_samples` of the `ClassifierFCM` of the
+  upstream, which the feature relevance needs to draw the noise of the node
+  itself.
+- the numbers of the upstream on the fixtures of the port in
+  `_verify/gcm_feature_relevance_reference.py`: the section
+  `PARENT_RELEVANCE_CATEGORICAL_KNN` runs the upstream with the classifier of
+  the port on the very rows of the port, so that the two can be compared. The
+  upstream gives a relevance of `0.120` for `X0` and of `0.076` for `X1`, where
+  the port gives `0.114` and `0.091`.
+
+### Fixed
+
+- the uniform distribution of the `gcm` package is the one of
+  `scipy.stats.uniform` now: its support is the interval that goes from the
+  location to the location plus the scale, so that `uniform(0.0, 1.0)` is the
+  uniform distribution on `[0, 1]`, and the fit of a uniform is the maximum
+  likelihood estimate of scipy, which is the smallest and the largest of the
+  samples. The port used to draw the distribution on `[loc - scale, loc +
+  scale]`, the convention of a symmetric uniform. The difference was invisible
+  in the tests that compare the parameters of a distribution, but it moved
+  every number that depends on the samples of a uniform root node: with the old
+  convention the fraction of the samples of a node whose parents are uniform on
+  `[0, 1]` and whose class is `"0"` when the sum of its two first parents is
+  larger than one was `0.125`, the fraction of the pairs of the uniform
+  distribution on `[-1, 1]` whose sum is larger than one, and it is `0.5` with
+  the convention of scipy.
+
+### Notes
+
+- The upstream uses its default classifier in the case with the categorical
+  target, which is the histogram gradient boosting classifier, and the port
+  uses the nearest neighbour classifier with one neighbour. Both are sharp: the
+  class of a sample of the background is certain, so the noise of the mechanism
+  does not change it and the relevance of the noise is zero. The logistic
+  regression of the port is too soft for that case: the relevance of its noise
+  is `0.093` and the relevance of the two parents that determine the class is
+  `0.070` and `0.062`.
+- The upstream evaluates the set function of the feature relevance once per
+  subset, with one permutation of the background that it shares with every
+  sample of the baseline, and it averages the values of the set function over
+  the samples of the baseline. The port estimates the Shapley values of every
+  sample of the baseline on its own and averages them, which is the same thing
+  in expectation, because the Shapley value is linear. The two therefore differ
+  by the noise of the permutations.
+- The upstream cannot catch an exception, so the cases of the upstream test
+  files that expect one are ported as predicates.
+
+[0.0.55]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.55
