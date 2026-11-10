@@ -209,6 +209,14 @@ statsmodels / scikit-learn conventions are deliberate:
   spread the same fit over the columns differently. The least squares fit of
   the `utils` package has no intercept at all, so the two are not
   interchangeable.
+- The E-value analysis of the `refuters` package follows two conventions of
+  the upstream. The **standard deviation of the outcome** is the one of NumPy,
+  with `ddof = 0`, and the **contrast of the treatment** scales the coefficient
+  of the treatment and not its standard error, because the standard error of the
+  estimator of the upstream already carries that contrast. The upstream reads
+  the coefficient and the standard error of the *effect*, and the port reads
+  the coefficient of the treatment and the standard error of the effect, which
+  is the same arithmetic.
 - The polynomial models of the `gcm` package expand their features the way
   `sklearn.preprocessing.PolynomialFeatures` with `include_bias=False` does,
   and the **order of the columns** of the expansion is the order of the

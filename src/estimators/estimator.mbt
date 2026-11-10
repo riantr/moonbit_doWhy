@@ -413,6 +413,43 @@ pub fn CausalEstimator::adjustment_set(self : CausalEstimator) -> Array[String] 
 }
 
 ///|
+/// The treatment value of the treated arm.
+///
+/// The E-value analysis of the `refuters` package needs it, because the
+/// contrast of the treatment scales the estimate of the upstream.
+pub fn CausalEstimator::treatment_value(self : CausalEstimator) -> Double {
+  self.treatment_value
+}
+
+///|
+/// The treatment value of the control arm.
+///
+/// The E-value analysis of the `refuters` package needs it, because the
+/// contrast of the treatment scales the estimate of the upstream.
+pub fn CausalEstimator::control_value(self : CausalEstimator) -> Double {
+  self.control_value
+}
+
+///|
+/// The fitted model of the generalised linear model estimator.
+///
+/// The E-value analysis of the `refuters` package needs it, because the
+/// estimate of a generalised linear model is on the scale of the link of its
+/// family.
+pub fn CausalEstimator::glm_model(self : CausalEstimator) -> @utils.GlmFit {
+  self.glm_model
+}
+
+///|
+/// The family of the generalised linear model estimator.
+///
+/// The E-value analysis of the `refuters` package needs it, because the
+/// conversion of the estimate to the risk ratio scale depends on the family.
+pub fn CausalEstimator::glm_family(self : CausalEstimator) -> @utils.GlmFamily {
+  self.glm_family
+}
+
+///|
 /// The effect modifiers the estimator uses.
 ///
 /// The bootstrap refuter perturbs them, the way the upstream does.

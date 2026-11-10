@@ -750,6 +750,32 @@ pub fn CausalModel::refute_linear_sensitivity(
 }
 
 ///|
+/// The E-value analysis of the estimate.
+///
+/// This is the port of the `sensitivity_e_value` simulation method of the
+/// upstream. The upstream returns the analyzer of the E-value from its
+/// `refute_estimate`, and the port returns it from a method of its own, because
+/// the analysis is not a refutation of the estimate, the way
+/// `refute_linear_sensitivity` returns the analyzer of the linear sensitivity.
+///
+/// The E-value is the minimum strength of association, on the risk ratio scale,
+/// that an unmeasured confounder would need with both the treatment and the
+/// outcome to explain away the estimate. The analysis needs a regression based
+/// estimator, the way the upstream does.
+pub fn CausalModel::refute_e_value(
+  causal_model : CausalModel,
+  estimator : @estimators.CausalEstimator,
+  target_units~ : String = "ate",
+) -> @refuters.EValueSensitivityAnalyzer {
+  @refuters.evalue_sensitivity_analyzer(
+    estimator,
+    causal_model.data,
+    estimator.outcome(),
+    target_units~,
+  )
+}
+
+///|
 /// The first segment of a dotted name.
 fn first_segment(name : String) -> String {
   let parts = name.split(".")

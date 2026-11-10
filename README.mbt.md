@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.40.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.41.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -18,7 +18,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators) |
 | Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
-| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis** --, the **significance test** of the refutations, and the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules) |
+| Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis** and its **E-value analysis** --, the **significance test** of the refutations, and the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules) |
 | Synthetic data | `dowhy.datasets` | ported (`linear_dataset` and the fixtures the upstream tests use) |
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
 | Dimensionality reduction | `dowhy.data_transformers` | ported (the PCA reducer) |
@@ -907,6 +907,11 @@ following ways:
   give them, and its fit reads `data[None]`, which is a column of the data
   frame that does not exist. The estimator of the port takes the three values
   as arguments.
+- `refuters` computes the E-value of an estimate the way the upstream does,
+  and it benchmarks it against the measured confounders the way the
+  upstream does: every measured confounder is dropped, the estimator is
+  refitted and the Observed Covariate E-value of the confounder is
+  reported. The port does not draw the contour plot of the upstream.
 - `gcm` expands the features of its polynomial models the way the upstream
   does, with the columns of `PolynomialFeatures(degree, include_bias=False)`
   in the order of the upstream, but the port expands the design matrix it is

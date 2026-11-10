@@ -2052,3 +2052,65 @@ The polynomial models of the graphical causal models.
   upstream as mirrored.
 
 [0.0.40]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.40
+
+## [0.0.41] - 2026-11-10
+
+The E-value analysis of an unmeasured confounder.
+
+### Added
+
+- `refuters.evalue_sensitivity_analyzer`, the port of
+  `dowhy.causal_refuters.evalue_sensitivity_analyzer.EValueSensitivityAnalyzer`,
+  which answers how strong an unmeasured confounder has to be with the
+  treatment and with the outcome to explain away the estimate. It reports the
+  E-value of the estimate, the E-value of the limit of its interval that is
+  closer to the null, and the Observed Covariate E-value of every measured
+  confounder.
+- `refuters.evalue_rr`, `refuters.evalue_md`, `refuters.evalue_or` and
+  `refuters.evalue_ols`, the four functions of the upstream that compute the
+  E-value of a risk ratio, of a standardised difference, of an odds ratio and
+  of the coefficient of a linear regression.
+- `refuters.observed_covariate_e_value`, the port of the function of the
+  upstream that compares the limit of the interval of an estimate with the limit
+  of the interval of the estimate that was computed without a confounder.
+- `CausalModel::refute_e_value`, the entry point of the analysis. The upstream
+  returns the analyzer from its `refute_estimate`; the port returns it from a
+  method of its own, because the analysis is not a refutation of the estimate,
+  the way `refute_linear_sensitivity` returns the analyzer of the linear
+  sensitivity.
+- the port of the case `test_evalue` of
+  `tests/causal_refuters/test_add_unobserved_common_cause.py` as
+  `src/tests/evalue.mbt`.
+- `_verify/evalue_reference.py`, which runs the analyzer of the upstream on a
+  fixture of the same shape and prints its numbers.
+
+### Notes
+
+- The numbers of the upstream are the ones of the R package `EValue`, and the
+  port reproduces them: the E-value of the OLS example `0.293`, `0.196` and
+  `17.405` is `1.141`, the E-value of the standardised difference `0.5` and
+  `0.25` is `2.529`, the E-value of the odds ratio `0.86`, `0.75` and `0.99` is
+  `1.369`, the E-value of the risk ratio `0.8`, `0.71` and `0.91` is `1.809`, the
+  Observed Covariate E-value of the pairs `(2, 4)` and `(4, 2)` is `3.414` and
+  the one of the pair `(0.8, 0.9)` is `1.500`.
+- The upstream scales the coefficient of the treatment with the contrast of the
+  treatment and leaves the standard error alone, because the standard error of
+  its estimator already carries that contrast. The port keeps the arithmetic:
+  the analysis scales the coefficient and takes the standard error as it is.
+- The upstream refuses an estimator with effect modifiers, and the port does the
+  same.
+- The upstream does not benchmark the E-value against the measured confounders
+  when the interval of the estimate already crosses the null, because the
+  interval is then already tipped, and the port does the same.
+- The upstream draws its contour plot of the E-values, and the port does not
+  draw it.
+- The upstream supports the binomial, the Poisson, the negative binomial and the
+  gamma family of the generalised linear model, and the port supports the
+  binomial and the Poisson ones, which are the two families the `utils` package
+  implements besides the gaussian one. The gaussian family raises an error in
+  the upstream, and the port does the same.
+- The `non-parametric-partial-R2` analyzer of the upstream is not ported yet,
+  and neither is the `percent_change_of_confounder` argument that infers the
+  strengths of the confounder from the observed common causes.
+
+[0.0.41]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.41

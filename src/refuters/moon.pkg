@@ -1,5 +1,6 @@
 import {
   "moonbitlang/core/double",
+  "moonbitlang/core/math",
   "riantr/moonbit_dowhy/api",
   "riantr/moonbit_dowhy/estimators",
   "riantr/moonbit_dowhy/identifiers",
