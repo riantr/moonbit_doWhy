@@ -27,6 +27,9 @@ pub struct PredictionModel {
   fixed : Bool
   /// The custom function of an equation, when the model is one.
   equation : EquationModel?
+  /// The degree of the polynomial expansion of the features, zero when the
+  /// model is fitted on the features themselves.
+  degree : Int32
 }
 
 ///|
@@ -40,6 +43,29 @@ pub fn PredictionModel::linear() -> PredictionModel {
     fitted: false,
     fixed: false,
     equation: None,
+    degree: 0,
+  }
+}
+
+///|
+/// A prediction model of the polynomial features of the input.
+///
+/// This is the port of `dowhy.gcm.ml.create_polynom_regressor`, which builds the
+/// pipeline of `PolynomialFeatures(degree=degree, include_bias=False)` and a
+/// linear regression. The port fits a linear model on the expanded features, so
+/// the model holds the coefficients of the expansion and the degree of it. The
+/// default degree is the default of the upstream, which is two.
+pub fn PredictionModel::polynomial(degree~ : Int32 = 2) -> PredictionModel {
+  if degree < 1 {
+    abort("the degree of a polynomial model has to be at least one")
+  }
+  {
+    coefficients: [],
+    intercept: 0.0,
+    fitted: false,
+    fixed: false,
+    equation: None,
+    degree,
   }
 }
 
@@ -60,6 +86,7 @@ pub fn PredictionModel::with_fixed_parameters(
     fitted: true,
     fixed: true,
     equation: None,
+    degree: 0,
   }
 }
 
@@ -85,6 +112,14 @@ pub fn PredictionModel::coefficients(self : PredictionModel) -> Array[Double] {
 /// The intercept of the model.
 pub fn PredictionModel::intercept(self : PredictionModel) -> Double {
   self.intercept
+}
+
+///|
+/// The degree of the polynomial expansion of the features of the model.
+///
+/// The degree is zero when the model is fitted on the features themselves.
+pub fn PredictionModel::degree(self : PredictionModel) -> Int32 {
+  self.degree
 }
 
 ///|
@@ -115,6 +150,7 @@ pub fn PredictionModel::fit(
         fitted: true,
         fixed: true,
         equation: Some(equation),
+        degree: self.degree,
       }
     None => ()
   }
@@ -126,10 +162,19 @@ pub fn PredictionModel::fit(
       fitted: true,
       fixed: true,
       equation: None,
+      degree: self.degree,
     }
   }
-  let p = x.ncols()
   let n = x.nrows()
+  // A model of the polynomial features is fitted on the expansion of the
+  // features, the way the pipeline of the upstream expands them before its
+  // linear regression sees them.
+  let design = if self.degree > 0 {
+    polynomial_features(x, self.degree)
+  } else {
+    x
+  }
+  let p = design.ncols()
   if p == 0 {
     return {
       coefficients: [],
@@ -137,17 +182,18 @@ pub fn PredictionModel::fit(
       fitted: true,
       fixed: false,
       equation: None,
+      degree: self.degree,
     }
   }
   let offsets : Array[Double] = []
   for j = 0; j < p; j = j + 1 {
-    offsets.push(@utils.mean(x.col(j)))
+    offsets.push(@utils.mean(design.col(j)))
   }
   let y_offset = @utils.mean(y)
   let centred = @utils.Matrix::zeros(n, p)
   for i = 0; i < n; i = i + 1 {
     for j = 0; j < p; j = j + 1 {
-      centred.set(i, j, x.get(i, j) - offsets[j])
+      centred.set(i, j, design.get(i, j) - offsets[j])
     }
   }
   let centred_y : Array[Double] = []
@@ -159,7 +205,14 @@ pub fn PredictionModel::fit(
   for j = 0; j < p; j = j + 1 {
     intercept = intercept - offsets[j] * coefficients[j]
   }
-  { coefficients, intercept, fitted: true, fixed: false, equation: None, }
+  {
+    coefficients,
+    intercept,
+    fitted: true,
+    fixed: false,
+    equation: None,
+    degree: self.degree,
+  }
 }
 
 ///|
@@ -175,12 +228,20 @@ pub fn PredictionModel::predict(
   if !self.fitted {
     abort("the prediction model has not been fitted")
   }
+  // A model of the polynomial features predicts with the expansion of the
+  // features, the way the pipeline of the upstream expands them before its
+  // linear regression sees them.
+  let design = if self.degree > 0 {
+    polynomial_features(x, self.degree)
+  } else {
+    x
+  }
   let out : Array[Double] = []
-  for i = 0; i < x.nrows(); i = i + 1 {
+  for i = 0; i < design.nrows(); i = i + 1 {
     let mut value = self.intercept
-    for j = 0; j < x.ncols(); j = j + 1 {
+    for j = 0; j < design.ncols(); j = j + 1 {
       if j < self.coefficients.length() {
-        value = value + self.coefficients[j] * x.get(i, j)
+        value = value + self.coefficients[j] * design.get(i, j)
       }
     }
     out.push(value)
@@ -207,6 +268,7 @@ pub fn PredictionModel::clone(self : PredictionModel) -> PredictionModel {
         fitted: true,
         fixed: true,
         equation: Some(equation),
+        degree: self.degree,
       }
     None => ()
   }
@@ -217,6 +279,7 @@ pub fn PredictionModel::clone(self : PredictionModel) -> PredictionModel {
       fitted: self.fitted,
       fixed: true,
       equation: None,
+      degree: self.degree,
     }
   }
   {
@@ -225,6 +288,7 @@ pub fn PredictionModel::clone(self : PredictionModel) -> PredictionModel {
     fitted: false,
     fixed: false,
     equation: None,
+    degree: self.degree,
   }
 }
 
@@ -244,6 +308,9 @@ pub struct ClassificationModel {
   classes : Array[String]
   /// Whether the model has been fitted.
   fitted : Bool
+  /// The degree of the polynomial expansion of the features, zero when the
+  /// model is fitted on the features themselves.
+  degree : Int32
 }
 
 ///|
@@ -251,7 +318,26 @@ pub struct ClassificationModel {
 ///
 /// This is the port of `dowhy.gcm.ml.create_logistic_regression_classifier`.
 pub fn ClassificationModel::logistic() -> ClassificationModel {
-  { coefficients: [], intercept: 0.0, classes: [], fitted: false, }
+  { coefficients: [], intercept: 0.0, classes: [], fitted: false, degree: 0, }
+}
+
+///|
+/// A classification model of the polynomial features of the input.
+///
+/// This is the port of
+/// `dowhy.gcm.ml.classification.create_polynom_logistic_regression_classifier`,
+/// which builds the pipeline of `PolynomialFeatures(degree=degree,
+/// include_bias=False)` and a logistic regression. The port fits a logistic
+/// regression on the expanded features, so the model holds the coefficients of
+/// the expansion and the degree of it. The default degree is the default of the
+/// upstream, which is three.
+pub fn ClassificationModel::polynomial(
+  degree~ : Int32 = 3,
+) -> ClassificationModel {
+  if degree < 1 {
+    abort("the degree of a polynomial model has to be at least one")
+  }
+  { coefficients: [], intercept: 0.0, classes: [], fitted: false, degree, }
 }
 
 ///|
@@ -266,6 +352,14 @@ pub fn ClassificationModel::classes(
   self : ClassificationModel,
 ) -> Array[String] {
   self.classes.copy()
+}
+
+///|
+/// The degree of the polynomial expansion of the features of the model.
+///
+/// The degree is zero when the model is fitted on the features themselves.
+pub fn ClassificationModel::degree(self : ClassificationModel) -> Int32 {
+  self.degree
 }
 
 ///|
@@ -293,8 +387,16 @@ pub fn ClassificationModel::fit(
   for label in y {
     response.push(if label == classes[0] { 0.0 } else { 1.0 })
   }
+  // A model of the polynomial features is fitted on the expansion of the
+  // features, the way the pipeline of the upstream expands them before its
+  // logistic regression sees them.
+  let design = if self.degree > 0 {
+    polynomial_features(x, self.degree)
+  } else {
+    x
+  }
   let fit = @utils.logistic_fit(
-    with_intercept_column(x),
+    with_intercept_column(design),
     response,
     1.0,
     100,
@@ -306,7 +408,7 @@ pub fn ClassificationModel::fit(
     coefficients.push(beta[i])
   }
   let intercept = if beta.length() > 0 { beta[0] } else { 0.0 }
-  { coefficients, intercept, classes, fitted: true, }
+  { coefficients, intercept, classes, fitted: true, degree: self.degree, }
 }
 
 ///|
@@ -321,12 +423,20 @@ pub fn ClassificationModel::predict_probabilities(
   if !self.fitted {
     abort("the classification model has not been fitted")
   }
+  // A model of the polynomial features predicts with the expansion of the
+  // features, the way the pipeline of the upstream expands them before its
+  // logistic regression sees them.
+  let design = if self.degree > 0 {
+    polynomial_features(x, self.degree)
+  } else {
+    x
+  }
   let out : Array[Array[Double]] = []
-  for i = 0; i < x.nrows(); i = i + 1 {
+  for i = 0; i < design.nrows(); i = i + 1 {
     let mut value = self.intercept
-    for j = 0; j < x.ncols(); j = j + 1 {
+    for j = 0; j < design.ncols(); j = j + 1 {
       if j < self.coefficients.length() {
-        value = value + self.coefficients[j] * x.get(i, j)
+        value = value + self.coefficients[j] * design.get(i, j)
       }
     }
     let positive = @utils.sigmoid(value)
@@ -361,8 +471,15 @@ pub fn ClassificationModel::predict(
 pub fn ClassificationModel::clone(
   self : ClassificationModel,
 ) -> ClassificationModel {
-  let _ = self
-  { coefficients: [], intercept: 0.0, classes: [], fitted: false, }
+  // The copy keeps the degree of the polynomial features, because it is a
+  // hyper parameter of the model and not the result of a fit.
+  {
+    coefficients: [],
+    intercept: 0.0,
+    classes: [],
+    fitted: false,
+    degree: self.degree,
+  }
 }
 
 ///|
@@ -430,6 +547,77 @@ pub fn InvertibleFunction::evaluate_inverse(
       Identity => out.push(value)
       Exponential => out.push(@math.ln(value))
       Logarithmic => out.push(@math.exp(value))
+    }
+  }
+  out
+}
+
+///|
+/// The polynomial expansion of the features.
+///
+/// This is the port of `sklearn.preprocessing.PolynomialFeatures` with
+/// `include_bias=False`, which the upstream builds its polynom regressor and
+/// its polynom classifier with. The expansion holds every product of the
+/// features of a total degree of one up to the given degree, and the order of
+/// its columns is the order of the upstream: the products of the degree one
+/// come first, then the ones of the degree two, and so on, and the products of
+/// one degree are ordered by the indices of the features they multiply.
+///
+/// The expansion of two features of the degree two therefore holds the columns
+/// `x0`, `x1`, `x0 * x0`, `x0 * x1` and `x1 * x1`, and the expansion of two
+/// features of the degree three holds those five columns and the four products
+/// of the degree three.
+pub fn polynomial_features(x : @utils.Matrix, degree : Int32) -> @utils.Matrix {
+  if degree < 1 {
+    abort("the degree of a polynomial model has to be at least one")
+  }
+  let n = x.ncols()
+  let combinations : Array[Array[Int32]] = []
+  for d = 1; d <= degree; d = d + 1 {
+    for combination in polynomial_combinations(n, d, 0) {
+      combinations.push(combination)
+    }
+  }
+  let out = @utils.Matrix::zeros(x.nrows(), combinations.length())
+  for i = 0; i < x.nrows(); i = i + 1 {
+    for c = 0; c < combinations.length(); c = c + 1 {
+      let combination = combinations[c]
+      let mut value = 1.0
+      for index in combination {
+        value = value * x.get(i, index)
+      }
+      out.set(i, c, value)
+    }
+  }
+  out
+}
+
+///|
+/// The combinations of `length` features of `n` features with a repetition, in
+/// the order of the upstream.
+///
+/// The combinations are the ones of `itertools.combinations_with_replacement`,
+/// which the upstream's transformer enumerates: the indices of a combination
+/// are not decreasing, and the combinations of one length are ordered by their
+/// indices.
+fn polynomial_combinations(
+  n : Int32,
+  length : Int32,
+  start : Int32,
+) -> Array[Array[Int32]] {
+  let out : Array[Array[Int32]] = []
+  if length == 0 {
+    let empty : Array[Int32] = []
+    out.push(empty)
+    return out
+  }
+  for i = start; i < n; i = i + 1 {
+    for tail in polynomial_combinations(n, length - 1, i) {
+      let combination : Array[Int32] = [i]
+      for index in tail {
+        combination.push(index)
+      }
+      out.push(combination)
     }
   }
   out

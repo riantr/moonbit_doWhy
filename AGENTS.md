@@ -209,6 +209,21 @@ statsmodels / scikit-learn conventions are deliberate:
   spread the same fit over the columns differently. The least squares fit of
   the `utils` package has no intercept at all, so the two are not
   interchangeable.
+- The polynomial models of the `gcm` package expand their features the way
+  `sklearn.preprocessing.PolynomialFeatures` with `include_bias=False` does,
+  and the **order of the columns** of the expansion is the order of the
+  upstream: the products of the degree one come first, then the ones of the
+  degree two, and the products of one degree are ordered by the indices of the
+  features they multiply. The expansion of two features of the degree two holds
+  the columns `x0`, `x1`, `x0 * x0`, `x0 * x1` and `x1 * x1`; the expansion of
+  three features of the degree three holds nineteen columns. The expansion
+  happens **before** the centring of the fit, because the pipeline of the
+  upstream expands the features before its linear regression sees them.
+- The upstream fits the one-hot encoder of its categorical columns **inside**
+  the model, so the expansion of the upstream sees the encoded columns; the
+  port expands the design matrix it is given, so the caller encodes. The
+  mechanism of the `gcm` package encodes before the fit, the way it does it for
+  every other model.
 - The regression based independence test of the `gcm` package is **numerically
   unstable** for a target that is a step function of a continuous variable,
   and the upstream marks its categorical tests as flaky because of it. The

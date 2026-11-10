@@ -89,6 +89,7 @@ pub fn PredictionModel::with_equation(
     fitted: true,
     fixed: true,
     equation: Some({ expression, parents: parents.copy(), }),
+    degree: 0,
   }
 }
 

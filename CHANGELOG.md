@@ -1989,3 +1989,66 @@ The linear sensitivity analysis of an unobserved confounder.
   infers the strengths of the confounder from the observed common causes.
 
 [0.0.39]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.39
+
+## [0.0.40] - 2026-11-10
+
+The polynomial models of the graphical causal models.
+
+### Added
+
+- `gcm.PredictionModel::polynomial`, the port of
+  `dowhy.gcm.ml.create_polynom_regressor`, which fits a linear model on the
+  polynomial features of its input. The degree is an optional argument with the
+  default of the upstream, which is two.
+- `gcm.ClassificationModel::polynomial`, the port of
+  `dowhy.gcm.ml.classification.create_polynom_logistic_regression_classifier`,
+  which fits a logistic regression on the polynomial features of its input. The
+  degree is an optional argument with the default of the upstream, which is
+  three.
+- `gcm.polynomial_features`, the port of
+  `sklearn.preprocessing.PolynomialFeatures` with `include_bias=False`, which
+  the two pipelines of the upstream are built of.
+- `gcm.PredictionModel::degree` and `gcm.ClassificationModel::degree`, which
+  report the degree of the polynomial expansion of a model and are zero when
+  the model is fitted on the features themselves.
+- the port of the two cases of `tests/gcm/ml/test_regression.py` and of the case
+  of `tests/gcm/ml/test_classification.py` that the models of the polynomial
+  features answer, as `src/gcm/ml_polynomial_test.mbt`.
+- `_verify/polynom_features_reference.py`, which prints the columns of the
+  expansion of scikit-learn and the numbers of the upstream on the fixture of
+  its test file, and `_verify/probe_polynom_upstream_tests.py`, which runs the
+  cases of the upstream and reports what they do.
+
+### Notes
+
+- The order of the columns of the expansion is the order of the upstream: the
+  products of the degree one come first, then the ones of the degree two, and
+  the products of one degree are ordered by the indices of the features they
+  multiply. The expansion of two features of the degree two therefore holds the
+  columns `x0`, `x1`, `x0 * x0`, `x0 * x1` and `x1 * x1`, and the expansion of
+  two features of the degree three holds those five columns and the four
+  products of the degree three.
+- The upstream encodes the categorical columns of its input before its pipeline
+  expands them, because the encoder is fitted by the model itself. The port
+  expands the design matrix it is given, so the caller encodes, the way the
+  mechanism of the `gcm` package does it for every other model.
+- The upstream draws the fixtures of its two regression cases and of its
+  classification case with the global generator of numpy and marks all three of
+  them as flaky. The port draws them with the generator of the `utils` package
+  and a fixed seed.
+- The upstream reproduces the product of the two features of its fixture to
+  `7.1e-15` and the target of its categorical fixture to `2.6e-14`, against the
+  tolerance of `1e-10` of its tests. The port reproduces them to `3.6e-15` and
+  to `2.1e-14`.
+- The upstream predicts 988 of the 1000 classes of its classification fixture
+  right and asks for more than 950. The port predicts 991 of them right on its
+  own fixture, so the threshold of the upstream is not a marginal one here.
+- The random forest of the upstream, the support vector machine of the upstream,
+  the gradient boosting of the upstream and the other estimators of their zoos
+  are not ported, so the third case of the upstream test file of the regression
+  and the second case of the upstream test file of the classification have no
+  counterpart here.
+- `_verify/upstream_test_coverage.py` reports 56 of the 74 test files of the
+  upstream as mirrored.
+
+[0.0.40]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.40
