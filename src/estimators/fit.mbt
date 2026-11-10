@@ -166,6 +166,28 @@ fn CausalEstimator::interventional_outcomes(
 }
 
 ///|
+/// The mean of the outcome when the treatment is set to the given value.
+///
+/// This is the port of `dowhy.causal_estimator.CausalEstimator.do`, which
+/// returns the mean of the interventional outcomes of the data: the value of
+/// the outcome under the intervention, and not the difference between the two
+/// arms.
+///
+/// The upstream keeps the data it was fitted on and reads it when the caller
+/// gives none. The port keeps no data in the estimator, so the data is an
+/// argument.
+///
+/// The name of the upstream is `do`, and `do` is a reserved word of the
+/// toolchain, so the port calls the method `do_operator`.
+pub fn CausalEstimator::do_operator(
+  self : CausalEstimator,
+  x : Double,
+  data : @api.DataFrame,
+) -> Double {
+  @utils.mean(self.interventional_outcomes(data, x))
+}
+
+///|
 /// Fit the estimator on the given data.
 ///
 /// The estimator remembers the adjustment variables of its estimand, fits the

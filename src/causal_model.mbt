@@ -556,6 +556,45 @@ pub fn CausalModel::estimate_effect(
 }
 
 ///|
+/// The value of the outcome when the treatment is intervened on.
+///
+/// This is the port of `dowhy.causal_model.CausalModel.do`.
+///
+/// The `method_name` names the estimator, the way it does in `estimate_effect`,
+/// and the `estimand` is the estimand of the caller. The upstream builds the
+/// estimator with the estimand of the caller and it fits it on the data of the
+/// model, and the port does the same.
+///
+/// The upstream returns the number of the interventional outcomes, even though
+/// its documentation promises an estimate object, and the port returns the
+/// number.
+///
+/// The name of the upstream is `do`, and `do` is a reserved word of the
+/// toolchain, so the port calls the method `do_operator`.
+pub fn CausalModel::do_operator(
+  self : CausalModel,
+  x : Double,
+  estimand : @identifiers.IdentifiedEstimand,
+  method_name : String,
+  fit_estimator~ : Bool = true,
+) -> Double {
+  let identifier = first_segment(method_name)
+  if !self.estimand.has_estimand(identifier) {
+    let _ = self.identify_effect(identifier)
+  }
+  estimand.set_identifier_method(identifier)
+  let estimator = self.build_estimator(method_name).with_estimand(estimand)
+  if fit_estimator {
+    let modifiers = self.graph.get_effect_modifiers(
+      self.treatment,
+      self.outcome,
+    )
+    estimator.fit(self.data, modifiers)
+  }
+  estimator.do_operator(x, self.data)
+}
+
+///|
 /// Refute the estimate.
 ///
 /// `refuter_name` is one of `"bootstrap"`, `"placebo"`, `"subset"`,

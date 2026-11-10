@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.71.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.72.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -15,7 +15,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Area | Upstream | This port |
 | --- | --- | --- |
 | Causal graph, d-separation | `dowhy.graph`, `dowhy.causal_graph` | ported (the graph, the d-separation, the backdoor and the frontdoor paths, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site) |
-| Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators) |
+| Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators, the **refutation of the graph** and the **do operator**) |
 | Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity) |
 | Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome, **with its random forest, its neural network and its support vector regressor**, and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis**, its **E-value analysis** and the **default strength** it infers for its confounder --, the **significance test** of the refutations, the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules, and the **graph refutation**, which tests the conditional independences the graph entails against the data) |
@@ -94,7 +94,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `graph` | `riantr/moonbit_dowhy/graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
 | `identifiers` | `riantr/moonbit_dowhy/identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `riantr/moonbit_dowhy/model` | `dowhy.causal_estimator` (the estimate objects) |
-| `estimators` | `riantr/moonbit_dowhy/estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones and the two stage regression of the frontdoor and of the mediation estimand |
+| `estimators` | `riantr/moonbit_dowhy/estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand and the **do operator** |
 | `refuters` | `riantr/moonbit_dowhy/refuters` | `dowhy.causal_refuters`, with the **graph refutation** |
 | `overrule` | `riantr/moonbit_dowhy/overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `datasets` | `riantr/moonbit_dowhy/datasets` | `dowhy.datasets` (the `linear_dataset` generator, the sales data set and the **random graph** data set) and the deterministic test fixtures |
@@ -130,6 +130,10 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   columns of the two variables and not their values, so it is the negative
   entropy of the conditioning columns. The port reproduces that number,
   because the verdict of the graph refuter of the upstream depends on it.
+- The do operator of the upstream returns the mean of the interventional
+  outcomes of the data, which is the value of the outcome under the
+  intervention and not the difference between the two arms. The port returns
+  the same number.
 - The propensity score estimators trim the scores of the data only where the
   upstream trims them: the inverse propensity score weighting estimator trims
   them to `0.05` and `0.95` and the doubly robust estimator trims them to
@@ -1274,6 +1278,12 @@ following ways:
   column, so a column of integers is discrete and a column of floating point
   numbers is continuous. The port reads the kind of a column from its payload,
   so a column of text is discrete and a column of numbers is continuous.
+- The do operator of the upstream is named `do`, and `do` is a reserved word of
+  the toolchain, so the port calls it `do_operator`. The upstream reads the
+  identifier of the estimator before it is bound when the caller gives no name
+  of a method, and it raises a `NameError`; the port takes the name of the
+  method. The upstream documents the do operator of the model as an estimate
+  object and returns a number, and the port returns the number.
 
 ## Development
 

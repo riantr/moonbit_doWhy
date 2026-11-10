@@ -3249,6 +3249,49 @@ The graph refutation.
 
 [0.0.71]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.71
 
+## [0.0.72] - 2026-11-11
+
+The do operator.
+
+### Added
+
+- the do operator of the estimator, in `src/estimators/fit.mbt`: the port of
+  `dowhy.causal_estimator.CausalEstimator.do`. It returns the mean of the
+  interventional outcomes of the data, which is the value of the outcome when
+  the treatment is set to a value and not the difference between the two arms.
+- the do operator of the model, in `src/causal_model.mbt`: the port of
+  `dowhy.causal_model.CausalModel.do`. It builds the estimator of the given
+  method with the estimand of the caller, it fits it on the data of the model
+  and it returns the value of the outcome under the intervention.
+- four cases in `src/tests/estimators.mbt`: the value of the do operator of the
+  model is the number of the upstream, the value of the do operator of the
+  estimator does not move when the rows of the data are permuted, it moves when
+  the values of the encoded columns move, and the do operator of the model is
+  the value of the outcome under the intervention. The first two assertions
+  are the ones of the second test of the base class of the upstream estimator
+  tests.
+- the numbers of the upstream on the fixture of the port in
+  `_verify/do_operator_reference.py`: the script runs the upstream
+  `LinearRegressionEstimator` on the very rows of the port and prints the value
+  of its do operator, on the rows in their order and on the rows in another
+  order.
+
+### Notes
+
+- The name of the upstream is `do`, and `do` is a reserved word of the
+  toolchain, so the port calls the method `do_operator`.
+- The upstream reads the identifier of the estimator before it is bound when
+  the caller gives no name of a method, and it raises a `NameError`. The port
+  takes the name of the method.
+- The upstream documents the do operator of the model as an estimate object and
+  returns the number of the interventional outcomes. The port returns the
+  number.
+- The upstream keeps the data it was fitted on in its estimator and reads it
+  when the caller gives none. The port keeps no data in the estimator, so the
+  data is an argument of the do operator.
+
+[0.0.72]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.72
+
 ## [0.0.70] - 2026-11-11
 
 The plotting layer.

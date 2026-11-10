@@ -42,6 +42,8 @@ and costly to debug.
   `x.round()`, `x.trunc()`, `x.signum()` are methods; `ln`, `exp`, `pow`
   live in the `math` package (`@math.ln(x)`); `@math.PI` is the constant.
 - `var` is a reserved word — do not use it as an identifier.
+- **`do` is a reserved word**, so the port calls the do operator of the
+  estimator and of the model `do_operator`.
 - **`test` is a reserved word**, so it cannot be used as a method name either:
   the independence test of the `cm` package exposes `FisherZ::check(..)`, not
   `FisherZ::test(..)`.
@@ -477,6 +479,15 @@ statsmodels / scikit-learn conventions are deliberate:
   that are conditioned on, which cannot be hashed, so the port keys the results
   with the text of the two variables and of the variables that are conditioned
   on.
+- The do operator of the `estimators` package and of the root package is the
+  port of `dowhy.causal_estimator.CausalEstimator.do` and of
+  `dowhy.causal_model.CausalModel.do`: it returns the mean of the
+  interventional outcomes of the data, which is the value of the outcome under
+  the intervention and not the difference between the two arms. The upstream
+  keeps the data it was fitted on in its estimator, and the port keeps no data
+  in the estimator, so the data is an argument of the method. The name of the
+  upstream is `do`, and `do` is a reserved word of the toolchain, so the port
+  calls the method `do_operator`.
 - The entropy of the `gcm` package is the entropy of `scipy.stats.entropy`, so
   it is measured in nats and the probabilities are normalised by their sum
   before the entropy is computed. The digamma function of the `utils` package
@@ -1181,7 +1192,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
 | `identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `dowhy.causal_estimator` (the estimate objects) |
-| `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones and the two stage regression of the frontdoor and of the mediation estimand |
+| `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand and the do operator |
 | `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations and the graph refutation |
 | `overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
@@ -1268,6 +1279,11 @@ README makes, so they are tracked in the repository:
   cannot store the one element array that its `convert_to_binary` returns in
   the output of a scalar, so the script restores the behaviour of NumPy 1 for
   it.
+- `do_operator_reference.py` runs the upstream `LinearRegressionEstimator` on
+  the rows of the fixture of the tests of the port and prints the value of its
+  do operator, on the rows in their order and on the rows in another order. It
+  is the evidence for the do operator of the port, and its two numbers are the
+  numbers of the port.
 - `cit_reference.py` runs the upstream `dowhy.utils.cit` on the rows of the
   fixture of the tests of the `utils` package and prints the partial
   correlation, the Spearman one, the confidence interval of a correlation, the
