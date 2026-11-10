@@ -1,6 +1,6 @@
 name = "riantr/moonbit_dowhy"
 
-version = "0.0.52"
+version = "0.0.53"
 
 readme = "README.mbt.md"
 

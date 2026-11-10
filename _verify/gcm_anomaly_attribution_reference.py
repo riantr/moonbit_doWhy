@@ -12,7 +12,10 @@ numbers the MoonBit port has to reproduce:
   * the total anomaly score of every anomaly sample, which is the sum of the
     contributions,
   * the contribution of every upstream node to the anomaly score of every
-    anomaly sample of the non-trivial graph, whose relations are non-linear.
+    anomaly sample of the non-trivial graph, whose relations are non-linear,
+  * the contribution of every column to the anomaly score of every anomaly
+    sample of the simple Gaussian data, which is attributed without a causal
+    model.
 
 The fixtures are the ones of the upstream test file, with the draws of the
 upstream replaced by the draws of the generator of the port. The generator of
@@ -68,6 +71,10 @@ NUM_ROWS = 5000
 # draws ten thousand of them.
 NUM_ROWS_NON_LINEAR = 10000
 
+# The number of the rows of the fixture of the simple Gaussian data. The
+# upstream draws five thousand of them.
+NUM_ROWS_GAUSSIAN = 5000
+
 # The upstream modules of the layer.
 ML = None
 MECHANISMS = None
@@ -77,6 +84,7 @@ FITTING = None
 AUTO = None
 SCORERS = None
 ANOMALY = None
+DENSITY = None
 
 
 class PortRandom:
@@ -175,7 +183,7 @@ def expose_upstream_packages() -> None:
 
 def load_upstream() -> None:
     """Loads the upstream modules of the layer."""
-    global ML, MECHANISMS, CAUSAL_MODELS, STOCHASTIC, FITTING, AUTO, SCORERS, ANOMALY
+    global ML, MECHANISMS, CAUSAL_MODELS, STOCHASTIC, FITTING, AUTO, SCORERS, ANOMALY, DENSITY
 
     register_missing_modules()
     upstream_gcm._stub_packages()
@@ -192,7 +200,7 @@ def load_upstream() -> None:
     AUTO = load("dowhy.gcm.auto")
     load("dowhy.gcm.stats")
     load("dowhy.gcm.shapley")
-    load("dowhy.gcm.density_estimators")
+    DENSITY = load("dowhy.gcm.density_estimators")
 
     # The stub of the package holds no causal mechanism and no causal model, so
     # the names the upstream module imports are set here. The names have to be
@@ -292,6 +300,45 @@ def non_linear_fixture() -> tuple[object, pd.DataFrame, pd.DataFrame]:
     return causal_model, training_data, anomaly_data
 
 
+def gaussian_observations() -> np.ndarray:
+    """The observations of the fixture of the simple Gaussian data.
+
+    The four columns of the fixture share a common cause, so they are pairwise
+    dependent, and the upstream notes that the confounder is there to show some
+    robustness.
+    """
+    rng = fixture_rng(9)
+    common = rng.normals(NUM_ROWS_GAUSSIAN)
+    columns = []
+    for _ in range(4):
+        columns.append(common + rng.normals(NUM_ROWS_GAUSSIAN))
+    return np.column_stack(columns)
+
+
+def gaussian_samples() -> np.ndarray:
+    """The anomaly samples of the case of the information theoretic score."""
+    return np.array(
+        [
+            [3.0, 0.0, 0.0, 0.0],
+            [0.0, 3.0, 0.0, 0.0],
+            [0.0, 0.0, 3.0, 0.0],
+            [0.0, 3.0, 3.0, 0.0],
+            [3.0, 0.0, 3.0, 3.0],
+        ]
+    )
+
+
+def gaussian_relevance_samples() -> np.ndarray:
+    """The anomaly samples of the case of the feature relevance."""
+    return np.array(
+        [
+            [3.0, 0.0, 0.0, 0.0],
+            [0.0, 3.0, 3.0, 0.0],
+            [3.0, 0.0, 3.0, 3.0],
+        ]
+    )
+
+
 def total_anomaly_score(training_data: pd.DataFrame, anomaly_sample: np.ndarray) -> float:
     """The anomaly score of the target, like the upstream test computes it."""
     distribution_samples = training_data["X3"].to_numpy()
@@ -367,6 +414,37 @@ def main() -> None:
     for i in range(3):
         total = sum(scores[node][i] for node in scores)
         show(f"non_linear.total[{i}]", total)
+
+    print("== the attribution of the simple Gaussian data without a causal model ==")
+    observations = gaussian_observations()
+    samples = gaussian_samples()
+    np.random.seed(SEED)
+    scorer = SCORERS.InverseDensityScorer(DENSITY.GaussianMixtureDensityEstimator())
+    scorer.fit(observations)
+    contributions = ANOMALY.attribute_anomaly_scores(
+        samples,
+        observations,
+        scorer.score,
+        False,
+    )
+    for i in range(contributions.shape[0]):
+        show_list(f"gaussian[{i}]", contributions[i])
+        show(f"gaussian.argmax[{i}]", int(np.argmax(contributions[i])))
+
+    relevance_samples = gaussian_relevance_samples()
+    np.random.seed(SEED)
+    relevance_scorer = SCORERS.InverseDensityScorer(
+        DENSITY.GaussianMixtureDensityEstimator(num_components=5)
+    )
+    relevance_scorer.fit(observations)
+    relevance = ANOMALY.attribute_anomaly_scores(
+        relevance_samples,
+        observations,
+        relevance_scorer.score,
+        True,
+    )
+    for i in range(relevance.shape[0]):
+        show_list(f"gaussian_relevance[{i}]", relevance[i])
 
 
 if __name__ == "__main__":

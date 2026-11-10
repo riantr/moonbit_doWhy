@@ -2681,3 +2681,46 @@ The attribution of the anomalies with a non-linear mechanism.
   the global generator of numpy.
 
 [0.0.52]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.52
+
+## [0.0.53] - 2026-11-12
+
+The attribution of the anomalies without a causal model.
+
+### Added
+
+- the attribution of the anomalies of a sample without a causal model in the
+  `gcm` package, the port of `dowhy.gcm.anomaly.attribute_anomaly_scores`: the
+  contribution of every column of the sample to its anomaly score is the
+  Shapley value of the set function of the score, which permutes the rows of
+  the columns that are not in the subset, so that the subset represents an
+  interventional distribution.
+- the cases of the upstream test file `tests/gcm/test_anomaly_attribution.py`
+  that attribute the anomalies of the simple Gaussian data, in
+  `src/gcm/anomaly_attribution_test.mbt`: the attribution with the information
+  theoretic score and the attribution with the feature relevance.
+- the numbers of the upstream on the fixture of the simple Gaussian data in
+  `_verify/gcm_anomaly_attribution_reference.py`.
+
+### Changed
+
+- the header of the test file of the attribution of the anomalies records that
+  the port mirrors the cases of the upstream that attribute the anomalies
+  without a causal model.
+
+### Notes
+
+- The upstream draws the centres of the components of its Gaussian mixture at
+  random and does not seed its generator, so the density of the upstream and
+  the density of the port are different numbers, and the contributions of the
+  upstream and of the port are different numbers as well. The two make the
+  same decision on the fixture of the port: the anomalous column of every
+  sample is the column with the largest contribution, and the contributions of
+  the columns that are not anomalous are negative in the case of the feature
+  relevance.
+- The upstream marks its case of the feature relevance as flaky, and the
+  numbers it computes on the fixture of the port do not satisfy its own
+  assertion for the third sample: the contribution of its fourth column is
+  negative where the assertion wants it to be positive. The numbers of the
+  port do satisfy it.
+
+[0.0.53]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.53

@@ -858,6 +858,19 @@ statsmodels / scikit-learn conventions are deliberate:
   matrices of the port hold numbers only, so the encoding happens at the call
   site of the test. The p-values of the port and of the upstream differ by less than
   `5e-12` on the categorical fixture of the test.
+- The attribution of the anomalies without a causal model of the `gcm` package
+  is the port of `dowhy.gcm.anomaly.attribute_anomaly_scores`. The set function
+  of the score permutes the rows of the columns that are not in the subset, so
+  that the subset represents an interventional distribution, and it replaces the
+  columns that are in the subset with the values of the anomaly sample. The
+  score of a sample is either the information theoretic score, which is the
+  logarithm of the relative frequency of the scores of the distribution that
+  are at least the score of the anomaly, or the deviation of the score from its
+  expectation, which is the feature relevance of the upstream. The upstream
+  draws the centres of the components of its Gaussian mixture at random and does
+  not seed its generator, so the contributions of the upstream and of the port
+  are different numbers; the two make the same decision on the fixture of the
+  port.
 - The mechanism of a node of the `gcm` package can be the model of an equation
   of the port, which is the relation of the node itself and not a fit of it.
   The upstream sets such a mechanism to a model of its own, and the port
@@ -1077,7 +1090,8 @@ README makes, so they are tracked in the repository:
   the feature relevance, and the total anomaly score -- with the upstream
   `dowhy.gcm.anomaly.attribute_anomalies` code, which is where the expectations
   of the tests of the layer come from. It computes the numbers of the non-trivial
-  graph, whose relations are non-linear, as well. The constructor of
+  graph, whose relations are non-linear, and the numbers of the attribution
+  without a causal model, as well. The constructor of
   `InvertibleStructuralCausalModel` of the upstream imports the module
   `dowhy.causal_model`, which pulls in the whole graph learning stack of the
   upstream, so the module is stubbed out with a placeholder class, the way the

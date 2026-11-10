@@ -573,13 +573,11 @@ fn AttributionState::set_function(
     if self.attribute_mean_deviation {
       @utils.mean(scores) - self.expectation_of_score
     } else {
-      let mut count = 0.0
+      let conditions : Array[Bool] = []
       for score in scores {
-        if score >= anomaly_score {
-          count = count + 1.0
-        }
+        conditions.push(score >= anomaly_score)
       }
-      @math.ln((count + 0.5) / (scores.length().to_double() + 0.5))
+      @math.ln(relative_frequency(conditions))
     }
   }
 }
@@ -688,6 +686,103 @@ pub fn attribute_anomalies(
     result.set(nodes_order[j], values)
   }
   result
+}
+
+///|
+/// The relative frequency of the given conditions.
+///
+/// This is the port of `dowhy.gcm.anomaly._relative_frequency`, which turns a
+/// count into a probability: the number of the conditions that hold, plus a
+/// half, over the number of the conditions, plus a half.
+pub fn relative_frequency(conditions : Array[Bool]) -> Double {
+  let mut count = 0.0
+  for condition in conditions {
+    if condition {
+      count = count + 1.0
+    }
+  }
+  (count + 0.5) / (conditions.length().to_double() + 0.5)
+}
+
+///|
+/// The contribution of every feature to the anomaly score of every anomaly
+/// sample.
+///
+/// This is the port of `dowhy.gcm.anomaly.attribute_anomaly_scores`, which
+/// attributes the anomaly score of a sample to its features without a causal
+/// model. The score of a sample is the one of the scoring function the caller
+/// gives, and the contribution of a feature is the Shapley value of the set
+/// function of the score.
+///
+/// The set function permutes the rows of the features that are not in the
+/// subset, so that the subset represents an interventional distribution, and
+/// it replaces the features that are in the subset with the values of the
+/// anomaly sample.
+///
+/// The score of the anomaly is either the information theoretic score, which is
+/// the logarithm of the relative frequency of the scores of the distribution
+/// that are at least the score of the anomaly, or the deviation of the score
+/// from its expectation, which is the feature relevance of the upstream.
+///
+/// The upstream computes the Shapley values of every sample at once, while the
+/// Shapley estimator of the port takes one set function at a time, so the port
+/// computes the values of every sample on its own. The exact estimator of the
+/// port evaluates the same subsets of the players as the upstream, so the
+/// contributions are the same numbers.
+pub fn attribute_anomaly_scores(
+  anomaly_samples : @utils.Matrix,
+  distribution_samples : @utils.Matrix,
+  score : (@utils.Matrix) -> Array[Double],
+  attribute_mean_deviation : Bool,
+  shapley_config : ShapleyConfig,
+  rng : @utils.Random,
+) -> @utils.Matrix {
+  let mut expectation_of_score = 0.0
+  let mut anomaly_scores : Array[Double] = []
+  if attribute_mean_deviation {
+    expectation_of_score = @utils.mean(score(distribution_samples))
+  } else {
+    anomaly_scores = score(anomaly_samples)
+  }
+  let contributions : Array[Array[Double]] = []
+  for i in 0..<anomaly_samples.nrows() {
+    let set_function = fn(subset : Array[Bool]) -> Double {
+      let to_permute : Array[Int32] = []
+      for j in 0..<subset.length() {
+        if !subset[j] {
+          to_permute.push(j)
+        }
+      }
+      let feature_samples = permute_features(
+        distribution_samples, to_permute, true, rng,
+      )
+      for j in 0..<subset.length() {
+        if subset[j] {
+          for row in 0..<feature_samples.nrows() {
+            feature_samples.set(row, j, anomaly_samples.get(i, j))
+          }
+        }
+      }
+      let scores = score(feature_samples)
+      if attribute_mean_deviation {
+        @utils.mean(scores) - expectation_of_score
+      } else {
+        let conditions : Array[Bool] = []
+        for value in scores {
+          conditions.push(value >= anomaly_scores[i])
+        }
+        @math.ln(relative_frequency(conditions))
+      }
+    }
+    contributions.push(
+      estimate_shapley_values(
+        set_function,
+        anomaly_samples.ncols(),
+        shapley_config,
+      ),
+    )
+  }
+  @utils.Matrix::from_rows(contributions)
 }
 
 ///|

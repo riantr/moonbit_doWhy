@@ -17,10 +17,11 @@
 /// upstream reference, with a tolerance that covers the difference of the two
 /// generators.
 ///
-/// The cases the port does not mirror are the two of the upstream that
-/// attribute the anomalies of a sample without a causal model, because the
-/// scorer of the port scores one variable at a time and the scorer of the
-/// upstream scores a sample of several variables at once.
+/// Every case of the upstream test file is mirrored now: the attribution of
+/// the simple Gaussian data with the information theoretic score and with the
+/// feature relevance, the attribution of the causal chain with the two scores,
+/// the attribution of the non-trivial graph, whose relations are non-linear,
+/// and the relative frequency of the conditions.
 
 ///|
 /// The number of the rows of the fixture of the causal chain.
@@ -443,4 +444,201 @@ test "given a non-trivial graph with non-linear relationships when attributing t
     )
   }
   assert_true((anomaly_sum_of(attribution, 2) - 4.89959124534071).abs() <= 0.6)
+}
+
+///|
+/// The number of the rows of the fixture of the simple Gaussian data.
+const ANOMALY_NUM_ROWS_GAUSSIAN : Int32 = 5000
+
+///|
+/// The observations of the fixture of the simple Gaussian data.
+///
+/// The fixture is the one of the upstream test file: the four columns share a
+/// common cause, so they are pairwise dependent, and the upstream notes that
+/// the confounder is there to show some robustness.
+fn anomaly_gaussian_observations() -> @utils.Matrix {
+  let rng = anomaly_rng(9)
+  let common = anomaly_normals(rng, ANOMALY_NUM_ROWS_GAUSSIAN)
+  let columns : Array[Array[Double]] = []
+  for _ in 0..<4 {
+    columns.push(
+      anomaly_sum(common, anomaly_normals(rng, ANOMALY_NUM_ROWS_GAUSSIAN)),
+    )
+  }
+  @utils.Matrix::from_columns(columns)
+}
+
+///|
+/// The anomaly samples of the fixture of the simple Gaussian data.
+///
+/// This is the fixture of the upstream test file: the first sample is
+/// anomalous in its first column, the second one in its second column, the
+/// third one in its third column, the fourth one in its second and third
+/// columns, and the fifth one in its first, third and fourth columns.
+fn anomaly_gaussian_samples() -> @utils.Matrix {
+  @utils.Matrix::from_rows([
+    [3.0, 0.0, 0.0, 0.0],
+    [0.0, 3.0, 0.0, 0.0],
+    [0.0, 0.0, 3.0, 0.0],
+    [0.0, 3.0, 3.0, 0.0],
+    [3.0, 0.0, 3.0, 3.0],
+  ])
+}
+
+///|
+/// The anomaly samples of the case of the feature relevance.
+///
+/// This is the fixture of the upstream test file: the first sample is
+/// anomalous in its first column, the second one in its second and third
+/// columns, and the third one in its first, third and fourth columns.
+fn anomaly_gaussian_relevance_samples() -> @utils.Matrix {
+  @utils.Matrix::from_rows([
+    [3.0, 0.0, 0.0, 0.0],
+    [0.0, 3.0, 3.0, 0.0],
+    [3.0, 0.0, 3.0, 3.0],
+  ])
+}
+
+///|
+/// The index of the largest contribution of the given sample.
+fn anomaly_argmax(contributions : @utils.Matrix, index : Int32) -> Int32 {
+  let mut best = 0
+  for j in 1..<contributions.ncols() {
+    if contributions.get(index, j) > contributions.get(index, best) {
+      best = j
+    }
+  }
+  best
+}
+
+///|
+/// The sum of the contributions of the given sample.
+fn anomaly_row_sum(contributions : @utils.Matrix, index : Int32) -> Double {
+  let mut total = 0.0
+  for j in 0..<contributions.ncols() {
+    total = total + contributions.get(index, j)
+  }
+  total
+}
+
+///|
+/// The score of the inverse of the density of the observations.
+///
+/// This is the score of the upstream test file, which uses the inverse density
+/// scorer of a Gaussian mixture.
+fn anomaly_inverse_density_score(
+  observations : @utils.Matrix,
+  num_components : Int32,
+) -> (@utils.Matrix) -> Array[Double] {
+  let estimator = @gcm.GaussianMixtureDensityEstimator::new(num_components~)
+  estimator.fit(observations)
+  fn(samples : @utils.Matrix) -> Array[Double] {
+    let out : Array[Double] = []
+    for density in estimator.density(samples) {
+      out.push(1.0 / density)
+    }
+    out
+  }
+}
+
+///|
+/// test "given simple gaussian data when attributing the anomalies with the information theoretic score then report the anomalous column"
+///
+/// This is the case of the upstream
+/// `test_given_simple_gaussian_data_when_attribute_anomaly_scores_with_it_score_then_returns_qualitatively_correct_results`.
+test "given simple gaussian data when attributing the anomalies with the information theoretic score then report the anomalous column" {
+  let observations = anomaly_gaussian_observations()
+  let samples = anomaly_gaussian_samples()
+  let score = anomaly_inverse_density_score(observations, 0)
+  let contributions = @gcm.attribute_anomaly_scores(
+    samples,
+    observations,
+    score,
+    false,
+    anomaly_shapley_config(),
+    anomaly_rng(10),
+  )
+  // The first sample is anomalous in its first column.
+  assert_eq(anomaly_argmax(contributions, 0), 0)
+  assert_true(contributions.get(0, 0) > contributions.get(0, 1) * 3.0)
+  assert_true(contributions.get(0, 0) > contributions.get(0, 2) * 3.0)
+  assert_true(contributions.get(0, 0) > contributions.get(0, 3) * 3.0)
+  // The second sample is anomalous in its second column.
+  assert_eq(anomaly_argmax(contributions, 1), 1)
+  assert_true(contributions.get(1, 1) > contributions.get(1, 0) * 3.0)
+  assert_true(contributions.get(1, 1) > contributions.get(1, 2) * 3.0)
+  assert_true(contributions.get(1, 1) > contributions.get(1, 3) * 3.0)
+  // The third sample is anomalous in its third column.
+  assert_eq(anomaly_argmax(contributions, 2), 2)
+  assert_true(contributions.get(2, 2) > contributions.get(2, 0) * 3.0)
+  assert_true(contributions.get(2, 2) > contributions.get(2, 1) * 3.0)
+  assert_true(contributions.get(2, 2) > contributions.get(2, 3) * 3.0)
+  // The fourth sample is anomalous in its second and third columns, so the
+  // contributions of the two are about the same and the ones of the other two
+  // are much smaller.
+  assert_true(contributions.get(3, 1) > contributions.get(3, 0) * 3.0)
+  assert_true(contributions.get(3, 2) > contributions.get(3, 0) * 3.0)
+  assert_true(contributions.get(3, 1) > contributions.get(3, 3) * 3.0)
+  assert_true(contributions.get(3, 2) > contributions.get(3, 3) * 3.0)
+  assert_true((contributions.get(3, 1) - contributions.get(3, 2)).abs() <= 0.5)
+  // The fifth sample is anomalous in its first, third and fourth columns.
+  assert_true(contributions.get(4, 0) > contributions.get(4, 1) * 3.0)
+  assert_true(contributions.get(4, 2) > contributions.get(4, 1) * 3.0)
+  assert_true(contributions.get(4, 3) > contributions.get(4, 1) * 3.0)
+  assert_true((contributions.get(4, 0) - contributions.get(4, 2)).abs() <= 0.5)
+  assert_true((contributions.get(4, 2) - contributions.get(4, 3)).abs() <= 0.5)
+}
+
+///|
+/// test "given simple gaussian data when attributing the anomalies with the feature relevance then report the anomalous column"
+///
+/// This is the case of the upstream
+/// `test_given_simple_gaussian_data_when_attribute_anomaly_scores_with_feature_relevance_then_returns_qualitatively_correct_results`.
+test "given simple gaussian data when attributing the anomalies with the feature relevance then report the anomalous column" {
+  let observations = anomaly_gaussian_observations()
+  let samples = anomaly_gaussian_relevance_samples()
+  let score = anomaly_inverse_density_score(observations, 5)
+  let contributions = @gcm.attribute_anomaly_scores(
+    samples,
+    observations,
+    score,
+    true,
+    anomaly_shapley_config(),
+    anomaly_rng(11),
+  )
+  // The first sample is anomalous in its first column, so its contribution is
+  // positive and the contributions of the other columns are negative.
+  assert_eq(anomaly_argmax(contributions, 0), 0)
+  assert_true(contributions.get(0, 0) > 0.0)
+  assert_true(contributions.get(0, 1) < 0.0)
+  assert_true(contributions.get(0, 2) < 0.0)
+  assert_true(contributions.get(0, 3) < 0.0)
+  // The second sample is anomalous in its second and third columns.
+  assert_true(contributions.get(1, 1) > 0.0)
+  assert_true(contributions.get(1, 2) > 0.0)
+  assert_true(contributions.get(1, 0) < 0.0)
+  assert_true(contributions.get(1, 3) < 0.0)
+  // The third sample is anomalous in its first, third and fourth columns.
+  assert_true(contributions.get(2, 0) > 0.0)
+  assert_true(contributions.get(2, 2) > 0.0)
+  assert_true(contributions.get(2, 3) > 0.0)
+  assert_true(contributions.get(2, 1) < 0.0)
+  // The contributions of a sample add up to the score of the sample less the
+  // expectation of the score.
+  let expectation = @utils.mean(score(observations))
+  for i in 0..<samples.nrows() {
+    let anomaly_score = score(@utils.Matrix::from_rows([samples.row(i)]))[0]
+    let expected = anomaly_score - expectation
+    let total = anomaly_row_sum(contributions, i)
+    assert_true((total - expected).abs() <= expected.abs() * 1.0e-6)
+  }
+}
+
+///|
+/// test "the relative frequency of the conditions is the fraction of the conditions that hold"
+///
+/// This is the case of the upstream `test_relative_frequency`.
+test "the relative frequency of the conditions is the fraction of the conditions that hold" {
+  let frequency = @gcm.relative_frequency([true, true, false, true])
+  assert_true((frequency - 4.0 / 5.0).abs() < 0.1)
 }
