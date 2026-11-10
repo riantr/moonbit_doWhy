@@ -195,6 +195,76 @@ pub fn unit_change_nonlinear_input_only(
 }
 
 ///|
+/// The contributions of the inputs and of the mechanism to the change of the
+/// output of a mechanism.
+///
+/// This is the port of `dowhy.gcm.unit_change.unit_change`. The upstream chooses
+/// between the linear and the non-linear attribution with the kind of the
+/// mechanism, and it attributes the change to the mechanism only when a
+/// foreground mechanism is given.
+///
+/// The upstream fits the linear model of the mechanism without an intercept in
+/// the fixtures of the layer; the port fits its model with an intercept, like
+/// the fit of the `gcm` package does everywhere else. The intercept of the
+/// fixtures of the layer is zero up to the rounding of the fit, so the
+/// contributions of the port and of the upstream agree to the tolerance of the
+/// tests.
+pub fn unit_change(
+  background_mechanism : PredictionModel,
+  background_data : @api.DataFrame,
+  foreground_data : @api.DataFrame,
+  input_column_names : Array[String],
+  foreground_mechanism : PredictionModel?,
+  shapley_config : ShapleyConfig?,
+) -> @api.DataFrame {
+  match foreground_mechanism {
+    Some(foreground) =>
+      if can_evaluate_unit_change_linear(background_mechanism) {
+        unit_change_linear(
+          background_mechanism, background_data, foreground, foreground_data, input_column_names,
+        )
+      } else {
+        unit_change_nonlinear(
+          background_mechanism,
+          background_data,
+          foreground,
+          foreground_data,
+          input_column_names,
+          unit_change_shapley_config_of(shapley_config),
+        )
+      }
+    None =>
+      if can_evaluate_unit_change_linear(background_mechanism) {
+        unit_change_linear_input_only(
+          background_mechanism, background_data, foreground_data, input_column_names,
+        )
+      } else {
+        unit_change_nonlinear_input_only(
+          background_mechanism,
+          background_data,
+          foreground_data,
+          input_column_names,
+          unit_change_shapley_config_of(shapley_config),
+        )
+      }
+  }
+}
+
+///|
+/// The given configuration, or the default configuration of the layer.
+///
+/// The default configuration is the one of the upstream, which is the automatic
+/// method of the Shapley estimator.
+fn unit_change_shapley_config_of(
+  shapley_config : ShapleyConfig?,
+) -> ShapleyConfig {
+  match shapley_config {
+    Some(config) => config
+    None => ShapleyConfig::new(ShapleyApproximationMethod::auto())
+  }
+}
+
+///|
 /// The contributions of the players to the change of the output of the given
 /// row.
 ///

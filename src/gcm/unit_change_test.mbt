@@ -20,6 +20,12 @@
 /// model, which is linear, so the tests of the layer use the non-linear
 /// attribution with the linear model of the port, which is what the upstream test
 /// file `tests/gcm/test_unit_change.py` compares against the linear attribution.
+///
+/// The port also has the dispatcher of the layer, which is the port of
+/// `dowhy.gcm.unit_change.unit_change`. The upstream chooses between the linear
+/// and the non-linear attribution with the kind of the mechanism, and it
+/// attributes the change to the mechanism only when a foreground mechanism is
+/// given. Every case of the upstream test file has a counterpart here.
 
 ///|
 /// The seed of the generators of the fixtures.
@@ -186,6 +192,50 @@ fn unit_change_unchanged_fixture() -> (@api.DataFrame, @gcm.PredictionModel) {
   )
   let data = unit_change_frame([("A", a), ("B", b), ("C", c)])
   (data, @gcm.PredictionModel::with_fixed_parameters([3.0, 2.0], 0.0))
+}
+
+///|
+/// The fixture of the single mechanism attribution.
+///
+/// The fixture is the one of the upstream test file
+/// `tests/gcm/test_unit_change.py` in the case
+/// `test_given_single_mechanism_with_default_optional_parameters_when_evaluate_unit_change_then_returns_correct_attributions_to_input_only`:
+/// the relation of the background is `C = 2A + 3B` and the mechanism is fitted
+/// on the background data.
+struct UnitChangeSingleMechanismFixture {
+  a1 : Array[Double]
+  b1 : Array[Double]
+  a2 : Array[Double]
+  b2 : Array[Double]
+  background_data : @api.DataFrame
+  foreground_data : @api.DataFrame
+  mechanism : @gcm.PredictionModel
+}
+
+///|
+/// The fixture of the single mechanism attribution.
+fn unit_change_single_mechanism_fixture() -> UnitChangeSingleMechanismFixture {
+  let rng = unit_change_rng(4)
+  let a1 = unit_change_normals(rng, UNIT_CHANGE_NUM_ROWS)
+  let b1 = unit_change_normals(rng, UNIT_CHANGE_NUM_ROWS)
+  let a2 = unit_change_normals(rng, UNIT_CHANGE_NUM_ROWS)
+  let b2 = unit_change_normals(rng, UNIT_CHANGE_NUM_ROWS)
+  let c1 = unit_change_sum(
+    unit_change_scaled(a1, 2.0),
+    unit_change_scaled(b1, 3.0),
+  )
+  {
+    a1,
+    b1,
+    a2,
+    b2,
+    background_data: unit_change_frame([("A", a1), ("B", b1)]),
+    foreground_data: unit_change_frame([("A", a2), ("B", b2)]),
+    mechanism: @gcm.PredictionModel::linear().fit(
+      @utils.Matrix::from_columns([a1, b1]),
+      c1,
+    ),
+  }
 }
 
 ///|
@@ -488,4 +538,110 @@ test "given a non-linear mechanism when attributing the change of the output wit
   assert_true(
     @gcm.can_evaluate_unit_change_nonlinear(fixture.background_mechanism),
   )
+}
+
+///|
+/// test "given a single mechanism with the default optional parameters when attributing the change of the output then report the contributions of the inputs"
+///
+/// This is the port of the upstream test
+/// `test_given_single_mechanism_with_default_optional_parameters_when_evaluate_unit_change_then_returns_correct_attributions_to_input_only`.
+/// The upstream compares the dispatcher of the layer with the attribution of the
+/// inputs alone, because the mechanism does not change; the port compares the
+/// numbers of the upstream reference as well.
+test "given a single mechanism with the default optional parameters when attributing the change of the output then report the contributions of the inputs" {
+  let fixture = unit_change_single_mechanism_fixture()
+  let contributions = @gcm.unit_change(
+    fixture.mechanism,
+    fixture.background_data,
+    fixture.foreground_data,
+    ["A", "B"],
+    None,
+    None,
+  )
+  unit_change_assert_columns(contributions, ["A", "B"])
+  let a = contributions.numeric("A")
+  let b = contributions.numeric("B")
+  for k in 0..<UNIT_CHANGE_NUM_ROWS {
+    // The contribution of an input is the coefficient of the mechanism times the
+    // change of the input. The mechanism is fitted on the background data, where
+    // the relation is `C = 2A + 3B`.
+    assert_true((a[k] - 2.0 * (fixture.a2[k] - fixture.a1[k])).abs() <= 1.0e-8)
+    assert_true((b[k] - 3.0 * (fixture.b2[k] - fixture.b1[k])).abs() <= 1.0e-8)
+  }
+  // The dispatcher of the layer falls back to the attribution of the inputs
+  // alone, because there is no foreground mechanism.
+  let expected = @gcm.unit_change_linear_input_only(
+    fixture.mechanism,
+    fixture.background_data,
+    fixture.foreground_data,
+    ["A", "B"],
+  )
+  for name in ["A", "B"] {
+    unit_change_assert_column(
+      contributions,
+      name,
+      expected.numeric(name),
+      1.0e-8,
+    )
+  }
+  // The contributions of the upstream reference.
+  unit_change_assert_column(
+    contributions,
+    "A",
+    [-0.9458823220097685, -2.2114499432330104, 0.38554121131576213],
+    1.0e-8,
+  )
+  unit_change_assert_column(
+    contributions,
+    "B",
+    [0.84768094503045, -0.9083540590816706, -4.462112542335108],
+    1.0e-8,
+  )
+  assert_true((contributions.sum("A") - -10.633708612600262).abs() <= 1.0e-8)
+  assert_true((contributions.sum("B") - 11.954356541968675).abs() <= 1.0e-8)
+}
+
+///|
+/// test "given a single non-linear mechanism when attributing the change of the output then report the contributions of the inputs"
+///
+/// This is the second half of the upstream test
+/// `test_given_single_mechanism_with_default_optional_parameters_when_evaluate_unit_change_then_returns_correct_attributions_to_input_only`.
+/// The upstream uses a random forest for its non-linear mechanism; the port uses
+/// the nearest neighbour regression, which is the non-linear model of the port.
+test "given a single non-linear mechanism when attributing the change of the output then report the contributions of the inputs" {
+  let fixture = unit_change_single_mechanism_fixture()
+  let target = unit_change_sum(
+    unit_change_scaled(fixture.a1, 2.0),
+    unit_change_scaled(fixture.b1, 3.0),
+  )
+  let non_linear = @gcm.PredictionModel::nearest_neighbour(k=5).fit(
+    @utils.Matrix::from_columns([fixture.a1, fixture.b1]),
+    target,
+  )
+  let contributions = @gcm.unit_change(
+    non_linear,
+    fixture.background_data,
+    fixture.foreground_data,
+    ["A", "B"],
+    None,
+    None,
+  )
+  unit_change_assert_columns(contributions, ["A", "B"])
+  // The dispatcher of the layer falls back to the non-linear attribution of the
+  // inputs alone, because there is no foreground mechanism.
+  let expected = @gcm.unit_change_nonlinear_input_only(
+    non_linear,
+    fixture.background_data,
+    fixture.foreground_data,
+    ["A", "B"],
+    unit_change_shapley_config(),
+  )
+  for name in ["A", "B"] {
+    unit_change_assert_column(
+      contributions,
+      name,
+      expected.numeric(name),
+      1.0e-8,
+    )
+  }
 }

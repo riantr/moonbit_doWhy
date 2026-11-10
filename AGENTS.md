@@ -406,6 +406,14 @@ statsmodels / scikit-learn conventions are deliberate:
   up to the change of the output without it. The intercept of the fixtures of
   the layer is zero up to the rounding of the fit, so the contributions of the
   port and of the upstream are the same numbers.
+- The `unit_change` dispatcher of the `gcm` package is the port of
+  `dowhy.gcm.unit_change.unit_change`. The upstream picks the linear
+  attribution when its mechanism is a `LinearPredictionModel` and the non-linear
+  attribution otherwise, and it attributes the change to the mechanism only when
+  a foreground mechanism is given. The port picks the linear branch when the
+  mechanism has coefficients, which means every model of the port but the
+  nearest neighbour one, because the linear attribution reads the coefficients
+  of the mechanism.
 - The number of the rows of a unit change attribution is the number of the rows
   of the data, and **not** the number of the input columns. `inputs_of` returns
   the columns of the data, so `background_inputs.length()` is the number of the

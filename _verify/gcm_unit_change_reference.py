@@ -10,7 +10,9 @@ layer and prints the numbers the MoonBit port has to reproduce:
   * the contributions of the inputs to the change of the output of a linear
     mechanism, without the mechanism as a player,
   * the contributions of the inputs to the change of the output of a non-linear
-    mechanism, without the mechanism as a player.
+    mechanism, without the mechanism as a player,
+  * the contributions of the dispatcher of the layer when it is given a single
+    mechanism, which are the contributions of the inputs alone.
 
 The fixtures are the ones of the upstream test file
 `tests/gcm/test_unit_change.py`, with the draws of the upstream replaced by the
@@ -208,6 +210,33 @@ def fixture() -> tuple[pd.DataFrame, pd.DataFrame, object, object]:
     return background_df, foreground_df, background_mechanism, foreground_mechanism
 
 
+def single_mechanism_fixture() -> tuple[pd.DataFrame, pd.DataFrame, object]:
+    """The background data, the foreground data and the single mechanism.
+
+    The fixture is the one of the upstream test file
+    `tests/gcm/test_unit_change.py` in the case
+    `test_given_single_mechanism_with_default_optional_parameters_when_evaluate_unit_change_then_returns_correct_attributions_to_input_only`:
+    the relation of the background is `C = 2A + 3B` and the mechanism is fitted on
+    the background data.
+    """
+    rng = fixture_rng(4)
+    a1 = rng.normals(NUM_ROWS)
+    b1 = rng.normals(NUM_ROWS)
+    a2 = rng.normals(NUM_ROWS)
+    b2 = rng.normals(NUM_ROWS)
+    c1 = 2.0 * a1 + 3.0 * b1
+
+    background_df = pd.DataFrame(data={"A": a1, "B": b1})
+    foreground_df = pd.DataFrame(data={"A": a2, "B": b2})
+
+    from sklearn.linear_model import LinearRegression
+
+    mechanism = UNIT_CHANGE.SklearnLinearRegressionModel(
+        LinearRegression(fit_intercept=False).fit(np.column_stack((a1, b1)), c1)
+    )
+    return background_df, foreground_df, mechanism
+
+
 def main() -> None:
     """Runs every fixture of the layer."""
     load_upstream()
@@ -252,6 +281,25 @@ def main() -> None:
             foreground_df,
             ["A", "B"],
             shapley_config=shapley_config,
+        ),
+    )
+    single_background, single_foreground, single_mechanism = single_mechanism_fixture()
+    show_frame(
+        "unit_change_single_mechanism",
+        UNIT_CHANGE.unit_change(
+            single_background,
+            single_foreground,
+            ["A", "B"],
+            single_mechanism,
+        ),
+    )
+    show_frame(
+        "unit_change_linear_input_only_single_mechanism",
+        UNIT_CHANGE.unit_change_linear_input_only(
+            single_mechanism,
+            single_background,
+            single_foreground,
+            ["A", "B"],
         ),
     )
 

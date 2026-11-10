@@ -3029,3 +3029,34 @@ ancestors.
   with strings.
 
 [0.0.58]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.58
+
+## [0.0.59] - 2026-11-10
+
+The dispatcher of the unit change layer.
+
+### Added
+
+- the dispatcher of the unit change layer of the `gcm` package, in
+  `src/gcm/unit_change.mbt`: the new public function `unit_change` is the port
+  of `dowhy.gcm.unit_change.unit_change`. The upstream chooses between the
+  linear and the non-linear attribution with the kind of its mechanism, and it
+  attributes the change to the mechanism only when a foreground mechanism is
+  given. The port does the same: the linear branch is the one of a mechanism
+  with coefficients, and the two input only variants are the ones of a layer
+  without a foreground mechanism.
+- two cases in `src/gcm/unit_change_test.mbt`: a single mechanism with the
+  default optional parameters reports the contributions of the inputs alone, and
+  the same holds for a single non-linear mechanism. Every case of the upstream
+  test file `tests/gcm/test_unit_change.py` has a counterpart now.
+- the numbers of the upstream on the fixtures of the port in
+  `_verify/gcm_unit_change_reference.py`: the new section runs the dispatcher of
+  the upstream on the very rows of the port and shows that its contributions are
+  the ones of the attribution of the inputs alone.
+
+### Notes
+
+- The upstream uses a random forest regressor for the non-linear branch of the
+  dispatcher; the port uses the nearest neighbour regression, which is the
+  non-linear model of the port.
+
+[0.0.59]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.59
