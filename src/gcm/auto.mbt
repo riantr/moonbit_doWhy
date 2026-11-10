@@ -218,18 +218,29 @@ pub fn AutoAssignmentSummary::to_string(self : AutoAssignmentSummary) -> String 
 /// The deviations from the upstream are the following ones. The upstream
 /// reports the performances of the models it evaluated; the port reports them
 /// as well, and they are the performances of the models of the port. The
-/// upstream takes the experimental flag `experimental_allow_nans`; the port
-/// has no missing values, so the flag is not there. The upstream shuffles the
-/// rows of the cross validation of the selection with the global generator of
-/// numpy; the port shuffles them with its own generator, whose seed is the
-/// argument of the function.
+/// upstream takes the experimental flag `experimental_allow_nans`, which the
+/// port takes as well: the assignment stops when the data holds a missing
+/// value and the flag is not set, the way the upstream raises. The upstream
+/// fits its models on the rows that hold no missing value in their target and
+/// keeps the rows whose features hold a missing value, because its histogram
+/// gradient boosting model reads them; the port has no model that reads them,
+/// so it drops the rows that hold a missing value in a feature as well. The
+/// upstream shuffles the rows of the cross validation of the selection with
+/// the global generator of numpy; the port shuffles them with its own
+/// generator, whose seed is the argument of the function.
 pub fn assign_causal_mechanisms(
   causal_model : ProbabilisticCausalModel,
   based_on : @api.DataFrame,
   quality : AssignmentQuality,
   override_models : Bool,
   seed~ : UInt64 = 0UL,
+  allow_nans~ : Bool = false,
 ) -> AutoAssignmentSummary {
+  if !allow_nans && based_on.has_missing_values() {
+    abort(
+      "Data contains NaN! This is currently only supported when setting experimental_allow_nans to True and only for missing data in numerical features. Note that not all GCM features support missing data yet!",
+    )
+  }
   let summary : AutoAssignmentSummary = { entries: [], }
   for node in causal_model.graph.topological_order() {
     if !override_models && causal_model.has_causal_mechanism(node) {
@@ -295,9 +306,13 @@ pub fn assign_causal_mechanism_node(
     return []
   }
   let parents = causal_model.graph.ordered_predecessors(node)
+  // The rows that hold a missing value are left out of the selection, the way
+  // the upstream leaves the rows whose target holds a missing value out of it.
+  let frame = based_on.select(parents + [node])
+  let complete = frame.complete_rows()
   let selection = select_model(
-    based_on.select(parents),
-    based_on.select([node]),
+    frame.select(parents).take_rows(complete),
+    frame.select([node]).take_rows(complete),
     quality,
     seed,
   )

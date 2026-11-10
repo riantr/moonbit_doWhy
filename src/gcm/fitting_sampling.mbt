@@ -92,13 +92,21 @@ pub fn fit_causal_model_of_target(
           " has to be a continuous distribution, because the column of the node holds numbers",
         )
       }
-      let fitted = root_model.fit(training_data.numeric(target_node))
+      // The rows whose value is a missing value are left out of the
+      // distribution, the way the upstream leaves them out of it.
+      let fitted = root_model.fit(
+        without_missing_values(training_data.numeric(target_node)),
+      )
       causal_model.set_root_model(target_node, fitted)
     }
   } else {
     let encoder = ParentEncoder::fit(training_data, parents)
     causal_model.set_encoder(target_node, encoder)
     let x = encoder.design_matrix(training_data, parents)
+    // The rows that hold a missing value are left out of the fit, the way the
+    // upstream leaves the rows whose target holds a missing value out of it.
+    let complete = training_data.select(parents + [target_node]).complete_rows()
+    let fitted_x = rows_of_matrix(x, complete)
     let mechanism = match causal_model.causal_mechanism(target_node) {
       Some(mechanism) => mechanism
       None =>
@@ -117,8 +125,8 @@ pub fn fit_causal_model_of_target(
         )
       }
       let fitted = mechanism.fit_categorical(
-        x,
-        training_data.discrete(target_node),
+        fitted_x,
+        labels_of_rows(training_data.discrete(target_node), complete),
       )
       causal_model.set_causal_mechanism(target_node, fitted)
     } else {
@@ -129,7 +137,10 @@ pub fn fit_causal_model_of_target(
           " has to be a continuous mechanism, because the column of the node holds numbers",
         )
       }
-      let fitted = mechanism.fit(x, training_data.numeric(target_node))
+      let fitted = mechanism.fit(
+        fitted_x,
+        values_of_rows(training_data.numeric(target_node), complete),
+      )
       causal_model.set_causal_mechanism(target_node, fitted)
     }
   }
@@ -228,6 +239,54 @@ pub fn has_data_for_every_node(
     }
   }
   true
+}
+
+///|
+/// The rows of the matrix that are named by their indices.
+fn rows_of_matrix(matrix : @utils.Matrix, rows : Array[Int32]) -> @utils.Matrix {
+  let out : Array[Array[Double]] = []
+  for row in rows {
+    if row >= 0 && row < matrix.nrows() {
+      out.push(matrix.row(row))
+    }
+  }
+  @utils.Matrix::from_rows(out)
+}
+
+///|
+/// The values of the given rows.
+fn values_of_rows(values : Array[Double], rows : Array[Int32]) -> Array[Double] {
+  let out : Array[Double] = []
+  for row in rows {
+    if row >= 0 && row < values.length() {
+      out.push(values[row])
+    }
+  }
+  out
+}
+
+///|
+/// The labels of the given rows.
+fn labels_of_rows(labels : Array[String], rows : Array[Int32]) -> Array[String] {
+  let out : Array[String] = []
+  for row in rows {
+    if row >= 0 && row < labels.length() {
+      out.push(labels[row])
+    }
+  }
+  out
+}
+
+///|
+/// The values of the array that are not a missing value.
+fn without_missing_values(values : Array[Double]) -> Array[Double] {
+  let out : Array[Double] = []
+  for value in values {
+    if !@utils.is_nan(value) {
+      out.push(value)
+    }
+  }
+  out
 }
 
 ///|

@@ -3165,6 +3165,54 @@ The categorical noise dependent function.
 
 [0.0.61]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.61
 
+## [0.0.65] - 2026-11-10
+
+The missing values of the automatic assignment.
+
+### Added
+
+- the experimental flag of the missing values in the `gcm` package: the
+  function `assign_causal_mechanisms` takes the optional argument `allow_nans`,
+  and it stops when the data holds a missing value and the flag is not set,
+  the way the upstream `assign_causal_mechanisms` raises. The predicate of the
+  check of the upstream is a function of its own now, in the `api` package:
+  `DataFrame::has_missing_values`.
+- the rows of a frame that hold no missing value, in the `api` package:
+  `DataFrame::complete_rows`. The selection of the model of a node and the fit
+  of the mechanism of a node leave the rows that hold a missing value out,
+  the way the upstream leaves the rows whose target holds a missing value out
+  of it.
+- two cases in the file `src/gcm/auto_test.mbt`: the case of the upstream test
+  `test_given_missing_data_only_numerical_when_auto_assign_mechanism_with_experimental_feature_then_handles_as_expected`
+  and the case of the upstream test
+  `test_given_missing_data_mixed_numerical_and_categorical_when_auto_assign_mechanism_with_experimental_feature_then_handles_as_expected`.
+  The port mirrors 24 of the 26 cases of the upstream test file
+  `tests/gcm/test_auto.py` now; the two it does not mirror are the one of the
+  namespace of the automatic assignment and the one of the AutoGluon model,
+  which the upstream skips as well.
+- the numbers of the upstream on the very rows of the port in
+  `_verify/gcm_missing_values_reference.py`: the script runs the upstream
+  `dowhy.gcm` on the fixtures of the missing values with its experimental flag
+  and it prints the means of the drawn samples, of the interventional samples
+  and of the counterfactual samples. On the rows of the port the upstream
+  gives the mean of `X` 0.243552, the mean of `Y` 10.361000 and the mean of `Z`
+  30.542165, and the counterfactual of the noise sample holds 10, 31.916057
+  and 69.828446. Every tolerance of the upstream case is met on those rows, so
+  the tolerances of the test of the port are the tolerances of the upstream.
+
+### Notes
+
+- The upstream keeps the rows whose **features** hold a missing value, because
+  its histogram gradient boosting model reads them; the port has no model that
+  reads them, so it drops them as well. The rows that hold no missing value
+  are the rows of `DataFrame::complete_rows`, and both the selection of the
+  model of a node and the fit of the mechanism of a node use them, so the two
+  agree on the model they fit.
+- The root node of a model is fitted on the values of its column that hold no
+  missing value, the way the upstream fits its empirical distribution.
+
+[0.0.65]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.65
+
 ## [0.0.64] - 2026-11-10
 
 The fully categorical intrinsic causal influence.

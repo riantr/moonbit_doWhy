@@ -17,8 +17,9 @@
 /// is categorical exactly when it is a discrete one.
 ///
 /// The upstream refuses a categorical input that holds missing values, because
-/// only the missing values of a numerical variable are supported. The frame of
-/// the port holds no missing value, so there is no such check here.
+/// only the missing values of a numerical variable are supported. A column of
+/// strings of the port cannot hold a missing value, so there is no such check
+/// here.
 pub fn is_categorical(data : @api.DataFrame) -> Bool {
   let names = data.column_names()
   if names.length() == 0 {

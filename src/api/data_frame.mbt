@@ -123,6 +123,65 @@ pub fn DataFrame::numeric_column_names(self : DataFrame) -> Array[String] {
 }
 
 ///|
+/// Whether the frame holds a value that is not a number.
+///
+/// This is the predicate of the check the upstream `assign_causal_mechanisms`
+/// does before it assigns the mechanisms of a model: the upstream raises when
+/// the data holds missing values and its experimental flag is not set, and
+/// MoonBit cannot catch the stop of a function, so the check is available on
+/// its own.
+///
+/// A column of strings cannot hold a missing value, so only the numeric
+/// columns of the frame are read.
+pub fn DataFrame::has_missing_values(self : DataFrame) -> Bool {
+  for name in self.order {
+    match self.columns.get(name) {
+      Some(Numeric(values)) =>
+        for value in values {
+          if @utils.is_nan(value) {
+            return true
+          }
+        }
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
+/// The rows of the frame that hold no missing value.
+///
+/// A row is missing when one of the numeric columns of the frame holds a value
+/// that is not a number in it. A row of a column of strings is never missing.
+///
+/// The rows are the indices of the frame, in order, so that the caller can
+/// take the rows of the frame and the rows of its columns with them.
+pub fn DataFrame::complete_rows(self : DataFrame) -> Array[Int32] {
+  let rows : Array[Int32] = []
+  for row in 0..<self.nrows {
+    if frame_row_is_complete(self, row) {
+      rows.push(row)
+    }
+  }
+  rows
+}
+
+///|
+/// Whether the row of the frame holds no missing value.
+fn frame_row_is_complete(frame : DataFrame, row : Int32) -> Bool {
+  for name in frame.order {
+    match frame.columns.get(name) {
+      Some(Numeric(values)) =>
+        if row < values.length() && @utils.is_nan(values[row]) {
+          return false
+        }
+      _ => ()
+    }
+  }
+  true
+}
+
+///|
 /// Whether the given column holds discrete values.
 pub fn DataFrame::is_discrete(self : DataFrame, name : String) -> Bool {
   match self.columns.get(name) {

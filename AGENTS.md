@@ -1060,6 +1060,19 @@ statsmodels / scikit-learn conventions are deliberate:
   centres it draws at random, so the numbers of the upstream are not
   reproducible: the numbers of the port are the ones of the same model and not
   the ones of the upstream's fit.
+- The **missing values** of the `gcm` package follow the experimental flag of
+  the upstream, `experimental_allow_nans`, which the port takes as the optional
+  argument `allow_nans` of `assign_causal_mechanisms`. The upstream raises
+  when the data holds a missing value and the flag is not set; the port
+  aborts, because MoonBit cannot catch an error, so the predicate of the
+  check is a function of its own, `DataFrame::has_missing_values`. The
+  upstream drops the rows whose **target** holds a missing value and keeps the
+  rows whose **features** hold one, because its histogram gradient boosting
+  model reads them; the port has no model that reads them, so it drops the
+  rows that hold a missing value in a feature as well. The rows that are left
+  out are the rows of `DataFrame::complete_rows`, and both the selection of
+  the model of a node and the fit of the mechanism of a node use them, so the
+  two agree on the model they fit.
 
 ## Package layout
 

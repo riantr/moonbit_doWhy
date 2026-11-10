@@ -10,11 +10,20 @@
 /// package and it asserts which family of models it picked, the linear one
 /// or the non-linear one.
 ///
-/// The port mirrors 22 of the 26 cases of the upstream test file. The four
+/// The port mirrors 24 of the 26 cases of the upstream test file. The two
 /// cases of the upstream that have no counterpart in the port are the one of
-/// the namespace of the automatic assignment, the one of the AutoGluon model,
-/// which the upstream skips as well, and the two ones of the missing values,
-/// which the frames of the port do not hold.
+/// the namespace of the automatic assignment and the one of the AutoGluon
+/// model, which the upstream skips as well.
+///
+/// The two cases of the missing values are mirrored, and they are the ones that
+/// use the experimental flag of the upstream, which the port takes as well. The
+/// upstream raises when the data holds a missing value and the flag is not
+/// set, and MoonBit cannot catch the stop of a function, so the test reads the
+/// predicate of the check instead of the raise. The upstream fits its models
+/// on the rows that hold no missing value in their target and keeps the rows
+/// whose features hold a missing value, because its histogram gradient
+/// boosting model reads them; the port has no model that reads them, so it
+/// drops the rows that hold a missing value in a feature as well.
 ///
 /// One of the cases the port mirrors ends in a different model: the upstream
 /// picks the linear model for a linear relation of three classes and the port
@@ -23,6 +32,309 @@
 /// of a target of more than two classes are worse than the ones of the
 /// multinomial variant of the upstream. The test of the case records the
 /// difference.
+
+///|
+/// The number of the rows of the fixture of the missing values.
+const AUTO_MISSING_ROWS : Int32 = 600
+
+///|
+/// The seed of the generator of the fixture of the missing values.
+const AUTO_MISSING_SEED : UInt64 = 20240301UL
+
+///|
+/// The share of the rows of the fixture of the missing values that hold a
+/// missing value.
+const AUTO_MISSING_SHARE : Double = 0.25
+
+///|
+/// The number of the samples the fixture of the missing values draws.
+const AUTO_MISSING_SAMPLES : Int32 = 5000
+
+///|
+/// The number of the samples of the interventional distribution of the fixture
+/// of the missing values.
+const AUTO_MISSING_INTERVENTIONAL_SAMPLES : Int32 = 100
+
+///|
+/// The frame of the fixture of the missing values, whose columns are `X`, `Y`
+/// and `Z`.
+///
+/// The relations are the ones of the upstream: `Y` is `2 * X + 10` with a
+/// small noise and `Z` is `X + Y + 20` with a small noise. A quarter of the
+/// rows of `X` and a quarter of the rows of `Z` hold a missing value and the
+/// column of `Y` holds none, the way the upstream masks them.
+fn auto_missing_frame() -> @api.DataFrame {
+  let rng = @utils.Random::new(AUTO_MISSING_SEED)
+  let x : Array[Double] = []
+  let y : Array[Double] = []
+  let z : Array[Double] = []
+  for _ in 0..<AUTO_MISSING_ROWS {
+    let value = 5.0 * rng.next_normal()
+    let middle = 2.0 * value + 10.0 + 0.05 * rng.next_normal()
+    let last = value + middle + 20.0 + 0.05 * rng.next_normal()
+    x.push(
+      if rng.next_double() < AUTO_MISSING_SHARE {
+        @utils.nan()
+      } else {
+        value
+      },
+    )
+    y.push(middle)
+    z.push(
+      if rng.next_double() < AUTO_MISSING_SHARE {
+        @utils.nan()
+      } else {
+        last
+      },
+    )
+  }
+  @api.DataFrame::new(
+    ["X", "Y", "Z"],
+    Map([
+      ("X", @api.Column::numeric(x)),
+      ("Y", @api.Column::numeric(y)),
+      ("Z", @api.Column::numeric(z)),
+    ]),
+  )
+}
+
+///|
+/// The graph of the fixture of the missing values, where `X` is a parent of `Y`
+/// and of `Z` and `Y` is a parent of `Z`.
+fn auto_missing_graph() -> @graph.DirectedGraph {
+  let g = @graph.DirectedGraph::new()
+  g.add_edge("X", "Y")
+  g.add_edge("Y", "Z")
+  g.add_edge("X", "Z")
+  g
+}
+
+///|
+/// The frame of the fixture of the mixed missing values, whose columns are `X`,
+/// `Y` and `Z`.
+///
+/// The relations are the ones of the upstream: `Y` holds the class of the sign
+/// of `X` and `Z` is `X` with ten more when the class is `Class 1` and with ten
+/// less when it is `Class 0`, plus a small noise. A quarter of the rows of `X`
+/// and a quarter of the rows of `Z` hold a missing value and the column of `Y`
+/// holds none, the way the upstream masks them.
+fn auto_missing_mixed_frame() -> @api.DataFrame {
+  let rng = @utils.Random::new(AUTO_MISSING_SEED + 5UL)
+  let x : Array[Double] = []
+  let y : Array[String] = []
+  let z : Array[Double] = []
+  for _ in 0..<AUTO_MISSING_ROWS {
+    let value = 5.0 * rng.next_normal()
+    let class_zero = value < 0.0
+    let last = value +
+      (if class_zero { -10.0 } else { 10.0 }) +
+      0.1 * rng.next_normal()
+    x.push(
+      if rng.next_double() < AUTO_MISSING_SHARE {
+        @utils.nan()
+      } else {
+        value
+      },
+    )
+    y.push(if class_zero { "Class 0" } else { "Class 1" })
+    z.push(
+      if rng.next_double() < AUTO_MISSING_SHARE {
+        @utils.nan()
+      } else {
+        last
+      },
+    )
+  }
+  @api.DataFrame::new(
+    ["X", "Y", "Z"],
+    Map([
+      ("X", @api.Column::numeric(x)),
+      ("Y", @api.Column::discrete(y)),
+      ("Z", @api.Column::numeric(z)),
+    ]),
+  )
+}
+
+///|
+/// The number of the samples of the interventional distribution of the mixed
+/// fixture of the missing values.
+const AUTO_MISSING_MIXED_INTERVENTIONAL_SAMPLES : Int32 = 10
+
+///|
+/// The noise data of the counterfactual of the fixture of the missing values.
+fn auto_missing_noise_data() -> @api.DataFrame {
+  @api.DataFrame::from_numeric(
+    ["X", "Y", "Z"],
+    Map([("X", [10.0]), ("Y", [1.0]), ("Z", [10.0])]),
+  )
+}
+
+///|
+/// test "given missing data only numerical when auto assign mechanism with
+/// experimental feature then handles as expected"
+///
+/// This is the port of the upstream test
+/// `test_given_missing_data_only_numerical_when_auto_assign_mechanism_with_experimental_feature_then_handles_as_expected`.
+///
+/// The upstream raises when the data holds a missing value and its
+/// experimental flag is not set, and MoonBit cannot catch the stop of a
+/// function, so the test reads the predicate of the check of the port.
+test "given missing data only numerical when auto assign mechanism with experimental feature then handles as expected" {
+  let data = auto_missing_frame()
+  assert_true(data.has_missing_values())
+  let model = @gcm.ProbabilisticCausalModel::new(auto_missing_graph())
+  let _ = @gcm.assign_causal_mechanisms(
+    model,
+    data,
+    @gcm.AssignmentQuality::good(),
+    false,
+    allow_nans=true,
+  )
+  @gcm.fit(model, data)
+  let samples = @gcm.draw_samples(
+    model,
+    AUTO_MISSING_SAMPLES,
+    @utils.Random::new(AUTO_MISSING_SEED + 1UL),
+  )
+  // The mean of `X` is zero, the mean of `Y` is ten and the mean of `Z` is
+  // thirty, the way the upstream reads them.
+  assert_true((@utils.mean(samples.numeric("X")) - 0.0).abs() < 1.0)
+  assert_true((@utils.mean(samples.numeric("Y")) - 10.0).abs() < 2.0)
+  assert_true((@utils.mean(samples.numeric("Z")) - 30.0).abs() < 3.0)
+  // The intervention on `X` moves the mean of `Y` to thirty and the mean of
+  // `Z` to sixty.
+  let interventional = @gcm.interventional_samples(
+    model,
+    Map([("X", @gcm.set_number(10.0))]),
+    None,
+    Some(AUTO_MISSING_INTERVENTIONAL_SAMPLES),
+    @utils.Random::new(AUTO_MISSING_SEED + 2UL),
+  )
+  for value in interventional.numeric("X") {
+    assert_true((value - 10.0).abs() < 1.0e-9)
+  }
+  assert_true((@utils.mean(interventional.numeric("Y")) - 30.0).abs() < 5.0)
+  assert_true((@utils.mean(interventional.numeric("Z")) - 60.0).abs() < 5.0)
+  // The counterfactual of the noise sample holds the value of the
+  // intervention, the mean of `Y` and the mean of `Z`.
+  let counterfactual = @gcm.counterfactual_samples(
+    model,
+    Map([("X", @gcm.set_number(10.0))]),
+    None,
+    Some(auto_missing_noise_data()),
+  )
+  assert_true((counterfactual.numeric("X")[0] - 10.0).abs() < 1.0e-9)
+  assert_true((counterfactual.numeric("Y")[0] - 30.0).abs() < 5.0)
+  assert_true((counterfactual.numeric("Z")[0] - 70.0).abs() < 5.0)
+  // The influence of the ancestors of `Z` and the attribution of the
+  // anomalies of `Y` do not stop on the missing values.
+  let _ = @gcm.intrinsic_causal_influence(
+    model,
+    "Z",
+    @gcm.IccPrediction::exact(),
+    None,
+    100,
+    100,
+    100,
+    100,
+    @gcm.AssignmentQuality::good(),
+    @gcm.ShapleyConfig::new(@gcm.ShapleyApproximationMethod::auto()),
+    @utils.Random::new(AUTO_MISSING_SEED + 3UL),
+  )
+  let _ = @gcm.attribute_anomalies(
+    model,
+    "Y",
+    data.take_rows([0, 1, 2, 3, 4]),
+    @gcm.AnomalyScorer::median_cdf_quantile(),
+    false,
+    100,
+    @gcm.ShapleyConfig::new(@gcm.ShapleyApproximationMethod::auto()),
+    @utils.Random::new(AUTO_MISSING_SEED + 4UL),
+  )
+}
+
+///|
+/// test "given missing data mixed numerical and categorical when auto assign
+/// mechanism with experimental feature then handles as expected"
+///
+/// This is the port of the upstream test
+/// `test_given_missing_data_mixed_numerical_and_categorical_when_auto_assign_mechanism_with_experimental_feature_then_handles_as_expected`.
+test "given missing data mixed numerical and categorical when auto assign mechanism with experimental feature then handles as expected" {
+  let data = auto_missing_mixed_frame()
+  assert_true(data.has_missing_values())
+  let model = @gcm.ProbabilisticCausalModel::new(auto_missing_graph())
+  let _ = @gcm.assign_causal_mechanisms(
+    model,
+    data,
+    @gcm.AssignmentQuality::good(),
+    false,
+    allow_nans=true,
+  )
+  @gcm.fit(model, data)
+  let samples = @gcm.draw_samples(
+    model,
+    AUTO_MISSING_SAMPLES,
+    @utils.Random::new(AUTO_MISSING_SEED + 6UL),
+  )
+  // The mean of `X` is zero and the mean of `Z` is zero, the way the upstream
+  // reads them.
+  assert_true((@utils.mean(samples.numeric("X")) - 0.0).abs() < 1.0)
+  assert_true((@utils.mean(samples.numeric("Z")) - 0.0).abs() < 1.0)
+  // Half of the samples of `Y` hold the class `Class 0`, the way the upstream
+  // counts them.
+  let mut num_class_zero = 0
+  for label in samples.discrete("Y") {
+    if label == "Class 0" {
+      num_class_zero = num_class_zero + 1
+    }
+  }
+  let expected = AUTO_MISSING_SAMPLES / 2
+  assert_true((num_class_zero - expected).abs() <= 500)
+  // The intervention on `X` moves every sample of `Y` to the class `Class 1`
+  // and the mean of `Z` to twenty.
+  let interventional = @gcm.interventional_samples(
+    model,
+    Map([("X", @gcm.set_number(10.0))]),
+    None,
+    Some(AUTO_MISSING_MIXED_INTERVENTIONAL_SAMPLES),
+    @utils.Random::new(AUTO_MISSING_SEED + 7UL),
+  )
+  let mut num_class_one = 0
+  for label in interventional.discrete("Y") {
+    if label == "Class 1" {
+      num_class_one = num_class_one + 1
+    }
+  }
+  assert_true(
+    (num_class_one - AUTO_MISSING_MIXED_INTERVENTIONAL_SAMPLES).abs() <= 3,
+  )
+  assert_true((@utils.mean(interventional.numeric("Z")) - 20.0).abs() < 5.0)
+  // The counterfactual of the noise sample holds the value of the
+  // intervention, the class of `Y` and the value of `Z`.
+  let counterfactual = @gcm.counterfactual_samples(
+    model,
+    Map([("X", @gcm.set_number(10.0))]),
+    None,
+    Some(auto_missing_noise_data()),
+  )
+  assert_true((counterfactual.numeric("X")[0] - 10.0).abs() < 1.0e-9)
+  assert_eq(counterfactual.discrete("Y")[0], "Class 1")
+  assert_true((counterfactual.numeric("Z")[0] - 30.0).abs() < 5.0)
+  // The influence of the ancestors of `Z` does not stop on the missing values.
+  let _ = @gcm.intrinsic_causal_influence(
+    model,
+    "Z",
+    @gcm.IccPrediction::exact(),
+    None,
+    100,
+    100,
+    100,
+    100,
+    @gcm.AssignmentQuality::good(),
+    @gcm.ShapleyConfig::new(@gcm.ShapleyApproximationMethod::auto()),
+    @utils.Random::new(AUTO_MISSING_SEED + 8UL),
+  )
+}
 
 ///|
 /// The numeric column of the fixture.
