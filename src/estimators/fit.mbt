@@ -340,7 +340,7 @@ pub fn CausalEstimator::estimate_effect(
 ) -> @model.CausalEstimate {
   self.treatment_value = treatment_value
   self.control_value = control_value
-  match self.kind {
+  let estimate = match self.kind {
     Base => abort("The base estimator of the upstream estimates nothing")
     LinearRegression => self.estimate_regression(data, target_units)
     PropensityScoreWeighting =>
@@ -358,6 +358,12 @@ pub fn CausalEstimator::estimate_effect(
       self.estimate_generalized_linear_model(data, target_units)
     DistanceMatching => self.estimate_distance_matching(data, target_units)
   }
+  // The upstream hands the symbolic estimator of its estimator to the estimate.
+  match self.symbolic_estimator() {
+    Some(expression) => estimate.set_realized_estimand_expr(expression)
+    None => ()
+  }
+  estimate
 }
 
 ///|

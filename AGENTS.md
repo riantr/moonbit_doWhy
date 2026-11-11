@@ -1230,6 +1230,18 @@ statsmodels / scikit-learn conventions are deliberate:
   common causes when the estimator is fitted and pairs them with the outcomes
   of the data of the estimate, so an estimate on other data pairs the
   covariates of the fitted data with the outcomes of the other data.
+- The symbolic estimators of the `estimators` package are the strings of the
+  upstream, which the upstream builds when the estimator is fitted. The port
+  builds them when they are asked for, so the effect modifiers of the
+  estimator are the ones of its last fit. The upstream joins the outcome
+  variables with a comma, and the propensity score matching estimator and the
+  distance matching estimator join them with a comma and a space. The
+  generalised linear model estimator wraps its variables in a sigmoid, the
+  regression discontinuity estimator builds the empty string, and the two
+  stage regression estimator builds the product of the symbolic estimators of
+  its two stages. The instrumental variable estimator builds the expressions
+  of the sympy of the upstream and the base estimator raises a
+  `NotImplementedError`, so the port gives `None` for the two of them.
 
 ## Package layout
 
@@ -1242,7 +1254,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `dowhy.causal_estimator` (the estimate objects) |
 | `interpreters` | `dowhy.interpreters` (the sentence that reads an estimate) |
-| `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand, the do operator, the distance matching estimator and the base estimator of the upstream |
+| `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand, the do operator, the distance matching estimator, the symbolic estimators and the base estimator of the upstream |
 | `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations and the graph refutation |
 | `overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
@@ -1292,6 +1304,12 @@ README makes, so they are tracked in the repository:
   one of them, the data of the process with a binary treatment and the numbers
   of the deterministic conversion of the treatment. It is the evidence for the
   data generating processes of the `datasets` package.
+- `symbolic_estimators_reference.py` fits every estimator of the upstream that
+  builds a symbolic estimator and prints the string it builds -- with one
+  outcome and with two, with an effect modifier and without a common cause --
+  and it prints the string of the two stage regression estimator of the
+  frontdoor estimand. It is the evidence for the symbolic estimators of the
+  `estimators` package.
 - `distance_matching_reference.py` runs the distance matching estimator of
   the upstream -- the class
   `dowhy.causal_estimators.distance_matching_estimator.DistanceMatchingEstimator`

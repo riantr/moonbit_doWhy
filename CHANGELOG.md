@@ -3358,6 +3358,53 @@ The distance matching estimator.
   estimators.
 
 [0.0.77]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.77
+## [0.0.78] - 2026-11-11
+
+The symbolic estimators of the upstream.
+
+### Added
+
+- the symbolic estimators of the upstream, in the new file
+  `src/estimators/symbolic.mbt`: the public function
+  `CausalEstimator::symbolic_estimator` builds the string the upstream builds
+  for every estimator but the base one and the instrumental variable one. The
+  upstream builds the symbolic estimator when the estimator is fitted and hands
+  it to the estimate as its `realized_estimand_expr`, and the port hands the
+  same string to the estimate.
+- the accessor and the setter of the expression in the `model` package:
+  `CausalEstimate::realized_estimand_expr` and
+  `CausalEstimate::set_realized_estimand_expr`.
+- the nine cases of the new file `src/tests/symbolic_estimators.mbt`: the
+  symbolic estimator of every estimator is the one of the upstream, the
+  estimate carries it, and the two stage regression estimator composes the
+  symbolic estimators of its two stages.
+- the strings of the upstream in `_verify/symbolic_estimators_reference.py`:
+  the script fits every estimator of the upstream and prints the string it
+  builds, with one outcome and with two, with an effect modifier and without a
+  common cause, and it prints the string of the two stage regression estimator
+  of the frontdoor estimand.
+
+### Notes
+
+- The upstream builds the symbolic estimator of the instrumental variable
+  estimator with the sympy of the upstream, and the symbolic estimator of the
+  base estimator raises a `NotImplementedError`. The port gives `None` for the
+  two of them.
+- The upstream joins the outcome variables of the symbolic estimator with a
+  comma, and the propensity score matching estimator and the distance matching
+  estimator join them with a comma and a space.
+- The upstream builds the symbolic estimator of the regression discontinuity
+  estimator as the empty string.
+- The upstream builds the symbolic estimator of the two stage regression
+  estimator as the product of the symbolic estimators of its two stages, and it
+  builds another one for the natural direct effect when the estimand asks for
+  it. The port estimates the natural indirect effect, so it builds the product
+  of the two stages and not the natural direct effect.
+- The upstream builds its symbolic estimators when the estimator is fitted, and
+  the port builds them when they are asked for, so the effect modifiers of the
+  estimator are the ones of its last fit.
+
+[0.0.78]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.78
 
 ## [0.0.73] - 2026-11-11
 

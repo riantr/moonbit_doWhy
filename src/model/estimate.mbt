@@ -12,7 +12,7 @@ pub struct CausalEstimate {
   /// The estimand the estimate was computed for.
   target_estimand : String
   /// The symbolic description of the realised estimand.
-  realized_estimand_expr : String
+  mut realized_estimand_expr : String
   /// The value of the treatment in the control arm.
   control_value : Double
   /// The value of the treatment in the treated arm.
@@ -143,6 +143,24 @@ pub fn CausalEstimate::conditional_estimates(
 /// The estimand the estimate was computed for.
 pub fn CausalEstimate::target_estimand(self : CausalEstimate) -> String {
   self.target_estimand
+}
+
+///|
+/// The symbolic description of the realised estimand.
+///
+/// The upstream hands the symbolic estimator of its estimator to the estimate,
+/// so the port carries the same string.
+pub fn CausalEstimate::realized_estimand_expr(self : CausalEstimate) -> String {
+  self.realized_estimand_expr
+}
+
+///|
+/// Set the symbolic description of the realised estimand.
+pub fn CausalEstimate::set_realized_estimand_expr(
+  self : CausalEstimate,
+  expression : String,
+) -> Unit {
+  self.realized_estimand_expr = expression
 }
 
 ///|
