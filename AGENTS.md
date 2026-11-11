@@ -141,6 +141,17 @@ and costly to debug.
   declaration. The methods then have to be used explicitly, because the
   operators `==` and `!=` do not count as a use of them and the unused ones are
   a warning, which is a failure in this repository.
+- **There is no overloading.** Two functions of the same name in the same
+  package are an error and not an overload: the compiler reports `The toplevel
+  identifier f is declared twice`. The types of the arguments do not
+  disambiguate them, so a function that has to take one name or a list of
+  names takes a list of names.
+- **A trait is not a type.** `fn f(x : SomeTrait)` is an error (`SomeTrait` is a
+  trait, not a type), and `extend Array[String] with SomeTrait` is a parse
+  error, because only a plain type can be extended. A function whose argument
+  has to be either a `String` or an `Array[String]` therefore cannot be written
+  with a single parameter type, and the upstream of the port, whose
+  `parse_state` accepts both, has no counterpart here.
 - **A float literal has no exponent.** `1e-12` is a parse error; the tolerance
   is written out, `0.000000000001`.
 - **`String::trim_space` is deprecated**, use `String::trim`, which takes the

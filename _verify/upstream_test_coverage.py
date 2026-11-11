@@ -1,4 +1,4 @@
-"""Map the test files of the port to the test files of the upstream.
+"""Map the test files and the test cases of the port to the upstream.
 
 The header of every test file of the port names the upstream file it mirrors,
 so the two lists can be compared.  The files of the port are the ones whose
@@ -16,6 +16,35 @@ The file name of the upstream is not unique, so a bare name is only counted
 when it matches one file of the upstream; the script reports the names that
 match more than one.
 
+The script makes two checks.
+
+The first one is the one of the files: every test file of the upstream is
+named by a test file of the port.
+
+The second one is the one of the cases: every test case of the upstream is
+mirrored by a test case of the port, unless the table of the script says why
+it is not.  The number of the cases of an upstream file is the number of its
+test functions, counted by name: a file that defines the same function twice
+holds one case, because Python keeps the second definition and pytest collects
+it once.
+
+The number of the cases of the port is the number of the `test` blocks of the
+test files that name the upstream file.  A test file of the port may mirror
+several files of the upstream, so its cases are counted for every file it
+names.
+
+The table of the script holds the two kinds of exception:
+
+- `NOT_MIRRORED` names the test cases of the upstream that the port does not
+  mirror, with the reason why;
+- `SHARED` names the upstream files whose number of port cases is below the
+  number of their upstream cases for a reason that is not a missing case,
+  with the reason why.
+
+The script fails when the number of the cases of a file of the upstream is
+not the number of the cases of the port plus the exceptions of the table, and
+when an exception names a test function that the upstream does not hold.
+
 Usage:
 
     python _verify/upstream_test_coverage.py
@@ -26,6 +55,7 @@ from __future__ import annotations
 import fnmatch
 import os
 import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -43,55 +73,218 @@ PORT = Path(
     )
 ) / "src"
 
-upstream = sorted(
-    str(p.relative_to(TESTS)).replace("\\", "/")
-    for p in TESTS.rglob("test_*.py")
-)
-by_name: dict[str, list[str]] = defaultdict(list)
-for path in upstream:
-    by_name[path.rsplit("/", 1)[-1]].append(path)
+# The test cases of the upstream that the port does not mirror.
+#
+# Every entry is the file of the upstream, the name of the test function of
+# that file, and the reason why the port does not mirror it.
+NOT_MIRRORED: list[tuple[str, str, str]] = [
+    (
+        "causal_refuters/test_dummy_outcome_refuter.py",
+        "test_refutation_dummy_outcome_refuter_custom_function_linear_regression_with_noise_binary_treatment",
+        "the upstream marks the case `xfail` itself",
+    ),
+    (
+        "causal_refuters/test_dummy_outcome_refuter.py",
+        "test_refutation_dummy_outcome_refuter_custom_function_linear_regression_with_permute_binary_treatment",
+        "the upstream marks the case `xfail` itself",
+    ),
+    (
+        "causal_refuters/test_dummy_outcome_refuter.py",
+        "test_refutation_dummy_outcome_refuter_internal_linear_regression_binary_treatment",
+        "the upstream aborts with `ValueError: bins must increase monotonically`, "
+        "because the buckets of a binary treatment do not increase",
+    ),
+    (
+        "causal_refuters/test_dummy_outcome_refuter.py",
+        "test_refutation_dummy_outcome_refuter_internal_knn_binary_treatment",
+        "the upstream aborts with `ValueError: bins must increase monotonically`, "
+        "because the buckets of a binary treatment do not increase",
+    ),
+    (
+        "causal_refuters/test_dummy_outcome_refuter.py",
+        "test_refutation_dummy_outcome_refuter_internal_svm_binary_treatment",
+        "the upstream aborts with `ValueError: bins must increase monotonically`, "
+        "because the buckets of a binary treatment do not increase",
+    ),
+    (
+        "causal_refuters/test_dummy_outcome_refuter.py",
+        "test_refutation_dummy_outcome_refuter_internal_random_forest_binary_treatment",
+        "the upstream aborts with `ValueError: bins must increase monotonically`, "
+        "because the buckets of a binary treatment do not increase",
+    ),
+    (
+        "causal_refuters/test_dummy_outcome_refuter.py",
+        "test_refutation_dummy_outcome_refuter_internal_neural_network_binary_treatment",
+        "the upstream aborts with `ValueError: bins must increase monotonically`, "
+        "because the buckets of a binary treatment do not increase",
+    ),
+]
 
-covered: set[str] = set()
-ambiguous: set[str] = set()
-mentioned: dict[str, list[str]] = {}
-# The files of the port are the ones that hold a test block: the files whose
-# name ends with `_test.mbt` and the files of the `tests` package, whose name
-# does not follow that pattern.
-port_files = [p for p in sorted(PORT.rglob("*.mbt")) if "test \"" in p.read_text(encoding="utf-8")]
-for path in port_files:
-    head = path.read_text(encoding="utf-8")[:4000]
-    names = sorted(set(re.findall(r"tests/[-A-Za-z0-9_/\.\*]+\.py", head)))
-    names += sorted(set(re.findall(r"`(test_[A-Za-z0-9_]+\.py)`", head)))
-    mentioned[str(path.relative_to(PORT)).replace("\\", "/")] = names
-    for name in names:
-        if "*" in name:
-            pattern = name.split("tests/")[-1]
-            for candidate in upstream:
-                if fnmatch.fnmatch(candidate, pattern) or fnmatch.fnmatch(
-                    candidate.rsplit("/", 1)[-1], pattern
-                ):
-                    covered.add(candidate)
-        elif "/" in name:
-            for candidate in upstream:
-                if candidate.endswith(name.split("tests/")[-1]):
-                    covered.add(candidate)
-        else:
-            matches = by_name.get(name, [])
-            if len(matches) == 1:
-                covered.add(matches[0])
-            elif len(matches) > 1:
-                ambiguous.add(name)
+# The upstream files whose number of port cases is below the number of their
+# upstream cases, with the number of the cases the difference holds and the
+# reason why.
+SHARED: list[tuple[str, int, str]] = [
+    (
+        "gcm/test_unit_change.py",
+        1,
+        "two pairs of the upstream cases share one port case each, and one "
+        "upstream case is mirrored by two port cases",
+    ),
+]
 
-print(f"the upstream holds {len(upstream)} test files")
-print(f"the port holds {len(mentioned)} test files")
-print(f"the port names {len(covered)} of them")
-print()
-if ambiguous:
-    print("--- the names the port uses that match more than one upstream file")
-    for name in sorted(ambiguous):
+
+def upstream_files() -> list[str]:
+    return sorted(
+        str(p.relative_to(TESTS)).replace("\\", "/")
+        for p in TESTS.rglob("test_*.py")
+    )
+
+
+def upstream_cases(path: str) -> list[str]:
+    """The names of the test functions of an upstream file, without the repeats."""
+    text = (TESTS / path).read_text(encoding="utf-8", errors="replace")
+    names: list[str] = []
+    for name in re.findall(r"^\s*def (test_[A-Za-z0-9_]+)\s*\(", text, re.MULTILINE):
+        if name not in names:
+            names.append(name)
+    return names
+
+
+def port_case_count(text: str) -> int:
+    """The number of the test blocks of a file of the port."""
+    return len(re.findall(r'^\s*test\s+"', text, re.MULTILINE))
+
+
+def main() -> int:
+    upstream = upstream_files()
+    by_name: dict[str, list[str]] = defaultdict(list)
+    for path in upstream:
+        by_name[path.rsplit("/", 1)[-1]].append(path)
+
+    covered: set[str] = set()
+    ambiguous: set[str] = set()
+    mentioned: dict[str, list[str]] = {}
+    # The files of the port are the ones that hold a test block: the files whose
+    # name ends with `_test.mbt` and the files of the `tests` package, whose name
+    # does not follow that pattern.
+    port_files = [
+        p for p in sorted(PORT.rglob("*.mbt")) if 'test "' in p.read_text(encoding="utf-8")
+    ]
+    cases_of: dict[str, int] = defaultdict(int)
+    for path in port_files:
+        text = path.read_text(encoding="utf-8")
+        head = text[:4000]
+        names = sorted(set(re.findall(r"tests/[-A-Za-z0-9_/\.\*]+\.py", head)))
+        names += sorted(set(re.findall(r"`(test_[A-Za-z0-9_]+\.py)`", head)))
+        mentioned[str(path.relative_to(PORT)).replace("\\", "/")] = names
+        cases = port_case_count(text)
+        for name in names:
+            if "*" in name:
+                pattern = name.split("tests/")[-1]
+                for candidate in upstream:
+                    if fnmatch.fnmatch(candidate, pattern) or fnmatch.fnmatch(
+                        candidate.rsplit("/", 1)[-1], pattern
+                    ):
+                        covered.add(candidate)
+                        cases_of[candidate] += cases
+            elif "/" in name:
+                for candidate in upstream:
+                    if candidate.endswith(name.split("tests/")[-1]):
+                        covered.add(candidate)
+                        cases_of[candidate] += cases
+            else:
+                matches = by_name.get(name, [])
+                if len(matches) == 1:
+                    covered.add(matches[0])
+                    cases_of[matches[0]] += cases
+                elif len(matches) > 1:
+                    ambiguous.add(name)
+
+    print(f"the upstream holds {len(upstream)} test files")
+    print(f"the port holds {len(mentioned)} test files")
+    print(f"the port names {len(covered)} of them")
+    print()
+    if ambiguous:
+        print("--- the names the port uses that match more than one upstream file")
+        for name in sorted(ambiguous):
+            print("   ", name)
+        print()
+    unnamed = [name for name in upstream if name not in covered]
+    print("--- the upstream files the port does not name")
+    for name in unnamed:
         print("   ", name)
     print()
-print("--- the upstream files the port does not name")
-for name in upstream:
-    if name not in covered:
-        print("   ", name)
+
+    # ------------------------------------------------------------ the cases
+    failures: list[str] = []
+    not_mirrored: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for path, name, reason in NOT_MIRRORED:
+        not_mirrored[path].append((name, reason))
+    shared: dict[str, tuple[int, str]] = {}
+    for path, count, reason in SHARED:
+        if path in shared:
+            failures.append(f"{path}: the table holds two shared entries")
+            continue
+        shared[path] = (count, reason)
+
+    total_up = 0
+    total_port = 0
+    print("--- the test cases")
+    print(
+        f"{'upstream file':<58} {'upstream':>8} {'port':>6} {'gap':>5}  exception"
+    )
+    for path in upstream:
+        cases = upstream_cases(path)
+        up = len(cases)
+        port = cases_of.get(path, 0)
+        total_up += up
+        total_port += port
+        gap = up - port
+        entries = len(not_mirrored.get(path, []))
+        count, reason = shared.get(path, (0, ""))
+        exceptions = entries + count
+        if gap > 0 and exceptions != gap:
+            failures.append(
+                f"{path}: {up} upstream cases, {port} port cases, "
+                f"{exceptions} exceptions"
+            )
+        elif gap <= 0 and exceptions != 0:
+            failures.append(
+                f"{path}: {up} upstream cases, {port} port cases, "
+                f"{exceptions} exceptions that the counts do not need"
+            )
+        for name, why in not_mirrored.get(path, []):
+            if name not in cases:
+                failures.append(f"{path}: the upstream holds no case {name}")
+        note = ""
+        if entries:
+            note = f"{entries} case(s) not mirrored"
+        if count:
+            note = (note + ", " if note else "") + f"{count} case(s) shared"
+        print(f"{path:<58} {up:>8} {port:>6} {gap:>5}  {note}")
+    print()
+    print(f"the upstream holds {total_up} test cases")
+    print(f"the port holds {total_port} test cases in the files that name them")
+    print(f"the table holds {len(NOT_MIRRORED)} case(s) that are not mirrored")
+    print()
+    print("--- the test cases the port does not mirror")
+    for path, name, reason in NOT_MIRRORED:
+        print(f"    {path}::{name}")
+        print(f"        {reason}")
+    print()
+    print("--- the files whose port cases are fewer than their upstream cases")
+    for path, count, reason in SHARED:
+        print(f"    {path}: {count} case(s) fewer")
+        print(f"        {reason}")
+    print()
+    if failures:
+        print(f"--- {len(failures)} failure(s)")
+        for failure in failures:
+            print("   ", failure)
+        return 1
+    print("every test case of the upstream is mirrored by a test case of the port")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

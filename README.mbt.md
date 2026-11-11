@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.83.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.84.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -19,7 +19,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity, **distance matching**, and the **base estimator** of the upstream, whose placeholders are not implemented) -- and the **symbolic estimators** of every estimator but the instrumental variable one, whose symbolic estimator of the upstream holds the expressions of the sympy |
 | Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome, **with its random forest, its neural network and its support vector regressor**, and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis**, its **E-value analysis** and the **default strength** it infers for its confounder --, the **significance test** of the refutations, the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules, and the **graph refutation**, which tests the conditional independences the graph entails against the data) |
-| Synthetic data | `dowhy.datasets` | ported (`linear_dataset`, the **sales data set**, the **random graph** data set and the fixtures the upstream tests use) |
+| Synthetic data | `dowhy.datasets` | ported (`linear_dataset`, the **data set of the hidden confounder** -- `xy_dataset` --, the **sales data set**, the **random graph** data set and the fixtures the upstream tests use) -- the **Lalonde** and the **PSID** data sets are **not ported**, upstream downloads them from the network |
 | Data generating processes | `dowhy.utils.dgp`, `dowhy.utils.dgps` | ported (the linear, the quadratic and the cubic process, the weights and the bias they draw, the binary treatment they convert and the value of the effect they compute) |
 | Randomness | the generator of numpy | ported (the Mersenne Twister of numpy with its double, its normal variate, its Bernoulli and its integer, so the port draws the numbers of the upstream for a seed) |
 | Categorical encoding | `dowhy.utils.encoding` | ported (the one-hot encoder and the encoder registry of the estimators) |
@@ -41,6 +41,17 @@ than a missing one.
 The port mirrors every test file of the upstream: the header of every test
 file of the port names the file of the upstream it mirrors, and the script
 `_verify/upstream_test_coverage.py` maps the two lists.
+
+The script checks the test **cases** as well. The upstream holds 469 of them
+in its 74 files, and the port holds 1291 test cases in the files that name
+them. Seven of the cases of the upstream are not mirrored, and the script
+lists every one of them with the reason why: two of them are the cases the
+upstream marks `xfail` itself, and five of them are the cases the upstream
+aborts with `ValueError: bins must increase monotonically`, because the
+buckets of a binary treatment do not increase. One file holds fewer cases of
+the port than of the upstream, the file of the unit change, where two pairs of
+the upstream cases share one port case each and one upstream case is mirrored
+by two port cases.
 
 ## Install
 
@@ -105,7 +116,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `estimators` | `riantr/moonbit_dowhy/estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand, the **do operator**, the **distance matching estimator**, the **symbolic estimators** and the **base estimator** of the upstream |
 | `refuters` | `riantr/moonbit_dowhy/refuters` | `dowhy.causal_refuters`, with the **graph refutation** |
 | `overrule` | `riantr/moonbit_dowhy/overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
-| `datasets` | `riantr/moonbit_dowhy/datasets` | `dowhy.datasets` (the `linear_dataset` generator, the sales data set and the **random graph** data set), the **data generating processes** of `dowhy.utils.dgp` and of `dowhy.utils.dgps`, and the deterministic test fixtures |
+| `datasets` | `riantr/moonbit_dowhy/datasets` | `dowhy.datasets` (the `linear_dataset` generator, the **data set of the hidden confounder**, the sales data set and the **random graph** data set), the **data generating processes** of `dowhy.utils.dgp` and of `dowhy.utils.dgps`, and the deterministic test fixtures |
 | `data_transformers` | `riantr/moonbit_dowhy/data_transformers` | `dowhy.data_transformers` (the PCA reducer and the base reducer of the upstream) |
 | `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers`, with **the propensity score of the treatment** |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
@@ -558,6 +569,14 @@ Four behaviours of the mediation differ on purpose:
   of the frontdoor check is the one the upstream takes when the caller names no
   algorithm, which is the d-separation of the graph rather than the blocking of
   the directed paths.
+
+The public API of the upstream takes one name or a list of names wherever it
+takes the states of a model: `parse_state` of `dowhy/utils/api.py` normalises
+the argument, so `treatment="x"` and `treatment=["x", "y"]` are both accepted.
+The port takes a list of names, because MoonBit has no overloading, cannot
+extend an instantiated generic -- `extend Array[String] with Trait` is a parse
+error -- and does not take a trait as the type of a parameter. A caller who
+ports the code of the upstream writes `["x"]` where the upstream writes `"x"`.
 
 The `estimators` package and the test suites of the port differ from upstream
 in the following ways:

@@ -3540,6 +3540,118 @@ The remaining utilities of the upstream.
 
 [0.0.81]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.81
 
+## [0.0.82] - 2026-11-11
+
+The model that selects itself out of a zoo of models.
+
+### Added
+
+- the model of the zoo of the upstream, in the new file
+  `src/gcm/ml_autogluon.mbt`: the public enumeration `AutoMlFamily` holds the
+  families of the models it tries, the public struct `AutoMlConfiguration` holds
+  them and the seed of its cross validation, and the public functions
+  `auto_gluon_regressor` and `auto_gluon_classifier` are the port of
+  `dowhy.gcm.ml.autogluon`.
+- the four cases of the new file `src/gcm/ml_autogluon_test.mbt`: every one of
+  them asserts a number the upstream produces.
+- the numbers of the upstream in `_verify/autogluon_reference.py`: the script runs
+  the upstream model on the fixtures of the port and prints what it computes.
+
+### Changed
+
+- the `PredictionModel` and the `ClassificationModel` of the `gcm` package hold an
+  optional configuration of the zoo of models, and the `BEST` quality of the
+  assignment of the mechanisms returns the model of the zoo, the way the upstream
+  returns the model of AutoGluon.
+- the `CausalMechanism::evaluate_categorical` of the `gcm` package takes the first
+  class whose cumulative probability reaches the noise, the way the upstream does,
+  so a target of more than two classes can be drawn.
+
+### Notes
+
+- The upstream needs the optional dependency of AutoGluon, so the port has no
+  `TabularPredictor`: the model of the port holds the families of the models it
+  tries, it fits every model of the zoo with a cross validation of five folds and
+  it keeps the one with the smallest error, which it then fits on all the rows.
+- The upstream passes a classifier to the additive noise model in one of its cases,
+  which is a quirk of the multiple inheritance of its classes. The port passes the
+  regressor.
+
+[0.0.82]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.82
+
+## [0.0.83] - 2026-11-11
+
+The scenarios of the notebooks of the upstream.
+
+### Added
+
+- the scenarios of the notebooks of the upstream, in the new file
+  `src/tests/notebooks.mbt`: the causal API, the interpreter and the basic
+  graphical causal model run as test cases and assert the numbers they compute.
+- the numbers of the upstream in `_verify/notebooks_reference.py`.
+
+### Notes
+
+- The upstream executes its notebooks with `nbconvert --execute` and asserts that
+  no cell of them fails. The port runs the scenarios of the notebooks of the
+  portable core as test cases, and it asserts the numbers they compute.
+- The upstream draws the binary treatment with the `choice` of numpy and the size
+  of one, so it draws an array of one number where the `vectorize` of the numpy of
+  today wants a number. The script replaces that function with one that draws the
+  same number and gives it as a number.
+
+[0.0.83]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.83
+
+## [0.0.84] - 2026-11-11
+
+The data set of the hidden confounder, and the proof that the port mirrors every
+test case of the upstream.
+
+### Added
+
+- the data set of the hidden confounder, in the new public function
+  `datasets::xy_dataset`: it is the port of `dowhy.datasets.xy_dataset`, which
+  draws a hidden confounder, a time variable, a treatment and an outcome.
+- the six cases of the data set of the hidden confounder, in the file
+  `src/datasets/datasets_test.mbt`: every one of them asserts a row of the
+  upstream.
+- the numbers of the upstream in `_verify/xy_dataset_reference.py`: the script runs
+  the upstream data set with the generator of numpy and prints its rows.
+- the check of the test **cases** in `_verify/upstream_test_coverage.py`: the
+  script counts the test cases of every file of the upstream and the test cases of
+  the files of the port that name it, and it holds the table of the cases the port
+  does not mirror, with the reason why.
+
+### Changed
+
+- the README states that the port mirrors every test **case** of the upstream and
+  not only every test file, and it states the seven cases the port does not
+  mirror.
+- the file `src/gcm/influence_test.mbt` states that the upstream file of the arrow
+  strength defines one of its cases twice, so pytest collects it seven times.
+
+### Notes
+
+- The upstream holds 469 test cases in its 74 test files, and the port holds 1291
+  test cases in the files that name them. Seven cases of the upstream are not
+  mirrored: two of them are the cases the upstream marks `xfail` itself, and five
+  of them are the cases the upstream aborts with `ValueError: bins must increase
+  monotonically`, because the buckets of a binary treatment do not increase. One
+  file holds fewer cases of the port than of the upstream, the file of the unit
+  change, where two pairs of the upstream cases share one port case each and one
+  upstream case is mirrored by two port cases.
+- The upstream draws the rows of the data set of the hidden confounder from the
+  global generator of numpy, and the port draws them from the generator of numpy
+  with the same seed and the same order of the draws, so the rows of the port and
+  the rows of the upstream are the same numbers.
+- The public API of the upstream takes one name or a list of names wherever it
+  takes the states of a model, because `parse_state` of `dowhy/utils/api.py`
+  normalises the argument. The port takes a list of names, because MoonBit has no
+  overloading, cannot extend an instantiated generic and does not take a trait as
+  the type of a parameter.
+
+[0.0.84]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.84
+
 ## [0.0.73] - 2026-11-11
 
 The interpretation of an estimate.

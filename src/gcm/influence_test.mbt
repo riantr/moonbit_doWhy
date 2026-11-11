@@ -18,6 +18,11 @@
 /// conditional distribution and runs the estimate up to five thousand times,
 /// and the tests of the port have to stay within the time the gate of the port
 /// needs on every backend.
+///
+/// The upstream file defines one of its cases twice, with the same name and the
+/// same body.  Python keeps the second definition and pytest collects the file
+/// seven times, so the seven cases of the port are the seven cases pytest
+/// collects.
 
 ///|
 /// The seed of the generators of the fixtures.

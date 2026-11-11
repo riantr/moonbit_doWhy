@@ -1250,6 +1250,183 @@ pub fn simple_iv_dataset(seed : Int32, n : Int32) -> Dataset {
   }
 }
 
+///|
+/// The port of `dowhy.datasets.xy_dataset`.
+///
+/// The data set holds a hidden confounder (`w0`), a time variable (`s`), the
+/// treatment (`Treatment`) and the outcome (`Outcome`).  The hidden confounder
+/// is the sum of two parabolas of the time variable: the first one is zero on
+/// the right of the fifth unit and the second one is zero on the left of it, so
+/// the confounder is the first parabola below the fifth unit and the second one
+/// above it.
+///
+/// The upstream draws its rows from the global generator of numpy, and the port
+/// draws them from the generator of numpy as well, with the same seed and the
+/// same order of the draws, so the rows of the port and the rows of the
+/// upstream are the same numbers.  The reference script
+/// `_verify/xy_dataset_reference.py` prints the numbers of the upstream.
+///
+/// The upstream holds no true effect for this data set, so the port reports the
+/// coefficient of the treatment in the outcome equation, which is one when the
+/// data set has an effect and zero when it has none.
+///
+/// The seed is the seed of numpy, so it is between zero and two to the thirty
+/// second power minus one; a seed outside of that range is taken modulo it.
+pub fn xy_dataset(
+  seed : Int32,
+  n : Int32,
+  effect~ : Bool = true,
+  num_common_causes~ : Int32 = 1,
+  is_linear~ : Bool = true,
+  sd_error~ : Double = 1.0,
+) -> Dataset {
+  let rng = @utils.NumpyRandom::new(seed.to_uint64() & 0xFFFFFFFFUL)
+  let rows = if n < 0 { 0 } else { n }
+  let num_cc = if num_common_causes < 1 { 1 } else { num_common_causes }
+
+  // ---- the error terms ----------------------------------------------------
+  let e1 : Array[Double] = []
+  let mut i = 0
+  while i < rows {
+    e1.push(rng.normal(0.0, sd_error))
+    i = i + 1
+  }
+  let e2 : Array[Double] = []
+  let mut i = 0
+  while i < rows {
+    e2.push(rng.normal(0.0, sd_error))
+    i = i + 1
+  }
+  let s : Array[Double] = []
+  let mut i = 0
+  while i < rows {
+    s.push(rng.uniform(0.0, 10.0))
+    i = i + 1
+  }
+
+  // ---- the hidden confounder ---------------------------------------------
+  let w0 : Array[Double] = []
+  let mut i = 0
+  while i < rows {
+    let time = s[i]
+    let first = if time >= 5.0 {
+      0.0
+    } else {
+      4.0 - (time - 3.0) * (time - 3.0)
+    }
+    let second = if time <= 5.0 {
+      0.0
+    } else {
+      (time - 7.0) * (time - 7.0) - 4.0
+    }
+    w0.push(first + second)
+    i = i + 1
+  }
+
+  // ---- the other common causes -------------------------------------------
+  let other : Array[Array[Double]] = []
+  let c1 : Array[Double] = []
+  let c2 : Array[Double] = []
+  if num_cc > 1 {
+    let means : Array[Double] = []
+    let mut j = 0
+    while j < num_cc - 1 {
+      means.push(rng.uniform(-1.0, 1.0))
+      j = j + 1
+    }
+    // The covariance of the upstream is the identity, so the columns of the
+    // draws are independent of each other.
+    let matrix = rng.multivariate_normal_identity(means, rows)
+    let mut i = 0
+    while i < rows {
+      let row : Array[Double] = []
+      let mut j = 0
+      while j < num_cc - 1 {
+        row.push(matrix.get(i, j))
+        j = j + 1
+      }
+      other.push(row)
+      i = i + 1
+    }
+    let mut j = 0
+    while j < num_cc - 1 {
+      c1.push(rng.uniform(0.0, 1.0))
+      j = j + 1
+    }
+    let mut j = 0
+    while j < num_cc - 1 {
+      c2.push(rng.uniform(0.0, 1.0))
+      j = j + 1
+    }
+  }
+
+  // ---- the treatment and the outcome -------------------------------------
+  let treatment : Array[Double] = []
+  let outcome : Array[Double] = []
+  let mut i = 0
+  while i < rows {
+    let mut tterm = 0.0
+    let mut yterm = 0.0
+    if num_cc > 1 {
+      let mut j = 0
+      while j < num_cc - 1 {
+        tterm = tterm + other[i][j] * c1[j]
+        yterm = yterm + other[i][j] * c2[j]
+        j = j + 1
+      }
+    }
+    let base = if is_linear { w0[i] } else { w0[i] * w0[i] }
+    let v = 6.0 + base + tterm + e1[i]
+    let mut y = 6.0 + base + yterm + e2[i]
+    if effect {
+      y = y + v
+    } else {
+      y = y + (6.0 + w0[i])
+    }
+    treatment.push(v)
+    outcome.push(y)
+    i = i + 1
+  }
+
+  // ---- the frame ---------------------------------------------------------
+  let columns : Array[(String, @api.Column)] = [
+    ("Treatment", @api.Column::numeric(treatment)),
+    ("Outcome", @api.Column::numeric(outcome)),
+    ("w0", @api.Column::numeric(w0)),
+    ("s", @api.Column::numeric(s)),
+  ]
+  let common_cause_names : Array[String] = ["w0"]
+  if num_cc > 1 {
+    let mut j = 0
+    while j < num_cc - 1 {
+      let name = "w" + (j + 1).to_string()
+      common_cause_names.push(name)
+      let values : Array[Double] = []
+      let mut i = 0
+      while i < rows {
+        values.push(other[i][j])
+        i = i + 1
+      }
+      columns.push((name, @api.Column::numeric(values)))
+      j = j + 1
+    }
+  }
+  {
+    df: frame_from_columns(columns),
+    ate: if effect {
+      1.0
+    } else {
+      0.0
+    },
+    treatment_names: ["Treatment"],
+    outcome_name: "Outcome",
+    common_cause_names,
+    instrument_names: [],
+    effect_modifier_names: [],
+    frontdoor_names: [],
+  }
+}
+
 // ---------------------------------------------------------------------------
 // The scenarios
 // ---------------------------------------------------------------------------
