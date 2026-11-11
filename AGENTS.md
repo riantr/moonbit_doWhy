@@ -142,6 +142,12 @@ and costly to debug.
 - **The bounds of a range need their parentheses** when they hold arithmetic:
   `for i in (start + 1)..<(end - 1)`. The bare form is a parse error, because
   the `+` and the `..<` are ambiguous.
+- **Indexing a string gives the code point, not the character.** `text[2]` of
+  a `String` and `view[2]` of a `StringView` are the `Int` of the code point
+  of the character, so `text[2].to_string()` is the number of the character and
+  not the character. The character itself comes from an array of characters,
+  which `text.to_array()` builds. A slice of a string is the way to take the
+  last character of a text: `text[text.length() - 1:text.length()].to_owned()`.
 - **A native crash says nothing; run the same test on `wasm`.** A native
   access violation surfaces as a bare `PanicError` with `at moonbit_panic` and
   `???` frames, the exit code `0xc0000005`, and **no output of the tests that
