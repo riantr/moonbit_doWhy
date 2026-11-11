@@ -82,6 +82,14 @@ and costly to debug.
   build and the types it defines stay unresolved. A package that implements
   its own test type lives in `independence.mbt`, not
   `independence_test.mbt`.
+- **A `*_test.mbt` file is a blackbox package**: it sees the public API of its
+  own package and nothing else. A private top-level function of the package is
+  unbound in it (`The value identifier ... is unbound`) and a variant of a
+  public enumeration cannot be built in it (`Cannot create values of the
+  read-only type: ...`). The port therefore exposes the variants of its public
+  enumerations through constructor functions (`AssignmentQuality::good()`,
+  `AutoMlFamily::linear()`) and keeps the helpers of a test in the test file
+  itself.
 - **There is no top-level `let mut`.** A module level `let` and a `const` are
   allowed, but a mutable global is a parse error (`unexpected token 'mut'`).
   A setting that upstream keeps in a module global therefore has to be passed
