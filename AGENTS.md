@@ -227,7 +227,13 @@ statsmodels / scikit-learn conventions are deliberate:
   algorithm of Kachitvichyanukul and Schmeiser, which is not ported. The
   multivariate normal of numpy needs the singular values and the singular
   vectors of the covariance, so the port takes the identity as its covariance,
-  which is the covariance the upstream uses.
+  which is the covariance the upstream uses. The identity is exact for numpy
+  as well: `np.random.multivariate_normal(means, np.eye(k), n)` draws the
+  `n * k` standard normal variates in the order of the rows and adds the means
+  to them, which is what the port does, so the two draw the same numbers. The
+  sign of the singular vectors does not matter here, because the covariance of
+  numpy is turned into the singular values and the singular vectors of its
+  decomposition, and the product of the two is the identity.
 - The numbers that come out of a logarithm may differ by one unit in the last
   place between the backends of the toolchain, so the tests that compare such
   numbers use a tolerance.
