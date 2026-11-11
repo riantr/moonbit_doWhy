@@ -53,6 +53,11 @@ whose margin is the tightest, the ones where a replaced case would hide, so
 that the mapping can be read.  The verdict of the script is the same with and
 without the argument.
 
+The script also counts the test blocks the port declares and checks that no file
+holds two of them with the same name, and it prints the count, because the test
+runner of the toolchain reports how many tests it executed: the two numbers have
+to be the same, or a declared case never runs.
+
 Usage:
 
     python _verify/upstream_test_coverage.py
@@ -146,6 +151,25 @@ def main() -> int:
     port_files = [
         p for p in sorted(PORT.rglob("*.mbt")) if 'test "' in p.read_text(encoding="utf-8")
     ]
+    # The number of the test blocks the port declares, and the names they carry.
+    # The runner of the toolchain reports how many tests it executed, and the two
+    # numbers have to be the same: a declared case that never runs is a case the
+    # port does not really mirror.
+    declared = 0
+    duplicates: list[str] = []
+    for path in port_files:
+        text = path.read_text(encoding="utf-8")
+        names = port_case_names(text)
+        declared += len(names)
+        seen: set[str] = set()
+        for name in names:
+            if name in seen:
+                duplicates.append(
+                    '{}: the case "{}" is declared twice'.format(
+                        str(path.relative_to(PORT)).replace("\\", "/"), name
+                    )
+                )
+            seen.add(name)
     cases_of: dict[str, int] = defaultdict(int)
     # The cases of the port that name every file of the upstream, with the file
     # of the port they are in, so that the mapping can be printed.
@@ -205,7 +229,7 @@ def main() -> int:
     print()
 
     # ------------------------------------------------------------ the cases
-    failures: list[str] = []
+    failures: list[str] = list(duplicates)
     not_mirrored: dict[str, list[tuple[str, str]]] = defaultdict(list)
     for path, name, reason in NOT_MIRRORED:
         not_mirrored[path].append((name, reason))
@@ -255,6 +279,7 @@ def main() -> int:
     print(f"the upstream holds {total_up} test cases")
     print(f"the port holds {total_port} test cases in the files that name them")
     print(f"the table holds {len(NOT_MIRRORED)} case(s) that are not mirrored")
+    print(f"the port declares {declared} test blocks; the runner has to report the same number")
     print()
     print("--- the test cases the port does not mirror")
     for path, name, reason in NOT_MIRRORED:

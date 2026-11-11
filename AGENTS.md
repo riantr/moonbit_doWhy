@@ -1872,6 +1872,12 @@ README makes, so they are tracked in the repository:
   `gcm/test_uncertainty.py`. A gate that compares the **names** is not
   possible: only four of the 469 cases of the upstream keep the name of the
   upstream in the port, the other 465 are written in prose.
+- `upstream_test_coverage.py` counts the **test blocks the port declares**
+  and prints the count, and it fails when a file of the port declares two
+  cases with the same name. The test runner of the toolchain reports how many
+  tests it executed, and the two numbers have to be the same: a declared case
+  that never runs is a case the port does not really mirror. At the release of
+  0.0.85 the port declares 870 of them and every backend reports 870.
 - `overrule_reference.py` runs the upstream of the refuter that assesses the
   support and the overlap on the fixture of the upstream test file, with the
   program of the rules solved with the `HiGHS` solver of `scipy` instead of
