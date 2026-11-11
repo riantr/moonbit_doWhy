@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.82.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.83.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -31,11 +31,16 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
 | Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the **CatBoost encoder** of the categorical columns, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure, the **kernel based** one, **with categorical data**, and the **randomised** one), the prediction models -- the linear one, the **polynomial** ones and the **decision tree** --, the **model that selects itself** out of a zoo of models --, the causal mechanisms, the stochastic models, **with the beta distribution, with the automatic selection of the family and with the Bayesian Gaussian mixture**, the noise of a causal model, **with a categorical root and with a categorical target**, the **feature relevance**, the **intrinsic causal influence**, **with a categorical target and with a categorical root**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, **with the selection of the model of a node by cross validation** and **with the model that selects itself**, the **test of a linear relationship** and the **missing values**, the **what-if queries**, **with the categorical variables and with the discrete data**, the **validation** layer, the **falsification** layer, **with the categorical data**, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution, **with a non-linear mechanism** and **without a causal model**), the **unit change** layer, **with its dispatcher and with the predicates of the exceptions of the upstream**, the **uncertainty** estimates, the **distribution change** layer -- the plain one and the **multiply-robust** one -- and the **arrow strength** layer are ported |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
+| Notebooks | `docs/source/example_notebooks` | ported (the scenarios of the **causal API**, of the **interpreter** and of the **basic graphical causal model** run as test cases; the other notebooks walk through the features the tests of the port cover one by one, or through the features the port does not have) |
 
 Everything that is listed as ported is covered by tests that compare against
 the numbers the upstream implementation produces. The rows marked *not
 ported* are stated plainly rather than approximated: a wrong answer is worse
 than a missing one.
+
+The port mirrors every test file of the upstream: the header of every test
+file of the port names the file of the upstream it mirrors, and the script
+`_verify/upstream_test_coverage.py` maps the two lists.
 
 ## Install
 
@@ -107,7 +112,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `plotting` | `riantr/moonbit_dowhy/plotting` | `dowhy.utils.plotting`, `dowhy.utils.graphviz_plotting` and `dowhy.utils.networkx_plotting`: the width of the arrows, the label and the colour of the nodes and of the edges, the layer of every node, the uncertainty bars of a bar plot and the graph of an adjacency matrix |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
 | `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the **CatBoost encoder** of the categorical columns, the prediction models **with the decision tree** and **with the model that selects itself**, the causal mechanisms, the stochastic models **with their Bayesian Gaussian mixture**, the automatic assignment of the mechanisms with the selection of the model of a node by cross validation, the test of a linear relationship and the missing values, the noise of a causal model **with a categorical root**, the feature relevance, the intrinsic causal influence **with a categorical target and with a categorical root**, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer **with the categorical data**, the model evaluation layer, the anomaly detection layer, the unit change layer **with its dispatcher**, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
-| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter, of the data subset refuter, of the dummy outcome refuter, of the unobserved common cause refuter, of the linear sensitivity analysis, of the E-value analysis, of the default strength of the confounder, of the **graph refutation** and of the **distance matching estimator**, of the **symbolic estimators** and of the **visual interpreters** |
+| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter, of the data subset refuter, of the dummy outcome refuter, of the unobserved common cause refuter, of the linear sensitivity analysis, of the E-value analysis, of the default strength of the confounder, of the **graph refutation** and of the **distance matching estimator**, of the **symbolic estimators**, of the **visual interpreters** and of the **notebooks** |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
 The root package `riantr/moonbit_dowhy` holds `CausalModel`, the entry point
