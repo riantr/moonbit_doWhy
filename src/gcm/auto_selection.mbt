@@ -19,6 +19,11 @@
 /// the port evaluates the models of the `gcm` package, and the two families
 /// of the upstream, the linear one and the non-linear one, are the ordinary
 /// least squares regression and the nearest neighbour regression.
+///
+/// The `BEST` quality of the upstream is the exception: it returns the model
+/// that selects itself, the model of AutoGluon, without evaluating any model.
+/// The port returns the model that selects itself out of the models of the
+/// `gcm` package, which is the port of the model of the upstream.
 
 ///|
 /// The number of the folds of the cross validation of the selection.
@@ -165,6 +170,19 @@ pub fn select_regression_model(
   quality : AssignmentQuality,
   seed : UInt64,
 ) -> ModelSelection {
+  match quality {
+    Best =>
+      // The upstream returns the model that selects itself for the `BEST`
+      // quality without evaluating any model, because the model selects itself
+      // when it is fitted. The port does the same.
+      return {
+        model: SelectedModel::Regression(
+          auto_gluon_regressor(configuration=AutoMlConfiguration::new(seed~)),
+        ),
+        performances: [],
+      }
+    _ => ()
+  }
   let parents = x.column_names()
   let rng = @utils.Random::new(seed)
   let folds = selection_k_folds(y.length(), rng)
@@ -201,6 +219,19 @@ pub fn select_classification_model(
   quality : AssignmentQuality,
   seed : UInt64,
 ) -> ModelSelection {
+  match quality {
+    Best =>
+      // The upstream returns the model that selects itself for the `BEST`
+      // quality without evaluating any model, because the model selects itself
+      // when it is fitted. The port does the same.
+      return {
+        model: SelectedModel::Classification(
+          auto_gluon_classifier(configuration=AutoMlConfiguration::new(seed~)),
+        ),
+        performances: [],
+      }
+    _ => ()
+  }
   let parents = x.column_names()
   let rng = @utils.Random::new(seed)
   let folds = selection_stratified_k_folds(y, rng)
@@ -264,9 +295,10 @@ fn regressors_of(quality : AssignmentQuality) -> Array[PredictionModel] {
       models
     }
     Best => {
-      // The upstream uses an AutoGluon model for this quality, which needs
-      // the optional AutoGluon dependency; the port uses the models of the
-      // `BETTER` quality.
+      // The upstream uses the model of AutoGluon for this quality, which
+      // needs the optional AutoGluon dependency; the port uses the model that
+      // selects itself. The selection returns that model before it builds the
+      // zoo, so the arm is never reached.
       models.push(PredictionModel::polynomial())
       models
     }
@@ -288,6 +320,8 @@ fn regressors_of(quality : AssignmentQuality) -> Array[PredictionModel] {
 /// logistic regression, so its lists are the same for the three qualities. The
 /// decision tree is the non-linear classifier of the port, the way the histogram
 /// gradient boosting classifier is the non-linear classifier of the upstream.
+/// The `BEST` quality returns the model that selects itself before the list is
+/// built, so the list is not used for it.
 fn classifiers_of(quality : AssignmentQuality) -> Array[ClassificationModel] {
   let models : Array[ClassificationModel] = [
     ClassificationModel::decision_tree(),
@@ -304,7 +338,9 @@ fn classifiers_of(quality : AssignmentQuality) -> Array[ClassificationModel] {
 ///|
 /// The name of a regressor of the zoo of the selection.
 fn regression_model_name(model : PredictionModel) -> String {
-  if model.is_nearest_neighbour() {
+  if model.is_auto_ml() {
+    "the model that selects itself out of a zoo of models"
+  } else if model.is_nearest_neighbour() {
     "the nearest neighbour regression"
   } else if model.degree() > 0 {
     "the polynomial regression"
@@ -316,7 +352,9 @@ fn regression_model_name(model : PredictionModel) -> String {
 ///|
 /// The name of a classifier of the zoo of the selection.
 fn classification_model_name(model : ClassificationModel) -> String {
-  if model.is_nearest_neighbour() {
+  if model.is_auto_ml() {
+    "the model that selects itself out of a zoo of models"
+  } else if model.is_nearest_neighbour() {
     "the nearest neighbour classifier"
   } else if model.degree() > 0 {
     "the polynomial logistic regression"

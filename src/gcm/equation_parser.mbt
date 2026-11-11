@@ -91,6 +91,7 @@ pub fn PredictionModel::with_equation(
     equation: Some({ expression, parents: parents.copy(), }),
     degree: 0,
     neighbours: None,
+    auto_ml: None,
   }
 }
 

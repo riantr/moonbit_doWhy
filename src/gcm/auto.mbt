@@ -11,8 +11,9 @@
 /// by cross validation out of a whole zoo of scikit-learn estimators; the port
 /// selects it out of the models of the `gcm` package, the selection being the
 /// port of `dowhy.gcm.auto.select_model`. The `BEST` quality of the upstream
-/// needs the optional AutoGluon dependency, so the port uses the models of
-/// the `BETTER` quality for it.
+/// needs the optional AutoGluon dependency, so the port replaces the model of
+/// the upstream with the model that selects itself out of the models of the
+/// `gcm` package.
 
 ///|
 /// The quality of the automatic model selection.
@@ -25,8 +26,9 @@
 ///
 /// The deviation of the port is that its zoo holds the models of the `gcm`
 /// package, so the `Good` quality and the `Better` quality differ by the
-/// polynomial regression alone, and the `Best` quality cannot be reproduced
-/// and uses the models of the `Better` quality.
+/// polynomial regression alone. The `Best` quality holds the model that
+/// selects itself out of the models of the `gcm` package, which is the port
+/// of the model of AutoGluon that the upstream uses for it.
 pub enum AssignmentQuality {
   ///
   /// The small set of models of the upstream.
@@ -35,7 +37,8 @@ pub enum AssignmentQuality {
   /// The larger set of models of the upstream.
   Better
   ///
-  /// The AutoGluon model of the upstream, which the port cannot reproduce.
+  /// The model that selects itself, which the port has instead of the model of
+  /// AutoGluon.
   Best
 }
 
@@ -56,11 +59,11 @@ pub fn AssignmentQuality::better() -> AssignmentQuality {
 }
 
 ///|
-/// The AutoGluon model of the upstream.
+/// The model that selects itself.
 ///
 /// This is the port of `AssignmentQuality.BEST` of `dowhy.gcm.auto`. The
 /// upstream needs the optional AutoGluon dependency for it; the port uses the
-/// same models as the `Better` quality.
+/// model that selects itself out of the models of the `gcm` package.
 pub fn AssignmentQuality::best() -> AssignmentQuality {
   Best
 }

@@ -114,6 +114,24 @@ pub fn Matrix::col(self : Matrix, j : Int32) -> Array[Double] {
 }
 
 ///|
+/// The rows with the given indexes, in the order of the indexes.
+///
+/// The result holds one row for every index of the given indexes. An index
+/// that is out of the matrix holds a row of zeroes.
+pub fn Matrix::take_rows(self : Matrix, rows : Array[Int32]) -> Matrix {
+  let out = Matrix::zeros(rows.length(), self.cols)
+  for i = 0; i < rows.length(); i = i + 1 {
+    let row = rows[i]
+    if row >= 0 && row < self.rows {
+      for j = 0; j < self.cols; j = j + 1 {
+        out.set(i, j, self.get(row, j))
+      }
+    }
+  }
+  out
+}
+
+///|
 /// A copy of the matrix.
 pub fn Matrix::copy(self : Matrix) -> Matrix {
   { rows: self.rows, cols: self.cols, data: self.data.copy(), }

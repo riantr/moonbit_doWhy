@@ -936,16 +936,17 @@ pub fn CausalMechanism::evaluate_categorical(
   for i = 0; i < probabilities.length(); i = i + 1 {
     let row = probabilities[i]
     let mut index = 0
-    let mut cumulative = row[0]
-    if cumulative < noise[i] {
-      index = 1
-      cumulative = cumulative + row[1]
-      if cumulative < noise[i] {
-        // No class reaches the noise, which is what the upstream does as well:
-        // the first class is taken.
-        index = 0
+    let mut cumulative = 0.0
+    let mut found = false
+    for k = 0; k < row.length(); k = k + 1 {
+      cumulative = cumulative + row[k]
+      if !found && cumulative >= noise[i] {
+        index = k
+        found = true
       }
     }
+    // No class reaches the noise, which is what the upstream does as well: the
+    // first class is taken.
     out.push(classes[index])
   }
   out

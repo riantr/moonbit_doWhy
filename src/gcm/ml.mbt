@@ -32,6 +32,9 @@ pub struct PredictionModel {
   degree : Int32
   /// The nearest neighbour model, when the model is one.
   neighbours : KnnModel?
+  /// The configuration of the model that selects itself out of a zoo of
+  /// models, when the model is one.
+  auto_ml : AutoMlConfiguration?
 }
 
 ///|
@@ -47,6 +50,7 @@ pub fn PredictionModel::linear() -> PredictionModel {
     equation: None,
     degree: 0,
     neighbours: None,
+    auto_ml: None,
   }
 }
 
@@ -70,6 +74,7 @@ pub fn PredictionModel::polynomial(degree~ : Int32 = 2) -> PredictionModel {
     equation: None,
     degree,
     neighbours: None,
+    auto_ml: None,
   }
 }
 
@@ -92,6 +97,7 @@ pub fn PredictionModel::nearest_neighbour(k~ : Int32 = 5) -> PredictionModel {
     equation: None,
     degree: 0,
     neighbours: Some(KnnModel::new(k)),
+    auto_ml: None,
   }
 }
 
@@ -103,6 +109,18 @@ pub fn PredictionModel::nearest_neighbour(k~ : Int32 = 5) -> PredictionModel {
 /// neighbours of a row.
 pub fn PredictionModel::is_nearest_neighbour(self : PredictionModel) -> Bool {
   match self.neighbours {
+    Some(_) => true
+    None => false
+  }
+}
+
+///|
+/// Whether the model selects itself out of a zoo of models.
+///
+/// This is the port of the model of `dowhy.gcm.ml.autogluon`, which selects
+/// itself when it is fitted.
+pub fn PredictionModel::is_auto_ml(self : PredictionModel) -> Bool {
+  match self.auto_ml {
     Some(_) => true
     None => false
   }
@@ -127,6 +145,7 @@ pub fn PredictionModel::with_fixed_parameters(
     equation: None,
     degree: 0,
     neighbours: None,
+    auto_ml: None,
   }
 }
 
@@ -192,7 +211,15 @@ pub fn PredictionModel::fit(
         equation: Some(equation),
         degree: self.degree,
         neighbours: self.neighbours,
+        auto_ml: None,
       }
+    None => ()
+  }
+  match self.auto_ml {
+    Some(configuration) =>
+      // A model that selects itself out of a zoo of models fits every model of
+      // its zoo with a cross validation and keeps the best one.
+      return auto_ml_fit_regression(configuration, x, y)
     None => ()
   }
   match self.neighbours {
@@ -207,6 +234,7 @@ pub fn PredictionModel::fit(
         equation: None,
         degree: 0,
         neighbours: Some(neighbours.fit(x, y)),
+        auto_ml: None,
       }
     None => ()
   }
@@ -220,6 +248,7 @@ pub fn PredictionModel::fit(
       equation: None,
       degree: self.degree,
       neighbours: None,
+      auto_ml: None,
     }
   }
   let n = x.nrows()
@@ -241,6 +270,7 @@ pub fn PredictionModel::fit(
       equation: None,
       degree: self.degree,
       neighbours: None,
+      auto_ml: None,
     }
   }
   let offsets : Array[Double] = []
@@ -271,6 +301,7 @@ pub fn PredictionModel::fit(
     equation: None,
     degree: self.degree,
     neighbours: None,
+    auto_ml: None,
   }
 }
 
@@ -333,6 +364,24 @@ pub fn PredictionModel::clone(self : PredictionModel) -> PredictionModel {
         equation: Some(equation),
         degree: self.degree,
         neighbours: self.neighbours,
+        auto_ml: None,
+      }
+    None => ()
+  }
+  match self.auto_ml {
+    Some(configuration) =>
+      // The copy keeps the configuration of the model, because it holds the
+      // families of the models the model tries, and it is not fitted, the way
+      // the copy of the model of the upstream is not fitted.
+      return {
+        coefficients: [],
+        intercept: 0.0,
+        fitted: false,
+        fixed: false,
+        equation: None,
+        degree: 0,
+        neighbours: None,
+        auto_ml: Some(configuration.copy()),
       }
     None => ()
   }
@@ -348,6 +397,7 @@ pub fn PredictionModel::clone(self : PredictionModel) -> PredictionModel {
         equation: None,
         degree: 0,
         neighbours: Some(KnnModel::new(neighbours.k)),
+        auto_ml: None,
       }
     None => ()
   }
@@ -360,6 +410,7 @@ pub fn PredictionModel::clone(self : PredictionModel) -> PredictionModel {
       equation: None,
       degree: self.degree,
       neighbours: None,
+      auto_ml: None,
     }
   }
   {
@@ -370,6 +421,7 @@ pub fn PredictionModel::clone(self : PredictionModel) -> PredictionModel {
     equation: None,
     degree: self.degree,
     neighbours: None,
+    auto_ml: None,
   }
 }
 
@@ -413,6 +465,9 @@ pub struct ClassificationModel {
   neighbours : KnnClassifier?
   /// The decision tree, when the model is one.
   tree : DecisionTreeClassifier?
+  /// The configuration of the model that selects itself out of a zoo of
+  /// models, when the model is one.
+  auto_ml : AutoMlConfiguration?
 }
 
 ///|
@@ -429,6 +484,7 @@ pub fn ClassificationModel::logistic() -> ClassificationModel {
     one_versus_rest: None,
     neighbours: None,
     tree: None,
+    auto_ml: None,
   }
 }
 
@@ -456,6 +512,7 @@ pub fn ClassificationModel::nearest_neighbour(
     one_versus_rest: None,
     neighbours: Some(KnnClassifier::new(k)),
     tree: None,
+    auto_ml: None,
   }
 }
 
@@ -468,6 +525,18 @@ pub fn ClassificationModel::is_nearest_neighbour(
   self : ClassificationModel,
 ) -> Bool {
   match self.neighbours {
+    Some(_) => true
+    None => false
+  }
+}
+
+///|
+/// Whether the model selects itself out of a zoo of models.
+///
+/// This is the port of the model of `dowhy.gcm.ml.autogluon`, which selects
+/// itself when it is fitted.
+pub fn ClassificationModel::is_auto_ml(self : ClassificationModel) -> Bool {
+  match self.auto_ml {
     Some(_) => true
     None => false
   }
@@ -498,6 +567,7 @@ pub fn ClassificationModel::polynomial(
     one_versus_rest: None,
     neighbours: None,
     tree: None,
+    auto_ml: None,
   }
 }
 
@@ -519,6 +589,7 @@ pub fn ClassificationModel::decision_tree() -> ClassificationModel {
     one_versus_rest: None,
     neighbours: None,
     tree: Some(DecisionTreeClassifier::new()),
+    auto_ml: None,
   }
 }
 
@@ -564,6 +635,13 @@ pub fn ClassificationModel::fit(
       " classes",
     )
   }
+  match self.auto_ml {
+    Some(configuration) =>
+      // A model that selects itself out of a zoo of models fits every model of
+      // its zoo with a cross validation and keeps the best one.
+      return auto_ml_fit_classification(configuration, x, y)
+    None => ()
+  }
   match self.neighbours {
     Some(neighbours) =>
       // A nearest neighbour model keeps the training data and computes nothing
@@ -577,6 +655,7 @@ pub fn ClassificationModel::fit(
         one_versus_rest: None,
         neighbours: Some(neighbours.fit(x, y)),
         tree: None,
+        auto_ml: None,
       }
     None => ()
   }
@@ -593,6 +672,7 @@ pub fn ClassificationModel::fit(
         one_versus_rest: None,
         neighbours: None,
         tree: Some(tree.fit(x, y)),
+        auto_ml: None,
       }
     None => ()
   }
@@ -633,6 +713,7 @@ pub fn ClassificationModel::fit(
     one_versus_rest: None,
     neighbours: None,
     tree: None,
+    auto_ml: None,
   }
 }
 
@@ -683,6 +764,7 @@ fn fit_one_versus_rest(
     one_versus_rest: Some({ coefficients, intercepts, }),
     neighbours: None,
     tree: None,
+    auto_ml: None,
   }
 }
 
@@ -789,6 +871,24 @@ pub fn ClassificationModel::clone(
 ) -> ClassificationModel {
   // The copy keeps the degree of the polynomial features, because it is a
   // hyper parameter of the model and not the result of a fit.
+  match self.auto_ml {
+    Some(configuration) =>
+      // The copy keeps the configuration of the model, because it holds the
+      // families of the models the model tries, and it is not fitted, the way
+      // the copy of the model of the upstream is not fitted.
+      return {
+        coefficients: [],
+        intercept: 0.0,
+        classes: [],
+        fitted: false,
+        degree: self.degree,
+        one_versus_rest: None,
+        neighbours: None,
+        tree: None,
+        auto_ml: Some(configuration.copy()),
+      }
+    None => ()
+  }
   {
     coefficients: [],
     intercept: 0.0,
@@ -801,6 +901,7 @@ pub fn ClassificationModel::clone(
       None => None
     },
     tree: None,
+    auto_ml: None,
   }
 }
 
