@@ -3290,6 +3290,75 @@ The abstract bases of the upstream.
   which needs the autogluon of the upstream, and `test_notebooks.py`, which
   runs the notebooks of the upstream.
 
+[0.0.76]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.76
+## [0.0.77] - 2026-11-11
+
+The distance matching estimator.
+
+### Added
+
+- the distance matching estimator of the upstream, in the `estimators` package:
+  the `EstimatorKind::DistanceMatching` variant, the constructor
+  `CausalEstimator::distance_matching` and the new file
+  `src/estimators/distance_matching.mbt`, which is the port of
+  `dowhy.causal_estimators.distance_matching_estimator.DistanceMatchingEstimator`.
+  The estimator matches every unit of the treated arm with the units of the
+  control arm whose common causes are the closest ones, and it reports the
+  average treatment effect on the treated, the average treatment effect on the
+  control and the average treatment effect.
+- the distance metric of the estimator, the public enumeration
+  `DistanceMetric`: the Minkowski metric with its exponent, the Euclidean
+  distance, the Manhattan distance and the Chebyshev distance. The Euclidean
+  distance is the default, the way the upstream takes the default of
+  scikit-learn.
+- the method name `backdoor.distance_matching` of the registry of the
+  estimators of the model. It is the name the upstream reaches the estimator
+  with, and the upstream has no test file for it.
+- the report of the two errors of the upstream, in
+  `CausalEstimator::distance_matching_error`: the upstream raises an exception
+  when the treatment is not binary and when the estimand has no common cause,
+  and MoonBit cannot catch the abort of a function.
+- the six cases of the new file `src/tests/distance_matching.mbt`: the numbers
+  of the estimator are the numbers of the upstream, with one match per unit and
+  with two, the estimator recovers the true effect of a generated data set, the
+  estimator of the model is the estimator of the upstream, the errors of the
+  upstream are reported, and the estimator has no do operator and has a
+  symbolic estimator.
+- the numbers of the upstream on the very rows of the port in
+  `_verify/distance_matching_reference.py`: the script runs the estimator of
+  the upstream on the fixture of the port and prints the average treatment
+  effect on the treated, the average treatment effect on the control and the
+  average treatment effect, with one match per unit and with two. It prints
+  the number of the queries whose two nearest candidates are at the same
+  distance, which is the number of the ties the two searches may break
+  differently.
+
+### Notes
+
+- The upstream has no test file for the distance matching estimator, so the
+  cases of the port compare the numbers of the upstream on a fixture that both
+  build, and check that the estimator recovers the true effect of a generated
+  data set, the way the tests of the estimators of the upstream do.
+- The upstream searches the neighbours with the ball tree of scikit-learn, and
+  it breaks a tie between two neighbours at the same distance with the order
+  of the traversal of the tree. The port searches with an exact scan and
+  breaks the tie with the order of the rows. The two agree whenever no two
+  candidates are at the same distance, and the fixture of the port holds no
+  such pair.
+- The upstream caches the encoded common causes when the estimator is fitted
+  and pairs them with the outcomes of the data of the estimate, so an estimate
+  on other data pairs the covariates of the fitted data with the outcomes of
+  the other data. The port encodes the data of the estimate with the encoder
+  of the fit, so the covariates and the outcomes belong to the same rows.
+- The upstream raises an `IndexError` in its branch of the exact match
+  columns, because it indexes the rows of a group with the number of the
+  treated units of the whole data. The port does not implement that branch.
+- The upstream builds the symbolic estimator of the distance matching
+  estimator, the string `b: y~v0+W0`, and the port does not build the symbolic
+  estimators.
+
+[0.0.77]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.77
+
 ## [0.0.73] - 2026-11-11
 
 The interpretation of an estimate.

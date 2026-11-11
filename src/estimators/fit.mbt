@@ -236,6 +236,7 @@ pub fn CausalEstimator::fit(
     TwoStageRegression => self.fit_two_stage_regression(data)
     RegressionDiscontinuity => self.fit_regression_discontinuity(data)
     GeneralizedLinearModel => self.fit_generalized_linear_model(data)
+    DistanceMatching => self.fit_distance_matching(data)
   }
 }
 
@@ -355,6 +356,7 @@ pub fn CausalEstimator::estimate_effect(
       self.estimate_regression_discontinuity(data, target_units)
     GeneralizedLinearModel =>
       self.estimate_generalized_linear_model(data, target_units)
+    DistanceMatching => self.estimate_distance_matching(data, target_units)
   }
 }
 

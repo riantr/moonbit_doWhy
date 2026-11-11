@@ -485,6 +485,8 @@ fn CausalModel::build_estimator(
         estimand,
         @utils.GlmFamily::poisson(),
       )
+    "backdoor.distance_matching" =>
+      @estimators.CausalEstimator::distance_matching(estimand)
     _ =>
       abort(
         "The method " + method_name + " is not supported by this port of DoWhy",

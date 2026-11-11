@@ -1215,6 +1215,21 @@ statsmodels / scikit-learn conventions are deliberate:
   probability. The threshold of the comparison is the one of numpy, which
   takes the logarithm of the probability and the exponential of it, so the
   threshold and the probability differ by one unit in the last place.
+- The distance matching estimator of the `estimators` package compares the
+  candidates with the **sum of the powers of the differences** of their
+  covariates, which is the distance raised to the exponent of the Minkowski
+  metric. It is the number the ball tree of scikit-learn compares, and the root
+  of it is a monotone function, so the two order the candidates the same way.
+  The port searches with an exact scan and breaks a tie between two candidates
+  at the same distance with the **order of the rows**; the upstream breaks it
+  with the order of the traversal of its ball tree. The fixture of
+  `_verify/distance_matching_reference.py` holds no pair of candidates at the
+  same distance, so the numbers of the port and of the upstream are the same.
+- The distance matching estimator encodes the data of the estimate with the
+  encoder that was fitted with the estimator. The upstream caches the encoded
+  common causes when the estimator is fitted and pairs them with the outcomes
+  of the data of the estimate, so an estimate on other data pairs the
+  covariates of the fitted data with the outcomes of the other data.
 
 ## Package layout
 
@@ -1227,7 +1242,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `dowhy.causal_estimator` (the estimate objects) |
 | `interpreters` | `dowhy.interpreters` (the sentence that reads an estimate) |
-| `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand, the do operator and the base estimator of the upstream |
+| `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand, the do operator, the distance matching estimator and the base estimator of the upstream |
 | `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations and the graph refutation |
 | `overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `cm` | the PC causal discovery algorithm and the Fisher-z test |
@@ -1277,6 +1292,16 @@ README makes, so they are tracked in the repository:
   one of them, the data of the process with a binary treatment and the numbers
   of the deterministic conversion of the treatment. It is the evidence for the
   data generating processes of the `datasets` package.
+- `distance_matching_reference.py` runs the distance matching estimator of
+  the upstream -- the class
+  `dowhy.causal_estimators.distance_matching_estimator.DistanceMatchingEstimator`
+  -- on the fixture of the port and prints the average treatment effect on the
+  treated, the average treatment effect on the control and the average
+  treatment effect, with one match per unit and with two. It prints the number
+  of the queries whose two nearest candidates are at the same distance, which
+  is the number of the ties the search of the upstream and the search of the
+  port may break differently. It is the evidence for the distance matching
+  estimator of the `estimators` package.
 - `abstract_bases_reference.py` runs the base classes of the upstream -- the class
   `CausalEstimator` and the class `DimensionalityReducer` -- and prints the
   messages of the `NotImplementedError` they raise, and it walks the classes of

@@ -30,6 +30,8 @@ pub enum EstimatorKind {
   RegressionDiscontinuity
   /// A generalised linear model, with the family of the estimator.
   GeneralizedLinearModel
+  /// The distance matching estimator.
+  DistanceMatching
 }
 
 ///|
@@ -170,6 +172,10 @@ pub struct CausalEstimator {
   mut compute_confidence_intervals : Bool
   /// Whether the significance is tested.
   mut test_significance : Bool
+  /// The number of the matches of the distance matching estimator.
+  mut num_matches_per_unit : Int32
+  /// The distance metric of the distance matching estimator.
+  mut distance_metric : DistanceMetric
 }
 
 ///|
@@ -347,7 +353,34 @@ fn CausalEstimator::new(
     sample_size_fraction: 1.0,
     compute_confidence_intervals: false,
     test_significance: false,
+    num_matches_per_unit: 1,
+    distance_metric: DistanceMetric::euclidean(),
   }
+}
+
+///|
+/// A distance matching estimator for the given estimand.
+///
+/// The estimator matches every unit of the treated arm with the units of the
+/// control arm whose common causes are the closest ones, and the effect is the
+/// difference of the outcomes of the matched units.
+///
+/// The number of the matches per unit and the distance metric are the two
+/// parameters of the upstream: the upstream takes the number of the matches
+/// from its `num_matches_per_unit` and the metric from its
+/// `distance_metric`.
+pub fn CausalEstimator::distance_matching(
+  estimand : @identifiers.IdentifiedEstimand,
+  num_matches_per_unit~ : Int32 = 1,
+  distance_metric~ : DistanceMetric = DistanceMetric::euclidean(),
+) -> CausalEstimator {
+  let estimator = CausalEstimator::new(
+    estimand,
+    EstimatorKind::DistanceMatching,
+  )
+  estimator.num_matches_per_unit = num_matches_per_unit
+  estimator.distance_metric = distance_metric
+  estimator
 }
 
 ///|
@@ -390,6 +423,7 @@ pub fn CausalEstimator::supports_do_operator(self : CausalEstimator) -> Bool {
     InstrumentalVariable => false
     TwoStageRegression => false
     RegressionDiscontinuity => false
+    DistanceMatching => false
   }
 }
 
@@ -418,6 +452,7 @@ pub fn CausalEstimator::supports_symbolic_estimator(
     InstrumentalVariable => true
     TwoStageRegression => true
     RegressionDiscontinuity => true
+    DistanceMatching => true
   }
 }
 
