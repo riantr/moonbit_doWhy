@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.80.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.81.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -91,8 +91,8 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 
 | Package | Import path | Ports |
 | --- | --- | --- |
-| `api` | `riantr/moonbit_dowhy/api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder |
-| `utils` | `riantr/moonbit_dowhy/utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, a deterministic generator, **the generator of numpy**, the tests of the conditional independence and **the text of a number** |
+| `api` | `riantr/moonbit_dowhy/api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder and **the numeric features** |
+| `utils` | `riantr/moonbit_dowhy/utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, a deterministic generator, **the generator of numpy**, the tests of the conditional independence, **the text of a number** and **the ordered set** |
 | `graph` | `riantr/moonbit_dowhy/graph` | `dowhy.graph`, `dowhy.causal_graph`, the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site, and **the graph operations** of `dowhy.utils.graph_operations` |
 | `identifiers` | `riantr/moonbit_dowhy/identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `riantr/moonbit_dowhy/model` | `dowhy.causal_estimator` (the estimate objects) |
@@ -102,7 +102,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `overrule` | `riantr/moonbit_dowhy/overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
 | `datasets` | `riantr/moonbit_dowhy/datasets` | `dowhy.datasets` (the `linear_dataset` generator, the sales data set and the **random graph** data set), the **data generating processes** of `dowhy.utils.dgp` and of `dowhy.utils.dgps`, and the deterministic test fixtures |
 | `data_transformers` | `riantr/moonbit_dowhy/data_transformers` | `dowhy.data_transformers` (the PCA reducer and the base reducer of the upstream) |
-| `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
+| `do_samplers` | `riantr/moonbit_dowhy/do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers`, with **the propensity score of the treatment** |
 | `timeseries` | `riantr/moonbit_dowhy/timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `plotting` | `riantr/moonbit_dowhy/plotting` | `dowhy.utils.plotting`, `dowhy.utils.graphviz_plotting` and `dowhy.utils.networkx_plotting`: the width of the arrows, the label and the colour of the nodes and of the edges, the layer of every node, the uncertainty bars of a bar plot and the graph of an adjacency matrix |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
@@ -1412,6 +1412,11 @@ following ways:
   generator of numpy. The port draws them from the generator of numpy it is
   given, so the two numbers are the numbers of numpy for the seed of that
   generator.
+- The upstream closes over the loop variable of the loop that builds its
+  polynomial functions, so every function of the list it returns raises the
+  column to the highest degree of the list and the list is of no use. The port
+  closes over the degree of its own function, so every function of the list
+  raises the column to its own degree.
 
 ## Development
 

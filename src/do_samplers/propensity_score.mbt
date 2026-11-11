@@ -32,6 +32,31 @@ priv struct Design {
 const MINIMUM_PROPENSITY : Double = 1.0e-12
 
 ///|
+/// The propensity score of a binary treatment.
+///
+/// This is the port of
+/// `dowhy.utils.propensity_score.propensity_of_treatment_score`: a logistic
+/// regression of the treatment on the covariates, and the probability of the
+/// class one of every row.
+///
+/// The upstream fits the regression with the `lbfgs` solver of
+/// `scikit-learn`; the port fits it with the iteration of the `utils` package,
+/// so the scores are the scores of the upstream up to the tolerance of the
+/// fit.
+pub fn propensity_of_treatment_score(
+  data : @api.DataFrame,
+  covariates : Array[String],
+  treatment : String,
+  variable_types : Map[String, VariableType],
+) -> Array[Double] {
+  let design = build_design(data, covariates, variable_types)
+  let matrix = design_matrix(design)
+  let targets = binary_targets(data, treatment)
+  let fit = @utils.logistic_fit(matrix, targets, 1.0, 100, 1.0e-4)
+  @utils.logistic_predict(fit.beta, matrix)
+}
+
+///|
 /// The propensity score of the observed treatment state of every row.
 ///
 /// This is the port of `state_propensity_score`: the density of the

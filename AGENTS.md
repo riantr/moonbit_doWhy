@@ -1250,6 +1250,17 @@ statsmodels / scikit-learn conventions are deliberate:
 - The text of a number is the text of Python, so an integral number keeps its
   decimal point. The helper is the public function `utils::float_text`, and the
   `plotting` package takes it from there.
+- The ordered set of the `utils` package is the port of
+  `dowhy.utils.ordered_set.OrderedSet`. The set of the upstream holds any
+  hashable value and the set of the port holds names, which are the values the
+  upstream uses it with. The upstream raises an error when the index of the
+  set is out of range; the port returns the empty string.
+- The polynomial functions of the `utils` package are the port of
+  `dowhy.utils.regression.create_polynomial_function`. The upstream closes
+  over the loop variable of the loop that builds them, so every function of
+  the list it returns raises the column to the highest degree of the list. The
+  port closes over the degree of its own function, so every function of the
+  list raises the column to its own degree.
 - The symbolic estimators of the `estimators` package are the strings of the
   upstream, which the upstream builds when the estimator is fitted. The port
   builds them when they are asked for, so the effect modifiers of the
@@ -1268,8 +1279,8 @@ statsmodels / scikit-learn conventions are deliberate:
 | Package | Ports |
 | --- | --- |
 | the root package (`src/`) | `dowhy.causal_model`: the `CausalModel` entry point |
-| `api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder |
-| `utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, **the generator of numpy**, the tests of the conditional independence and **the text of a number** |
+| `api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder and **the numeric features** |
+| `utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, **the generator of numpy**, the tests of the conditional independence, **the text of a number** and **the ordered set** |
 | `graph` | `dowhy.graph`, `dowhy.causal_graph`, the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site, and **the graph operations** of `dowhy.utils.graph_operations` |
 | `identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `dowhy.causal_estimator` (the estimate objects) |
@@ -1281,7 +1292,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the **CatBoost encoder** of the categorical columns, the prediction models, the causal mechanisms, the automatic assignment of the mechanisms with the selection of the model by cross validation and the test of a linear relationship, the feature relevance, the intrinsic causal influence, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer, the model evaluation layer, the anomaly detection layer, the unit change layer, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
 | `datasets` | `dowhy.datasets` (the random graph data set), the **data generating processes** of `dowhy.utils.dgp` and of `dowhy.utils.dgps`, and the deterministic test fixtures |
 | `data_transformers` | `dowhy.data_transformers` (the PCA reducer and the base reducer of the upstream) |
-| `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers` |
+| `do_samplers` | `dowhy.do_sampler`, `dowhy.do_samplers`, with **the propensity score of the treatment** |
 | `timeseries` | `dowhy.timeseries` (the temporal graph and the temporal shift) |
 | `plotting` | `dowhy.utils.plotting`, `dowhy.utils.graphviz_plotting` and `dowhy.utils.networkx_plotting` (the width of the arrows, the label and the colour of the nodes and of the edges, the layer of every node, the error bars of a bar plot and the graph of an adjacency matrix) |
 | `tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter and of the data subset refuter |
@@ -1337,6 +1348,13 @@ README makes, so they are tracked in the repository:
   the simple ordered tree, the connectivity of a graph, its undirected graph,
   a predecessor, the removal and the addition of an edge and a random pair of
   nodes.
+- `utilities_reference.py` runs the functions of
+  `dowhy.utils.ordered_set`, of `dowhy.utils.regression` and of
+  `dowhy.utils.propensity_score` on the fixtures of the port and prints what
+  they return: the elements of an ordered set and its union, its intersection
+  and its difference, the polynomial functions of a matrix, the moment function
+  of a treatment, the indices of the numeric columns of a data frame and the
+  propensity score of a treatment.
 - `symbolic_estimators_reference.py` fits every estimator of the upstream that
   builds a symbolic estimator and prints the string it builds -- with one
   outcome and with two, with an effect modifier and without a common cause --

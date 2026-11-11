@@ -3495,6 +3495,50 @@ The graph operations of the upstream.
   generator.
 
 [0.0.80]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.80
+## [0.0.81] - 2026-11-11
+
+The remaining utilities of the upstream.
+
+### Added
+
+- the ordered set of the upstream, in the new file `src/utils/ordered_set.mbt`:
+  the public struct `OrderedSet` holds names in the order they were added, and
+  its `union`, `intersection` and `difference` are the port of the three
+  methods of `dowhy.utils.ordered_set.OrderedSet`.
+- the regression helpers of the upstream, in the new file
+  `src/utils/regression.mbt`: the public functions `generate_moment_function`
+  and `create_polynomial_function` are the port of the two of
+  `dowhy.utils.regression` that do not need a data frame.
+- the numeric features of a data frame, in the new file `src/api/features.mbt`:
+  the public function `DataFrame::numeric_feature_indices` is the port of
+  `dowhy.utils.regression.get_numeric_features`. The helper of the upstream
+  lives in the `utils` package of the upstream, and the `utils` package of the
+  port has no dependency on the `api` package, so the port keeps it where the
+  data frame lives.
+- the propensity score of a binary treatment, in the new public function
+  `do_samplers::propensity_of_treatment_score`: it completes the port of
+  `dowhy.utils.propensity_score`.
+- the nine cases of the new files `src/utils/ordered_set_test.mbt`,
+  `src/utils/regression_test.mbt`, `src/api/features_test.mbt` and
+  `src/do_samplers/propensity_score_test.mbt`.
+- the numbers of the upstream in `_verify/utilities_reference.py`: the script
+  runs the functions of the three modules of the upstream on the fixtures of
+  the port and prints what they return.
+
+### Notes
+
+- The upstream closes over the loop variable of the loop that builds its
+  polynomial functions, and every function of the list it returns raises the
+  column to the highest degree of the list. The port closes over the degree of
+  its own function, so every function of the list raises the column to its own
+  degree.
+- The upstream finds the propensity score of a treatment with the `lbfgs`
+  solver of scikit-learn and the port finds it with the iteration of the
+  `utils` package, so the two scores agree to the tolerance of the fit.
+- The upstream raises an error when the index of an ordered set is out of
+  range; the port returns the empty string.
+
+[0.0.81]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.81
 
 ## [0.0.73] - 2026-11-11
 
