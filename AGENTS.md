@@ -1241,6 +1241,15 @@ statsmodels / scikit-learn conventions are deliberate:
   means of a common cause as the absolute difference, because the upstream
   takes it as the difference of the largest and the smallest of them. The
   standard deviation of a common cause is the one of numpy, with `ddof = 0`.
+- The graph operations of the `graph` package are the port of
+  `dowhy.utils.graph_operations`. The graph of an adjacency matrix holds the
+  edges whose weight is larger than `0.01` in absolute value, the label of an
+  edge is its weight, and the upstream draws the edges from the column to the
+  row of the matrix, the way its own loop over the indices of the matrix does.
+  The port draws them the same way.
+- The text of a number is the text of Python, so an integral number keeps its
+  decimal point. The helper is the public function `utils::float_text`, and the
+  `plotting` package takes it from there.
 - The symbolic estimators of the `estimators` package are the strings of the
   upstream, which the upstream builds when the estimator is fitted. The port
   builds them when they are asked for, so the effect modifiers of the
@@ -1260,8 +1269,8 @@ statsmodels / scikit-learn conventions are deliberate:
 | --- | --- |
 | the root package (`src/`) | `dowhy.causal_model`: the `CausalModel` entry point |
 | `api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder |
-| `utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, **the generator of numpy**, the tests of the conditional independence |
-| `graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
+| `utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, **the generator of numpy**, the tests of the conditional independence and **the text of a number** |
+| `graph` | `dowhy.graph`, `dowhy.causal_graph`, the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site, and **the graph operations** of `dowhy.utils.graph_operations` |
 | `identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `dowhy.causal_estimator` (the estimate objects) |
 | `interpreters` | `dowhy.interpreters` (the sentence that reads an estimate, the balance of the common causes and the distribution of a confounder) |
@@ -1321,6 +1330,13 @@ README makes, so they are tracked in the repository:
   distribution one, whose counts and sums of the weights the port reproduces.
   The fixtures hold the propensity scores of their rows, so the two sides build
   the very same strata and the very same weights.
+- `graph_operations_reference.py` runs the thirteen functions of
+  `dowhy.utils.graph_operations` on the fixtures of the port and prints what
+  they return: the adjacency list of a matrix, the graph of a matrix and its
+  compact form, the ancestors of a node, the induced graph, the C-components,
+  the simple ordered tree, the connectivity of a graph, its undirected graph,
+  a predecessor, the removal and the addition of an edge and a random pair of
+  nodes.
 - `symbolic_estimators_reference.py` fits every estimator of the upstream that
   builds a symbolic estimator and prints the string it builds -- with one
   outcome and with two, with an effect modifier and without a common cause --

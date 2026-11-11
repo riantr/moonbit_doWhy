@@ -184,9 +184,9 @@ fn random_graph(
   for _ in 0..<10 {
     let (i, j) = random_node_pair(num_vars, random)
     if graph.has_edge(node_name(i), node_name(j)) {
-      delete_edge(graph, i, j)
+      @graph.del_edge(graph, node_name(i), node_name(j))
     } else {
-      add_edge(graph, i, j)
+      @graph.add_edge(graph, node_name(i), node_name(j))
     }
   }
   graph
@@ -235,77 +235,6 @@ fn node_name(index : Int32) -> String {
     abort("a random graph holds at most 26 variables")
   }
   letters[index]
-}
-
-///|
-/// Delete the edge between the two nodes, unless the graph would be
-/// disconnected.
-///
-/// This is the port of `dowhy.utils.graph_operations.del_edge`.
-fn delete_edge(graph : @graph.DirectedGraph, i : Int32, j : Int32) -> Unit {
-  let from = node_name(i)
-  let to = node_name(j)
-  if !graph.has_edge(from, to) {
-    return
-  }
-  graph.remove_edge(from, to)
-  if !is_connected_undirected(graph) {
-    graph.add_edge(from, to)
-  }
-}
-
-///|
-/// Add the edge between the two nodes, unless the graph would have a cycle.
-///
-/// This is the port of `dowhy.utils.graph_operations.add_edge`.
-fn add_edge(graph : @graph.DirectedGraph, i : Int32, j : Int32) -> Unit {
-  let from = node_name(i)
-  let to = node_name(j)
-  graph.add_edge(from, to)
-  if !graph.is_dag() {
-    graph.remove_edge(from, to)
-  }
-}
-
-///|
-/// Whether the graph is connected when its edges are ignored.
-///
-/// This is the port of `dowhy.utils.graph_operations.is_connected`, which asks
-/// the same question of the undirected graph of the edges.
-fn is_connected_undirected(graph : @graph.DirectedGraph) -> Bool {
-  let nodes = graph.node_list()
-  if nodes.length() <= 1 {
-    return true
-  }
-  let seen : Set[String] = Set::Set([nodes[0]])
-  let stack : Array[String] = [nodes[0]]
-  while stack.length() > 0 {
-    let node = stack[stack.length() - 1]
-    let _ = stack.pop()
-    for neighbour in neighbours_undirected(graph, node) {
-      if !seen.contains(neighbour) {
-        seen.add(neighbour)
-        stack.push(neighbour)
-      }
-    }
-  }
-  seen.length() == nodes.length()
-}
-
-///|
-/// The neighbours of a node, with the edges ignored.
-fn neighbours_undirected(
-  graph : @graph.DirectedGraph,
-  node : String,
-) -> Array[String] {
-  let out : Array[String] = []
-  for successor in graph.successors(node) {
-    out.push(successor)
-  }
-  for predecessor in graph.predecessors(node) {
-    out.push(predecessor)
-  }
-  out
 }
 
 ///|

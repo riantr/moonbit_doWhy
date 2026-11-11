@@ -3451,6 +3451,50 @@ The visual interpreters of the upstream.
   that way only. The port holds every common cause of the estimator.
 
 [0.0.79]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.79
+## [0.0.80] - 2026-11-11
+
+The graph operations of the upstream.
+
+### Added
+
+- the graph operations of the upstream, in the new file
+  `src/graph/operations.mbt`: the public functions
+  `adjacency_matrix_to_adjacency_list`, `adjacency_matrix_to_dot`, `str_to_dot`,
+  `find_ancestor`, `induced_graph`, `find_c_components`,
+  `get_simple_ordered_tree`, `is_connected`, `convert_to_undirected_graph`,
+  `get_random_node_pair`, `find_predecessor`, `del_edge` and `add_edge` are the
+  port of the thirteen functions of `dowhy.utils.graph_operations` that the port
+  did not have yet.
+- the text of a number in the `utils` package, in the new public function
+  `utils::float_text`: it is the way Python writes a number, and the helper of
+  the `plotting` package moves to it.
+- the thirteen cases of the new file `src/graph/operations_test.mbt`: every one
+  of them asserts a number that the upstream returns.
+- the numbers of the upstream in `_verify/graph_operations_reference.py`: the
+  script runs the thirteen functions of the upstream on the fixtures of the
+  port and prints what they return.
+
+### Changed
+
+- the `identifiers` package takes the ancestors and the C-components of a graph
+  from the `graph` package, and the `datasets` package takes the removal and
+  the addition of an edge and the connectivity of a graph from it, so the three
+  ports of the upstream live in one place.
+
+### Notes
+
+- The upstream draws the edges of the graph of an adjacency matrix from the
+  column to the row of the matrix, the way its own loop over the indices of the
+  matrix does. The port draws them the same way.
+- The upstream raises an error when it is asked whether a graph without a node
+  is connected, and when it is given the empty graph to compact. The port
+  answers that such a graph is connected and returns the empty string.
+- The upstream draws the two numbers of a random pair of nodes from the global
+  generator of numpy. The port draws them from the generator of numpy it is
+  given, so the two numbers are the numbers of numpy for the seed of that
+  generator.
+
+[0.0.80]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.80
 
 ## [0.0.73] - 2026-11-11
 

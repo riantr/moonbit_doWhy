@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.79.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.80.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -92,8 +92,8 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | Package | Import path | Ports |
 | --- | --- | --- |
 | `api` | `riantr/moonbit_dowhy/api` | the subset of `pandas.DataFrame` the estimators use, plus the one-hot encoder |
-| `utils` | `riantr/moonbit_dowhy/utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, a deterministic generator, **the generator of numpy**, the tests of the conditional independence |
-| `graph` | `riantr/moonbit_dowhy/graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
+| `utils` | `riantr/moonbit_dowhy/utils` | matrices, least squares, generalised linear models, distributions, descriptive statistics, a deterministic generator, **the generator of numpy**, the tests of the conditional independence and **the text of a number** |
+| `graph` | `riantr/moonbit_dowhy/graph` | `dowhy.graph`, `dowhy.causal_graph`, the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site, and **the graph operations** of `dowhy.utils.graph_operations` |
 | `identifiers` | `riantr/moonbit_dowhy/identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `riantr/moonbit_dowhy/model` | `dowhy.causal_estimator` (the estimate objects) |
 | `interpreters` | `riantr/moonbit_dowhy/interpreters` | `dowhy.interpreters`: the sentence that reads an estimate, the **balance of the common causes** and the **distribution of a confounder** |
@@ -487,6 +487,13 @@ statsmodels and scikit-learn are deliberate rather than accidental:
   one half, so a trial of a probability above one half is a one when the double
   is at most the probability, and a trial of a probability of at most one half
   is a one when the double is greater than the complement of the probability.
+- The graph operations of the `graph` package are the port of
+  `dowhy.utils.graph_operations`. The graph of an adjacency matrix holds the
+  edges whose weight is larger than `0.01` in absolute value, the label of an
+  edge is its weight, and the upstream draws the edges from the column to the
+  row of the matrix, the way its own loop over the indices of the matrix does.
+  The text of a number is the text of Python, so an integral number keeps its
+  decimal point.
 
 ## Deliberate differences from upstream
 
@@ -1394,6 +1401,17 @@ following ways:
   of its matrices with the library of linear algebra and the port computes it
   with a plain loop, so the numbers of the data generating processes differ in
   the last digits.
+- The upstream draws the edges of the graph of an adjacency matrix from the
+  column to the row of the matrix, the way its own loop over the indices of the
+  matrix does. The port draws them the same way, so the graph of the port has
+  the edges of the graph of the upstream.
+- The upstream raises an error when it is asked whether a graph without a node
+  is connected, and when it is given the empty graph to compact. The port
+  answers that such a graph is connected and returns the empty string.
+- The upstream draws the two numbers of a random pair of nodes from the global
+  generator of numpy. The port draws them from the generator of numpy it is
+  given, so the two numbers are the numbers of numpy for the seed of that
+  generator.
 
 ## Development
 

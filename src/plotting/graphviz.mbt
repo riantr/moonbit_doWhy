@@ -163,7 +163,10 @@ pub fn GraphPlot::to_dot(self : GraphPlot) -> String {
     }
     match edge.penwidth {
       Some(width) =>
-        attributes = attributes + "penwidth=\"" + float_text(width) + "\", "
+        attributes = attributes +
+          "penwidth=\"" +
+          @utils.float_text(width) +
+          "\", "
       None => ()
     }
     attributes = attributes + "color=\"" + edge.color + "\""

@@ -54,7 +54,7 @@ pub fn strength_label(strength : Double) -> String {
   if strength.is_inf() {
     return "Inf"
   }
-  " " + float_text(truncated_strength(strength))
+  " " + @utils.float_text(truncated_strength(strength))
 }
 
 ///|
@@ -68,7 +68,7 @@ fn label_and_strength(strength : Double) -> (String, Double) {
   if strength.is_inf() {
     return ("Inf", 10000.0)
   }
-  (" " + float_text(truncated_strength(strength)), strength)
+  (" " + @utils.float_text(truncated_strength(strength)), strength)
 }
 
 ///|
@@ -78,25 +78,6 @@ fn label_and_strength(strength : Double) -> (String, Double) {
 /// hundred, so the strength `0.29` becomes `0.28`.
 pub fn truncated_strength(strength : Double) -> Double {
   (strength * 100.0).trunc() / 100.0
-}
-
-///|
-/// The text of a number, the way Python writes it.
-///
-/// MoonBit writes an integral number without a decimal point, and Python
-/// writes one with it.
-fn float_text(value : Double) -> String {
-  if value.is_nan() {
-    return "nan"
-  }
-  if value.is_inf() {
-    return if value > 0.0 { "inf" } else { "-inf" }
-  }
-  let text = value.to_string()
-  if text.contains(".") || text.contains("e") || text.contains("E") {
-    return text
-  }
-  text + ".0"
 }
 
 ///|

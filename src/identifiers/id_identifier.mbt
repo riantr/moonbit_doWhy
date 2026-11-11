@@ -228,7 +228,7 @@ fn identify_effect_of_graph(
   }
   // Line 2. It is enough to look at the parts of the model that are ancestral
   // to the outcome.
-  let ancestors = find_ancestor(graph, outcome_name)
+  let ancestors = @graph.find_ancestor(graph, outcome_name)
   if difference(node_names, ancestors).length() > 0 {
     let treatment = intersection(treatment_name, ancestors)
     let nodes = intersection(node_names, ancestors)
@@ -242,7 +242,7 @@ fn identify_effect_of_graph(
   }
   // Line 3. An action on a node that has no effect on the outcome is forced.
   let do_graph = do_graph_of(graph, treatment_name)
-  let ancestors_do = find_ancestor(do_graph, outcome_name)
+  let ancestors_do = @graph.find_ancestor(do_graph, outcome_name)
   let w = difference(
     difference(node_names, to_set(treatment_name)),
     ancestors_do,
@@ -255,7 +255,10 @@ fn identify_effect_of_graph(
   }
   // Line 4. The problem is split into the problems of the C-components.
   let nodes_minus_x = difference(node_names, to_set(treatment_name))
-  let components = c_components(graph.subgraph(nodes_minus_x), nodes_minus_x)
+  let components = @graph.find_c_components(
+    graph.subgraph(nodes_minus_x),
+    nodes_minus_x,
+  )
   if components.length() > 1 {
     let identifier = IDExpression::new()
     let sum_over = difference(
@@ -285,7 +288,7 @@ fn identify_effect_of_graph(
   }
   // Line 5. The algorithm fails when the graph has a hedge.
   let s = components[0]
-  let components_g = c_components(graph, node_names)
+  let components_g = @graph.find_c_components(graph, node_names)
   if components_g.length() == 1 && same_set(components_g[0], node_names) {
     return (None, ID_NOT_IDENTIFIABLE)
   }
@@ -314,31 +317,6 @@ fn identify_effect_of_graph(
 }
 
 ///|
-/// The ancestors of the given nodes, the nodes themselves included.
-fn find_ancestor(
-  graph : @graph.DirectedGraph,
-  nodes : Array[String],
-) -> Set[String] {
-  let ancestors : Set[String] = Set::Set([])
-  for node in nodes {
-    let stack : Array[String] = [node]
-    while stack.length() > 0 {
-      let current = stack[stack.length() - 1]
-      let _ = stack.pop()
-      if !ancestors.contains(current) {
-        ancestors.add(current)
-        for parent in graph.predecessors(current) {
-          if !ancestors.contains(parent) {
-            stack.push(parent)
-          }
-        }
-      }
-    }
-  }
-  ancestors
-}
-
-///|
 /// The graph of the intervention on the given nodes: the edges that point into
 /// them are removed.
 fn do_graph_of(
@@ -352,60 +330,6 @@ fn do_graph_of(
     }
   }
   result
-}
-
-///|
-/// The C-components of the graph: the connected components of the subgraph of
-/// the edges that point in both directions.
-fn c_components(
-  graph : @graph.DirectedGraph,
-  node_set : Array[String],
-) -> Array[Array[String]] {
-  let adjacency : Map[String, Array[String]] = Map([])
-  for node in node_set {
-    adjacency.set(node, [])
-  }
-  for i in 0..<(node_set.length() - 1) {
-    for j in (i + 1)..<node_set.length() {
-      let first = node_set[i]
-      let second = node_set[j]
-      if graph.has_edge(first, second) && graph.has_edge(second, first) {
-        let first_neighbours = adjacency.get(first).unwrap_or([]).copy()
-        first_neighbours.push(second)
-        adjacency.set(first, first_neighbours)
-        let second_neighbours = adjacency.get(second).unwrap_or([]).copy()
-        second_neighbours.push(first)
-        adjacency.set(second, second_neighbours)
-      }
-    }
-  }
-  let components : Array[Array[String]] = []
-  let visited : Set[String] = Set::Set([])
-  for node in node_set {
-    if !visited.contains(node) {
-      let component : Array[String] = []
-      collect_component(node, adjacency, visited, component)
-      components.push(component)
-    }
-  }
-  components
-}
-
-///|
-/// The connected component of the node in the graph of the bidirected edges.
-fn collect_component(
-  node : String,
-  adjacency : Map[String, Array[String]],
-  visited : Set[String],
-  component : Array[String],
-) -> Unit {
-  visited.add(node)
-  component.push(node)
-  for neighbour in adjacency.get(node).unwrap_or([]) {
-    if !visited.contains(neighbour) {
-      collect_component(neighbour, adjacency, visited, component)
-    }
-  }
 }
 
 ///|
