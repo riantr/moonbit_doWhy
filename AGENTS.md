@@ -1853,6 +1853,25 @@ README makes, so they are tracked in the repository:
   file name and a glob -- because a test file of the port names the upstream
   file it mirrors one by one, by its bare name, or through a glob such as
   `tests/causal_estimators/test_*_estimator.py`.
+- The check of the cases of `upstream_test_coverage.py` is a **count**: the
+  number of the `test` blocks of the port against the number of the test
+  functions of the upstream, per file. A file whose port holds many more cases
+  than its upstream hides a case that was replaced by another one, so the
+  argument `--audit` prints the cases of the two sides of the twelve files
+  whose margin is the tightest, the ones where such a replacement would show.
+  The verdict of the script is the same with and without the argument. The
+  audit was read for the release of 0.0.85 and the mapping is one to one: the
+  names of the port are the names of the upstream written in prose, and the
+  tightest files are `gcm/test_unit_change.py` (the one case fewer of the
+  table), `causal_identifiers/test_id_identifier.py`,
+  `causal_refuters/test_dummy_outcome_refuter.py`, `gcm/ml/test_autogluon.py`,
+  `gcm/test_anomaly_attribution.py`, `gcm/test_arrow_strength.py`,
+  `gcm/test_config.py`, `gcm/test_distribution_change.py`,
+  `gcm/test_divergence.py`, `gcm/test_feature_relevance.py`, `gcm/test_graph.py`,
+  `gcm/test_model_evaluation.py`, `gcm/test_stats.py` and
+  `gcm/test_uncertainty.py`. A gate that compares the **names** is not
+  possible: only four of the 469 cases of the upstream keep the name of the
+  upstream in the port, the other 465 are written in prose.
 - `overrule_reference.py` runs the upstream of the refuter that assesses the
   support and the overlap on the fixture of the upstream test file, with the
   program of the rules solved with the `HiGHS` solver of `scipy` instead of

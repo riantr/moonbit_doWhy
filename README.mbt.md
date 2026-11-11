@@ -50,6 +50,11 @@ cases of the port than of the upstream, the file of the unit change, where
 two pairs of the upstream cases share one port case each and one upstream
 case is mirrored by two port cases.
 
+The check of the cases is a count, and a count hides a case that was replaced
+by another one in a file whose port holds many more cases than its upstream.
+The argument `--audit` therefore prints the cases of the two sides of the
+twelve files whose margin is the tightest, so that the mapping can be read.
+
 ## Install
 
 ```shell

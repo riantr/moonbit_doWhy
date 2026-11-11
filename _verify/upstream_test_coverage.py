@@ -46,9 +46,17 @@ The script fails when the number of the cases of a file of the upstream is
 not the number of the cases of the port plus the exceptions of the table, and
 when an exception names a test function that the upstream does not hold.
 
+The count is the check, and it is a count: a file whose port holds many more
+cases than its upstream hides a case that was replaced by another one.  The
+argument `--audit` therefore prints the cases of the two sides of the files
+whose margin is the tightest, the ones where a replaced case would hide, so
+that the mapping can be read.  The verdict of the script is the same with and
+without the argument.
+
 Usage:
 
     python _verify/upstream_test_coverage.py
+    python _verify/upstream_test_coverage.py --audit
 """
 
 from __future__ import annotations
@@ -115,7 +123,15 @@ def port_case_count(text: str) -> int:
     return len(re.findall(r'^\s*test\s+"', text, re.MULTILINE))
 
 
+def port_case_names(text: str) -> list[str]:
+    """The names of the test blocks of a file of the port."""
+    return re.findall(r'^\s*test\s+"([^"]*)"', text, re.MULTILINE)
+
+
 def main() -> int:
+    # The audit prints the mapping of the files whose margin is the tightest.
+    # The verdict of the script is the same with and without it.
+    audit = "--audit" in sys.argv[1:]
     upstream = upstream_files()
     by_name: dict[str, list[str]] = defaultdict(list)
     for path in upstream:
@@ -131,6 +147,9 @@ def main() -> int:
         p for p in sorted(PORT.rglob("*.mbt")) if 'test "' in p.read_text(encoding="utf-8")
     ]
     cases_of: dict[str, int] = defaultdict(int)
+    # The cases of the port that name every file of the upstream, with the file
+    # of the port they are in, so that the mapping can be printed.
+    names_of: dict[str, list[tuple[str, list[str]]]] = defaultdict(list)
     for path in port_files:
         text = path.read_text(encoding="utf-8")
         head = text[:4000]
@@ -138,6 +157,7 @@ def main() -> int:
         names += sorted(set(re.findall(r"`(test_[A-Za-z0-9_]+\.py)`", head)))
         mentioned[str(path.relative_to(PORT)).replace("\\", "/")] = names
         cases = port_case_count(text)
+        case_names = port_case_names(text)
         for name in names:
             if "*" in name:
                 pattern = name.split("tests/")[-1]
@@ -147,16 +167,25 @@ def main() -> int:
                     ):
                         covered.add(candidate)
                         cases_of[candidate] += cases
+                        names_of[candidate].append(
+                            (str(path.relative_to(PORT)).replace("\\", "/"), case_names)
+                        )
             elif "/" in name:
                 for candidate in upstream:
                     if candidate.endswith(name.split("tests/")[-1]):
                         covered.add(candidate)
                         cases_of[candidate] += cases
+                        names_of[candidate].append(
+                            (str(path.relative_to(PORT)).replace("\\", "/"), case_names)
+                        )
             else:
                 matches = by_name.get(name, [])
                 if len(matches) == 1:
                     covered.add(matches[0])
                     cases_of[matches[0]] += cases
+                    names_of[matches[0]].append(
+                        (str(path.relative_to(PORT)).replace("\\", "/"), case_names)
+                    )
                 elif len(matches) > 1:
                     ambiguous.add(name)
 
@@ -243,7 +272,43 @@ def main() -> int:
             print("   ", failure)
         return 1
     print("every test case of the upstream is mirrored by a test case of the port")
+    if audit:
+        print()
+        print_audit(upstream, names_of, cases_of)
     return 0
+
+
+def print_audit(
+    upstream: list[str],
+    names_of: dict[str, list[tuple[str, list[str]]]],
+    cases_of: dict[str, int],
+) -> None:
+    """Print the cases of the two sides of the files whose margin is the tightest.
+
+    The count is the check of the script, and a file whose port holds many more
+    cases than its upstream hides a case that was replaced by another one.  The
+    files whose margin is the tightest are the ones where such a replacement
+    would show, so their cases are printed side by side.
+    """
+    margins = []
+    for path in upstream:
+        cases = upstream_cases(path)
+        margins.append((cases_of.get(path, 0) - len(cases), path, len(cases)))
+    margins.sort()
+    print("--- the files whose margin is the tightest, and their cases")
+    for margin, path, up in margins[:12]:
+        print()
+        print("=" * 78)
+        print("{}  (upstream {}, port {})".format(path, up, cases_of.get(path, 0)))
+        print("=" * 78)
+        print("--- the cases of the upstream")
+        for name in upstream_cases(path):
+            print("   ", name)
+        print("--- the cases of the port")
+        for where, case_names in names_of.get(path, []):
+            print("   [{}]".format(where))
+            for case in case_names:
+                print("       -", case)
 
 
 if __name__ == "__main__":
