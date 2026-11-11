@@ -398,27 +398,37 @@ fn CausalEstimator::estimate_propensity_score_stratification(
 }
 
 ///|
-/// The rows of every stratum of the data, sorted by the stratum.
+/// The stratum of every row of the data.
 ///
-/// The stratum of a row is the rounded rank of its propensity score, scaled by
-/// the number of strata, the way the upstream computes it with the `rank`
-/// method of pandas and the `round` method of numpy.
+/// The stratum is the rounded rank of the propensity score, scaled by the
+/// number of strata, the way the upstream computes it with the `rank` method
+/// of pandas and the `round` method of numpy.
+fn strata_labels(ps : Array[Double], num_strata : Double) -> Array[Int32] {
+  let n = ps.length()
+  let ranks = @utils.average_rank(ps)
+  let labels : Array[Int32] = []
+  for i = 0; i < n; i = i + 1 {
+    labels.push(
+      @utils.round_half_even(ranks[i] / n.to_double() * num_strata).to_int(),
+    )
+  }
+  labels
+}
+
+///|
+/// The rows of every stratum of the data, sorted by the stratum.
 fn strata_groups(
   ps : Array[Double],
   num_strata : Double,
 ) -> Array[Array[Int32]] {
   let n = ps.length()
-  let ranks = @utils.average_rank(ps)
-  let keys : Array[Double] = []
-  for i = 0; i < n; i = i + 1 {
-    keys.push(@utils.round_half_even(ranks[i] / n.to_double() * num_strata))
-  }
+  let labels = strata_labels(ps, num_strata)
   let order : Array[Int32] = []
   for i = 0; i < n; i = i + 1 {
     order.push(i)
   }
   order.sort_by(fn(a, b) {
-    let c = @utils.compare_double(keys[a], keys[b])
+    let c = @utils.compare_double(labels[a].to_double(), labels[b].to_double())
     if c != 0 {
       c
     } else if a < b {
@@ -433,7 +443,7 @@ fn strata_groups(
   let mut i = 0
   while i < n {
     let mut j = i
-    while j + 1 < n && keys[order[j + 1]] == keys[order[i]] {
+    while j + 1 < n && labels[order[j + 1]] == labels[order[i]] {
       j = j + 1
     }
     let group : Array[Int32] = []
@@ -444,6 +454,40 @@ fn strata_groups(
     i = j + 1
   }
   groups
+}
+
+///|
+/// The number of the strata the upstream searches for.
+///
+/// The search starts with `0.5 * rows / clipping_threshold` strata and halves
+/// the number until at least half of the strata are kept, which is the rule of
+/// the upstream.
+fn auto_num_strata(
+  ps : Array[Double],
+  treatment : Array[Double],
+  clipping_threshold : Int32,
+) -> Double {
+  let n = treatment.length()
+  let mut num_strata = 0.5 * n.to_double() / clipping_threshold.to_double()
+  let mut found = false
+  while !found {
+    let groups = kept_strata(
+      strata_groups(ps, num_strata),
+      treatment,
+      clipping_threshold,
+    )
+    if groups.length().to_double() >= 0.5 * num_strata {
+      found = true
+    } else {
+      num_strata = (num_strata / 2.0).to_int().to_double()
+      if num_strata < 2.0 {
+        abort(
+          "Not enough data to generate at least two strata. This error may be due to a high value of \'clipping_threshold\'.",
+        )
+      }
+    }
+  }
+  num_strata
 }
 
 ///|
@@ -491,28 +535,28 @@ fn auto_strata_groups(
   treatment : Array[Double],
   clipping_threshold : Int32,
 ) -> Array[Array[Int32]] {
-  let n = treatment.length()
-  let mut num_strata = 0.5 * n.to_double() / clipping_threshold.to_double()
-  let mut groups : Array[Array[Int32]] = []
-  let mut found = false
-  while !found {
-    groups = kept_strata(
-      strata_groups(ps, num_strata),
-      treatment,
-      clipping_threshold,
-    )
-    if groups.length().to_double() >= 0.5 * num_strata {
-      found = true
-    } else {
-      num_strata = (num_strata / 2.0).to_int().to_double()
-      if num_strata < 2.0 {
-        abort(
-          "Not enough data to generate at least two strata. This error may be due to a high value of \'clipping_threshold\'.",
-        )
-      }
-    }
+  let num_strata = auto_num_strata(ps, treatment, clipping_threshold)
+  kept_strata(strata_groups(ps, num_strata), treatment, clipping_threshold)
+}
+
+///|
+/// The stratum of every row of the data.
+///
+/// This is the port of the `strata` column that the propensity score
+/// stratification estimator of the upstream adds to the data. The upstream
+/// searches for the number of the strata when its estimator holds the
+/// automatic number, and the port searches for it the same way.
+pub fn CausalEstimator::strata_labels(
+  self : CausalEstimator,
+  data : @api.DataFrame,
+) -> Array[Int32] {
+  let ps = self.propensity_scores_of(data)
+  let treatment = data.numeric(self.treatment_name)
+  let num_strata = match self.num_strata {
+    NumStrata::Fixed(count) => count.to_double()
+    NumStrata::Auto => auto_num_strata(ps, treatment, self.clipping_threshold)
   }
-  groups
+  strata_labels(ps, num_strata)
 }
 
 ///|

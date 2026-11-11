@@ -3405,6 +3405,52 @@ The symbolic estimators of the upstream.
   estimator are the ones of its last fit.
 
 [0.0.78]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.78
+## [0.0.79] - 2026-11-11
+
+The visual interpreters of the upstream.
+
+### Added
+
+- the propensity balance interpreter of the upstream, in the new file
+  `src/interpreters/propensity_balance.mbt`: the public function
+  `propensity_balance_interpretation` computes the standardized mean
+  differences of the common causes, without the strata and with them. The
+  upstream draws a line of them and returns the frame it plots, and the port
+  returns the numbers of that frame.
+- the confounder distribution interpreter of the upstream, in the new file
+  `src/interpreters/confounder_distribution.mbt`: the public function
+  `confounder_distribution_interpretation` computes the counts of the
+  categories of a confounder, before and after the weights of the inverse
+  propensity score weighting. The upstream draws two bar charts of them, and
+  the port returns the numbers of the two charts.
+- the stratum of every row of the data in the `estimators` package, in the new
+  public function `CausalEstimator::strata_labels`: it is the port of the
+  `strata` column that the propensity score stratification estimator of the
+  upstream adds to the data, and the balance interpreter needs it.
+- the two cases of the new file `src/tests/interpreters.mbt`: the balance and
+  the distribution of the port are the balance and the distribution of the
+  upstream.
+- the numbers of the upstream in `_verify/interpreter_reference.py`: the
+  script prints the balance of the upstream, the counts of its distribution
+  and the sums of the weights of the two arms, on the very rows of the port.
+
+### Notes
+
+- The upstream takes the difference of the two means of a common cause as the
+  difference of the largest and the smallest of them, so its standardized mean
+  differences are the absolute differences. The port takes the absolute
+  difference as well.
+- The upstream takes the strata of the data from the column that the
+  propensity score stratification estimator adds to the data, and the port
+  computes them with the number of the strata of the estimator, the way the
+  upstream computes them.
+- The upstream draws the two figures with the matplotlib of the upstream, and
+  the port returns the numbers of the two figures.
+- The upstream melts only the columns whose names start with a `W` when it
+  builds the frame of the balance, so its balance holds the common causes named
+  that way only. The port holds every common cause of the estimator.
+
+[0.0.79]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.79
 
 ## [0.0.73] - 2026-11-11
 

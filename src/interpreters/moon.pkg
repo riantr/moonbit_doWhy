@@ -1,4 +1,6 @@
 import {
   "riantr/moonbit_dowhy/api",
+  "riantr/moonbit_dowhy/estimators",
   "riantr/moonbit_dowhy/model",
+  "riantr/moonbit_dowhy/utils",
 }

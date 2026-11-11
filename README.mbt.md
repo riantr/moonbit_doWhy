@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.78.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.79.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -15,7 +15,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Area | Upstream | This port |
 | --- | --- | --- |
 | Causal graph, d-separation | `dowhy.graph`, `dowhy.causal_graph` | ported (the graph, the d-separation, the backdoor and the frontdoor paths, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site) |
-| Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators, the **refutation of the graph**, the **do operator**, the **view of the graph** and the **interpretation** of an estimate) |
+| Causal model | `dowhy.causal_model` | ported (the entry point, the graph given as a graph or as a string, the common causes, the instruments and the effect modifiers of the graph, the cache of the estimators, the conditional estimates of the regression based estimators, the **refutation of the graph**, the **do operator**, the **view of the graph** and the **interpretation** of an estimate -- the **sentence that reads it**, its **balance of the common causes** and its **distribution of a confounder**) |
 | Identification | `dowhy.causal_identifier` | ported (backdoor -- default, exhaustive, minimal, maximal, the three efficient strategies of Smucler-Sapienza-Rotnitzky and the optimized search -- frontdoor, general adjustment, IV, mediation -- the mediator, the confounders of its two stages and the natural indirect effect --, and the **ID algorithm** of Shpitser-Pearl) |
 | Estimation | `dowhy.causal_estimators` | ported (linear regression, generalised linear model, propensity score weighting / matching / stratification, doubly robust, instrumental variable, two stage regression -- the two stages of the frontdoor and of the mediation estimand --, regression discontinuity, **distance matching**, and the **base estimator** of the upstream, whose placeholders are not implemented) -- and the **symbolic estimators** of every estimator but the instrumental variable one, whose symbolic estimator of the upstream holds the expressions of the sympy |
 | Refutation | `dowhy.causal_refuters` | ported (bootstrap, placebo treatment, data subset, dummy outcome -- with its list of transformations of the outcome, **with its random forest, its neural network and its support vector regressor**, and its two branches --, random common cause, unobserved common cause -- with its **linear sensitivity analysis**, its **E-value analysis** and the **default strength** it infers for its confounder --, the **significance test** of the refutations, the **assess overlap** refuter, which learns the rules of the support and of the overlap with boolean rules, and the **graph refutation**, which tests the conditional independences the graph entails against the data) |
@@ -96,7 +96,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `graph` | `riantr/moonbit_dowhy/graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
 | `identifiers` | `riantr/moonbit_dowhy/identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `riantr/moonbit_dowhy/model` | `dowhy.causal_estimator` (the estimate objects) |
-| `interpreters` | `riantr/moonbit_dowhy/interpreters` | `dowhy.interpreters`: the sentence that reads an estimate |
+| `interpreters` | `riantr/moonbit_dowhy/interpreters` | `dowhy.interpreters`: the sentence that reads an estimate, the **balance of the common causes** and the **distribution of a confounder** |
 | `estimators` | `riantr/moonbit_dowhy/estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand, the **do operator**, the **distance matching estimator**, the **symbolic estimators** and the **base estimator** of the upstream |
 | `refuters` | `riantr/moonbit_dowhy/refuters` | `dowhy.causal_refuters`, with the **graph refutation** |
 | `overrule` | `riantr/moonbit_dowhy/overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
@@ -107,7 +107,7 @@ A runnable version of this snippet lives in [`examples/quick_start.mbt`](example
 | `plotting` | `riantr/moonbit_dowhy/plotting` | `dowhy.utils.plotting`, `dowhy.utils.graphviz_plotting` and `dowhy.utils.networkx_plotting`: the width of the arrows, the label and the colour of the nodes and of the edges, the layer of every node, the uncertainty bars of a bar plot and the graph of an adjacency matrix |
 | `cm` | `riantr/moonbit_dowhy/cm` | the PC causal discovery algorithm and the Fisher-z independence test |
 | `gcm` | `riantr/moonbit_dowhy/gcm` | the portable core of `dowhy.gcm`: the statistics, the confidence intervals, the divergences, the density estimators, the Shapley values, the independence tests, the **CatBoost encoder** of the categorical columns, the prediction models **with the decision tree**, the causal mechanisms, the stochastic models **with their Bayesian Gaussian mixture**, the automatic assignment of the mechanisms with the selection of the model of a node by cross validation, the test of a linear relationship and the missing values, the noise of a causal model **with a categorical root**, the feature relevance, the intrinsic causal influence **with a categorical target and with a categorical root**, the equation parser, the fitting of a causal model, the what-if queries, the validation layer, the falsification layer **with the categorical data**, the model evaluation layer, the anomaly detection layer, the unit change layer **with its dispatcher**, the uncertainty estimates, the distribution change layer -- the plain one and the multiply-robust one -- and the arrow strength layer |
-| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter, of the data subset refuter, of the dummy outcome refuter, of the unobserved common cause refuter, of the linear sensitivity analysis, of the E-value analysis, of the default strength of the confounder, of the **graph refutation** and of the **distance matching estimator** and of the **symbolic estimators** |
+| `tests` | `riantr/moonbit_dowhy/tests` | the cross-package integration tests, including the cases of the upstream test files of the causal model, of the estimators, of the two stage regression estimator, of the placebo treatment refuter, of the bootstrap refuter, of the data subset refuter, of the dummy outcome refuter, of the unobserved common cause refuter, of the linear sensitivity analysis, of the E-value analysis, of the default strength of the confounder, of the **graph refutation** and of the **distance matching estimator**, of the **symbolic estimators** and of the **visual interpreters** |
 | `examples` | `riantr/moonbit_dowhy/examples` | the runnable quick start |
 
 The root package `riantr/moonbit_dowhy` holds `CausalModel`, the entry point
@@ -1343,6 +1343,20 @@ following ways:
   operator for every estimator that has a model, so the predicate
   `supports_do_operator` tells what the upstream does and not what the port
   does.
+- The upstream draws the two visual interpreters with the matplotlib of the
+  upstream, and the port returns the numbers of the two figures: the
+  standardized mean differences of the common causes of the balance, and the
+  counts of the categories of a confounder of the distribution.
+- The upstream takes the difference of the two means of a common cause as the
+  difference of the largest and the smallest of them, so its standardized mean
+  differences of the balance are the absolute differences. The port takes the
+  absolute difference as well.
+- The upstream takes the strata of the data of the balance from the column
+  that the propensity score stratification estimator adds to the data, and the
+  port computes them with the number of the strata of the estimator.
+- The upstream melts only the columns whose names start with a `W` when it
+  builds the frame of the balance, so its balance holds the common causes named
+  that way only. The port holds every common cause of the estimator.
 - The upstream builds its symbolic estimators with the sympy of the upstream,
   and the port builds them as the strings of the upstream, because every
   estimator but the instrumental variable one builds a plain string. The

@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/core/math",
   "riantr/moonbit_dowhy",
   "riantr/moonbit_dowhy/api",
   "riantr/moonbit_dowhy/datasets",
@@ -6,6 +7,7 @@ import {
   "riantr/moonbit_dowhy/gcm",
   "riantr/moonbit_dowhy/graph",
   "riantr/moonbit_dowhy/identifiers",
+  "riantr/moonbit_dowhy/interpreters",
   "riantr/moonbit_dowhy/overrule",
   "riantr/moonbit_dowhy/refuters",
   "riantr/moonbit_dowhy/utils",

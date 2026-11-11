@@ -1230,6 +1230,17 @@ statsmodels / scikit-learn conventions are deliberate:
   common causes when the estimator is fitted and pairs them with the outcomes
   of the data of the estimate, so an estimate on other data pairs the
   covariates of the fitted data with the outcomes of the other data.
+- The stratum of every row of the data is the rounded rank of the propensity
+  score, scaled by the number of the strata, and the number of the strata is
+  searched for the way the upstream searches for it: the search starts with
+  `0.5 * rows / clipping_threshold` strata and halves the number until at
+  least half of the strata hold more units of both arms than the threshold.
+  The upstream adds the stratum to the data as a column, and the port keeps it
+  out of the data of the caller.
+- The balance of the `interpreters` package takes the difference of the two
+  means of a common cause as the absolute difference, because the upstream
+  takes it as the difference of the largest and the smallest of them. The
+  standard deviation of a common cause is the one of numpy, with `ddof = 0`.
 - The symbolic estimators of the `estimators` package are the strings of the
   upstream, which the upstream builds when the estimator is fitted. The port
   builds them when they are asked for, so the effect modifiers of the
@@ -1253,7 +1264,7 @@ statsmodels / scikit-learn conventions are deliberate:
 | `graph` | `dowhy.graph`, `dowhy.causal_graph`, and the readers of the GML graphs, of the DOT graphs and of the graphs of the daggity web site |
 | `identifiers` | `dowhy.causal_identifier`, with the mediation identification and the natural indirect effect |
 | `model` | `dowhy.causal_estimator` (the estimate objects) |
-| `interpreters` | `dowhy.interpreters` (the sentence that reads an estimate) |
+| `interpreters` | `dowhy.interpreters` (the sentence that reads an estimate, the balance of the common causes and the distribution of a confounder) |
 | `estimators` | `dowhy.causal_estimators`, with the conditional estimates of the regression based ones, the two stage regression of the frontdoor and of the mediation estimand, the do operator, the distance matching estimator, the symbolic estimators and the base estimator of the upstream |
 | `refuters` | `dowhy.causal_refuters`, with the significance test of the refutations and the graph refutation |
 | `overrule` | the `OverRule` algorithm of the refuter that assesses the support and the overlap: the binariser of the features, the sampler of the reference samples, the beam search of the pricing problem, the program of the rules and its rounding |
@@ -1304,6 +1315,12 @@ README makes, so they are tracked in the repository:
   one of them, the data of the process with a binary treatment and the numbers
   of the deterministic conversion of the treatment. It is the evidence for the
   data generating processes of the `datasets` package.
+- `interpreter_reference.py` runs the three interpreters of the upstream: the
+  textual one, whose sentence the port reproduces, the propensity balance one,
+  whose standardized mean differences the port reproduces, and the confounder
+  distribution one, whose counts and sums of the weights the port reproduces.
+  The fixtures hold the propensity scores of their rows, so the two sides build
+  the very same strata and the very same weights.
 - `symbolic_estimators_reference.py` fits every estimator of the upstream that
   builds a symbolic estimator and prints the string it builds -- with one
   outcome and with two, with an effect modifier and without a common cause --
