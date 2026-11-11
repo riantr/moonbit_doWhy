@@ -36,7 +36,8 @@ names.
 The table of the script holds the two kinds of exception:
 
 - `NOT_MIRRORED` names the test cases of the upstream that the port does not
-  mirror, with the reason why;
+  mirror, with the reason why. The table is empty: the port mirrors every test
+  case of the upstream;
 - `SHARED` names the upstream files whose number of port cases is below the
   number of their upstream cases for a reason that is not a missing case,
   with the reason why.
@@ -77,48 +78,7 @@ PORT = Path(
 #
 # Every entry is the file of the upstream, the name of the test function of
 # that file, and the reason why the port does not mirror it.
-NOT_MIRRORED: list[tuple[str, str, str]] = [
-    (
-        "causal_refuters/test_dummy_outcome_refuter.py",
-        "test_refutation_dummy_outcome_refuter_custom_function_linear_regression_with_noise_binary_treatment",
-        "the upstream marks the case `xfail` itself",
-    ),
-    (
-        "causal_refuters/test_dummy_outcome_refuter.py",
-        "test_refutation_dummy_outcome_refuter_custom_function_linear_regression_with_permute_binary_treatment",
-        "the upstream marks the case `xfail` itself",
-    ),
-    (
-        "causal_refuters/test_dummy_outcome_refuter.py",
-        "test_refutation_dummy_outcome_refuter_internal_linear_regression_binary_treatment",
-        "the upstream aborts with `ValueError: bins must increase monotonically`, "
-        "because the buckets of a binary treatment do not increase",
-    ),
-    (
-        "causal_refuters/test_dummy_outcome_refuter.py",
-        "test_refutation_dummy_outcome_refuter_internal_knn_binary_treatment",
-        "the upstream aborts with `ValueError: bins must increase monotonically`, "
-        "because the buckets of a binary treatment do not increase",
-    ),
-    (
-        "causal_refuters/test_dummy_outcome_refuter.py",
-        "test_refutation_dummy_outcome_refuter_internal_svm_binary_treatment",
-        "the upstream aborts with `ValueError: bins must increase monotonically`, "
-        "because the buckets of a binary treatment do not increase",
-    ),
-    (
-        "causal_refuters/test_dummy_outcome_refuter.py",
-        "test_refutation_dummy_outcome_refuter_internal_random_forest_binary_treatment",
-        "the upstream aborts with `ValueError: bins must increase monotonically`, "
-        "because the buckets of a binary treatment do not increase",
-    ),
-    (
-        "causal_refuters/test_dummy_outcome_refuter.py",
-        "test_refutation_dummy_outcome_refuter_internal_neural_network_binary_treatment",
-        "the upstream aborts with `ValueError: bins must increase monotonically`, "
-        "because the buckets of a binary treatment do not increase",
-    ),
-]
+NOT_MIRRORED: list[tuple[str, str, str]] = []
 
 # The upstream files whose number of port cases is below the number of their
 # upstream cases, with the number of the cases the difference holds and the

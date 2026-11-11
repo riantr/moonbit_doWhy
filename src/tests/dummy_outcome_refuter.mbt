@@ -6,6 +6,9 @@
 /// known effect of the simulated outcome, which is zero, and the tolerance of the
 /// case decides whether the refutation passes.
 ///
+/// The upstream holds twenty cases, ten of them with a continuous treatment and
+/// ten of them with a binary one. All twenty are mirrored here.
+///
 /// The mirrored cases, with the tolerance and the estimator of the upstream:
 ///
 /// * `default_continuous_treatment` — the default transformation list, the
@@ -24,45 +27,45 @@
 ///   `[linear_regression, zero, noise(1)]`, the instrumental variable estimator,
 ///   tolerance 0.01. The list carries an estimator, so the refuter buckets the
 ///   treatment and reports one refutation per bucket.
+/// * `internal_linear_regression_binary_treatment` — the same list, the
+///   propensity score matching estimator, tolerance 0.2.
 /// * `internal_knn_continuous_treatment` — `[knn(5), zero, noise(1)]`, the
 ///   instrumental variable estimator, tolerance 0.2.
+/// * `internal_knn_binary_treatment` — the same list, the propensity score
+///   matching estimator, tolerance 0.2.
 /// * `custom_function_linear_regression_with_noise_continuous_treatment` —
 ///   `[simple_linear_outcome_model, noise(1)]`, the instrumental variable
 ///   estimator, tolerance 0.2.
+/// * `custom_function_linear_regression_with_noise_binary_treatment` — the same
+///   list, the linear regression, tolerance 0.2. The upstream marks the case
+///   `xfail`, and the port reproduces its failure.
 /// * `custom_function_linear_regression_with_permute_continuous_treatment` —
 ///   `[permute(0.5), simple_linear_outcome_model, noise(1)]`, the linear
 ///   regression, tolerance 0.2.
+/// * `custom_function_linear_regression_with_permute_binary_treatment` — the same
+///   list, the propensity score matching estimator, tolerance 0.2. The upstream
+///   marks the case `xfail` as well.
 /// * `internal_random_forest_continuous_treatment` —
 ///   `[random_forest(20), zero, noise(1)]`, the instrumental variable estimator,
 ///   tolerance 0.01. The list carries an estimator, so the refuter buckets the
 ///   treatment and reports one refutation per bucket.
+/// * `internal_random_forest_binary_treatment` — the same list, the propensity
+///   score matching estimator, tolerance 0.1.
 /// * `internal_neural_network_continuous_treatment` —
 ///   `[neural_network([5, 2], 1e-5), zero, noise(1)]`, the instrumental variable
 ///   estimator, tolerance 0.01. The list carries an estimator, so the refuter
 ///   buckets the treatment and reports one refutation per bucket.
+/// * `internal_neural_network_binary_treatment` — the same list, the propensity
+///   score matching estimator, tolerance 0.1.
 /// * `internal_svm_continuous_treatment` — `[support_vector_machine(1, 0.2),
 ///   zero, noise(1)]`, the instrumental variable estimator, tolerance 0.01. The
 ///   list carries an estimator, so the refuter buckets the treatment and
 ///   reports one refutation per bucket. The case runs on the ten thousand rows
 ///   of the upstream case, because the regressor is expensive.
+/// * `internal_svm_binary_treatment` — the same list, the propensity score
+///   matching estimator, tolerance 0.1.
 ///
-/// The cases that are not mirrored:
-///
-/// * `internal_svm_binary_treatment`, whose transformation list names the support
-///   vector regressor and whose treatment is binary, so it fails for the reason
-///   of the binary cases below.
-/// * `custom_function_linear_regression_with_noise_binary_treatment` and
-///   `custom_function_linear_regression_with_permute_binary_treatment`, which the
-///   upstream marks `xfail` itself.
-/// * The binary treatment cases whose transformation list carries an estimator.
-///   The buckets of such a list are cut over the ranges of every column of the
-///   frame, and a binary treatment spans one unit while the outcome of the same
-///   frame spans tens, so the edges of `Z0, W0, v0, y` are `1.0, 5.5, 1.0, 24`
-///   over the same divisor, which does not increase, and `pandas.cut` raises
-///   `ValueError: bins must increase monotonically`. The port aborts with the same
-///   message, so the case has no assertion to mirror.
-///
-/// Two values of the fixture differ from the upstream suite, and both are
+/// Four values of the fixture differ from the upstream suite, and all four are
 /// deliberate:
 ///
 /// * **The number of simulations is ten rather than two.** The refutation of a
@@ -78,10 +81,29 @@
 ///   ten, 0.0041 with thirty and 0.0023 with a hundred, against a tolerance of
 ///   0.03.
 /// * **The rows are 20000 rather than the 100000 of the upstream continuous
-///   cases.** The assertions are tolerances on a near-zero effect, which the
-///   smaller fixture decides the same way, and the four backends of the gate would
-///   not finish the larger one. The columns and their order are the ones the port
-///   generates, because the bucketing of the estimator branch reads them.
+///   cases and the 1000 of its binary cases.** The assertions are tolerances on a
+///   near-zero effect, which the smaller fixture decides the same way, and the
+///   four backends of the gate would not finish the larger one. The columns and
+///   their order are the ones the port generates, because the bucketing of the
+///   estimator branch reads them.
+/// * **Every bucket of a case is checked, and not only the first one.** The
+///   upstream takes the first refutation of the list of the case and compares it
+///   with the tolerance, and the port compares every refutation with it. The
+///   buckets of a binary treatment are two, the buckets of a continuous one are
+///   three, and every one of them clears the tolerance of its case, so the two
+///   ways of reading the result decide the same way.
+/// * **The binary treatment is a numeric column of zeros and ones rather than a
+///   column of booleans.** The upstream casts its binary treatment to the dtype
+///   of a boolean and groups such a treatment by its values, so a binary
+///   treatment has two buckets. The port has no dtype of its own for a column,
+///   so it recognises a treatment of booleans by its values: a treatment whose
+///   values are only zero and one is grouped by them.
+///
+/// The data set of the binary cases carries an instrument, like the data set of
+/// the continuous cases, because the data set of the upstream carries one in
+/// both cases. The covariates of a bucket are therefore the confounder and the
+/// instrument, and the custom model of the upstream, which adds the first
+/// covariate to twice the second one, needs the two of them.
 
 ///|
 /// The dataset of the upstream cases: a confounder, an instrument and one
@@ -98,16 +120,6 @@ fn dummy_outcome_dataset(
       num_instruments=1,
       treatment_is_binary=!continuous,
     ),
-  )
-}
-
-///|
-/// The dataset of the upstream cases that have no instrument.
-fn dummy_outcome_confounded_dataset(num_samples : Int32) -> @datasets.Dataset {
-  @datasets.linear_dataset(
-    SEED,
-    num_samples,
-    @datasets.LinearConfig::confounded(),
   )
 }
 
@@ -214,12 +226,12 @@ test "the default transformation drives the effect of a continuous treatment to 
 
 ///|
 test "the default transformation drives the effect of a binary treatment to zero" {
-  let dataset = dummy_outcome_confounded_dataset(20000)
+  let dataset = dummy_outcome_dataset(false, 20000)
   let refutations = dummy_outcome_refute(
     dataset,
     dummy_outcome_psm(dataset),
     @refuters.dummy_outcome_default_transformations(),
-    22UL,
+    51UL,
   )
   assert_eq(refutations.length(), 1)
   assert_true(refutations[0].new_effect().abs() < 0.1)
@@ -244,7 +256,7 @@ test "the noise transformation drives the effect of a continuous treatment to ze
 
 ///|
 test "the noise transformation drives the effect of a binary treatment to zero" {
-  let dataset = dummy_outcome_confounded_dataset(20000)
+  let dataset = dummy_outcome_dataset(false, 20000)
   let transformations = [
     @refuters.Transformation::zero(),
     @refuters.Transformation::noise(1.0),
@@ -253,7 +265,7 @@ test "the noise transformation drives the effect of a binary treatment to zero" 
     dataset,
     dummy_outcome_psm(dataset),
     transformations,
-    24UL,
+    52UL,
   )
   assert_eq(refutations.length(), 1)
   assert_true(refutations[0].new_effect().abs() < 0.05)
@@ -274,12 +286,12 @@ test "the permutation transformation drives the effect of a continuous treatment
 
 ///|
 test "the permutation transformation drives the effect of a binary treatment to zero" {
-  let dataset = dummy_outcome_confounded_dataset(20000)
+  let dataset = dummy_outcome_dataset(false, 20000)
   let refutations = dummy_outcome_refute(
     dataset,
     dummy_outcome_linear(dataset),
     [@refuters.Transformation::permute(1.0)],
-    26UL,
+    53UL,
   )
   assert_eq(refutations.length(), 1)
   assert_true(refutations[0].new_effect().abs() < 0.1)
@@ -309,6 +321,35 @@ test "the inner linear regression reports one refutation per bucket of the treat
 }
 
 ///|
+/// test "the inner linear regression reports one refutation per bucket of a
+/// binary treatment"
+///
+/// This is the port of the upstream test
+/// `test_refutation_dummy_outcome_refuter_internal_linear_regression_binary_treatment`.
+///
+/// The treatment is binary, so its buckets are its two values, the way the
+/// upstream groups a treatment of booleans. The measured effects are 0.0108 and
+/// -0.0014, against the tolerance of 0.2 of the upstream case.
+test "the inner linear regression reports one refutation per bucket of a binary treatment" {
+  let dataset = dummy_outcome_dataset(false, 20000)
+  let transformations = [
+    @refuters.Transformation::linear_regression(),
+    @refuters.Transformation::zero(),
+    @refuters.Transformation::noise(1.0),
+  ]
+  let refutations = dummy_outcome_refute(
+    dataset,
+    dummy_outcome_psm(dataset),
+    transformations,
+    56UL,
+  )
+  assert_eq(refutations.length(), 2)
+  for refutation in refutations {
+    assert_true(refutation.new_effect().abs() < 0.2)
+  }
+}
+
+///|
 test "the inner nearest neighbours report one refutation per bucket of the treatment" {
   // The nearest neighbours cost the product of the training rows and the rows to
   // predict, so this case runs on a smaller fixture than the others. Its
@@ -329,6 +370,36 @@ test "the inner nearest neighbours report one refutation per bucket of the treat
     28UL,
   )
   assert_eq(refutations.length(), 3)
+  for refutation in refutations {
+    assert_true(refutation.new_effect().abs() < 0.2)
+  }
+}
+
+///|
+/// test "the inner nearest neighbours report one refutation per bucket of a
+/// binary treatment"
+///
+/// This is the port of the upstream test
+/// `test_refutation_dummy_outcome_refuter_internal_knn_binary_treatment`.
+///
+/// The case runs on the two thousand rows of the continuous case, because the
+/// neighbours cost the product of the training rows and the rows to predict. The
+/// measured effects are 0.0132 and -0.1100, against the tolerance of 0.2 of the
+/// upstream case.
+test "the inner nearest neighbours report one refutation per bucket of a binary treatment" {
+  let dataset = dummy_outcome_dataset(false, 2000)
+  let transformations = [
+    @refuters.Transformation::nearest_neighbour(5),
+    @refuters.Transformation::zero(),
+    @refuters.Transformation::noise(1.0),
+  ]
+  let refutations = dummy_outcome_refute(
+    dataset,
+    dummy_outcome_psm(dataset),
+    transformations,
+    57UL,
+  )
+  assert_eq(refutations.length(), 2)
   for refutation in refutations {
     assert_true(refutation.new_effect().abs() < 0.2)
   }
@@ -369,6 +440,34 @@ test "the inner random forest reports one refutation per bucket of the treatment
 }
 
 ///|
+/// test "the inner random forest reports one refutation per bucket of a binary
+/// treatment"
+///
+/// This is the port of the upstream test
+/// `test_refutation_dummy_outcome_refuter_internal_random_forest_binary_treatment`.
+///
+/// The measured effects are 0.0007 and -0.0055, against the tolerance of 0.1 of
+/// the upstream case.
+test "the inner random forest reports one refutation per bucket of a binary treatment" {
+  let dataset = dummy_outcome_dataset(false, 20000)
+  let transformations = [
+    @refuters.Transformation::random_forest(20),
+    @refuters.Transformation::zero(),
+    @refuters.Transformation::noise(1.0),
+  ]
+  let refutations = dummy_outcome_refute(
+    dataset,
+    dummy_outcome_psm(dataset),
+    transformations,
+    59UL,
+  )
+  assert_eq(refutations.length(), 2)
+  for refutation in refutations {
+    assert_true(refutation.new_effect().abs() < 0.1)
+  }
+}
+
+///|
 /// test "the inner neural network reports one refutation per bucket of the
 /// treatment"
 ///
@@ -401,6 +500,34 @@ test "the inner neural network reports one refutation per bucket of the treatmen
   assert_eq(refutations.length(), 3)
   for refutation in refutations {
     assert_true(refutation.new_effect().abs() < 0.01)
+  }
+}
+
+///|
+/// test "the inner neural network reports one refutation per bucket of a binary
+/// treatment"
+///
+/// This is the port of the upstream test
+/// `test_refutation_dummy_outcome_refuter_internal_neural_network_binary_treatment`.
+///
+/// The measured effects are 0.0040 and -0.0221, against the tolerance of 0.1 of
+/// the upstream case.
+test "the inner neural network reports one refutation per bucket of a binary treatment" {
+  let dataset = dummy_outcome_dataset(false, 20000)
+  let transformations = [
+    @refuters.Transformation::neural_network([5, 2], 0.00001),
+    @refuters.Transformation::zero(),
+    @refuters.Transformation::noise(1.0),
+  ]
+  let refutations = dummy_outcome_refute(
+    dataset,
+    dummy_outcome_psm(dataset),
+    transformations,
+    60UL,
+  )
+  assert_eq(refutations.length(), 2)
+  for refutation in refutations {
+    assert_true(refutation.new_effect().abs() < 0.1)
   }
 }
 
@@ -442,6 +569,35 @@ test "the inner support vector regressor reports one refutation per bucket of th
 }
 
 ///|
+/// test "the inner support vector regressor reports one refutation per bucket
+/// of a binary treatment"
+///
+/// This is the port of the upstream test
+/// `test_refutation_dummy_outcome_refuter_internal_svm_binary_treatment`.
+///
+/// The case runs on the ten thousand rows of the continuous case, because the
+/// regressor is fitted once per bucket and per simulation. The measured effects
+/// are -0.0225 and -0.0559, against the tolerance of 0.1 of the upstream case.
+test "the inner support vector regressor reports one refutation per bucket of a binary treatment" {
+  let dataset = dummy_outcome_dataset(false, 10000)
+  let transformations = [
+    @refuters.Transformation::support_vector_machine(1.0, 0.2),
+    @refuters.Transformation::zero(),
+    @refuters.Transformation::noise(1.0),
+  ]
+  let refutations = dummy_outcome_refute(
+    dataset,
+    dummy_outcome_psm(dataset),
+    transformations,
+    58UL,
+  )
+  assert_eq(refutations.length(), 2)
+  for refutation in refutations {
+    assert_true(refutation.new_effect().abs() < 0.1)
+  }
+}
+
+///|
 test "the custom model with a noise drives the effect of a continuous treatment to zero" {
   let dataset = dummy_outcome_dataset(true, 20000)
   let transformations = [
@@ -457,6 +613,36 @@ test "the custom model with a noise drives the effect of a continuous treatment 
   assert_eq(refutations.length(), 3)
   for refutation in refutations {
     assert_true(refutation.new_effect().abs() < 0.2)
+  }
+}
+
+///|
+/// test "the custom model with a noise does not drive the effect of a binary
+/// treatment to zero"
+///
+/// This is the port of the upstream test
+/// `test_refutation_dummy_outcome_refuter_custom_function_linear_regression_with_noise_binary_treatment`,
+/// which the upstream marks `xfail`.
+///
+/// The upstream's case fails its own assertion: its refuted effect is 0.513615
+/// and its tolerance is 0.2, so the refutation does not clear the tolerance. The
+/// port reproduces the failure: its effects are 0.5009 and 0.5001, so neither of
+/// them clears the tolerance either. The case asserts the failure.
+test "the custom model with a noise does not drive the effect of a binary treatment to zero" {
+  let dataset = dummy_outcome_dataset(false, 20000)
+  let transformations = [
+    @refuters.Transformation::estimate(simple_linear_outcome_model),
+    @refuters.Transformation::noise(1.0),
+  ]
+  let refutations = dummy_outcome_refute(
+    dataset,
+    dummy_outcome_linear(dataset),
+    transformations,
+    54UL,
+  )
+  assert_eq(refutations.length(), 2)
+  for refutation in refutations {
+    assert_true(refutation.new_effect().abs() >= 0.2)
   }
 }
 
@@ -477,5 +663,39 @@ test "the permuted custom model with a noise drives the effect to zero" {
   assert_eq(refutations.length(), 3)
   for refutation in refutations {
     assert_true(refutation.new_effect().abs() < 0.2)
+  }
+}
+
+///|
+/// test "the permuted custom model with a noise does not drive the effect of a
+/// binary treatment to zero"
+///
+/// This is the port of the upstream test
+/// `test_refutation_dummy_outcome_refuter_custom_function_linear_regression_with_permute_binary_treatment`,
+/// which the upstream marks `xfail` as well.
+///
+/// The upstream's case does not pass on numpy 2: its permutation writes the
+/// values into the column of the outcome in place, and the column of a pandas
+/// frame of pandas 3 is read only, so the case raises `ValueError: assignment
+/// destination is read-only` before it reaches its assertion. The port
+/// permutes its own copy of the outcome, so it reaches the number of the case,
+/// which is 0.4982 and 0.4912, and neither of them clears the tolerance of 0.2
+/// of the upstream case. The case asserts the failure the upstream expects.
+test "the permuted custom model with a noise does not drive the effect of a binary treatment to zero" {
+  let dataset = dummy_outcome_dataset(false, 20000)
+  let transformations = [
+    @refuters.Transformation::permute(0.5),
+    @refuters.Transformation::estimate(simple_linear_outcome_model),
+    @refuters.Transformation::noise(1.0),
+  ]
+  let refutations = dummy_outcome_refute(
+    dataset,
+    dummy_outcome_psm(dataset),
+    transformations,
+    55UL,
+  )
+  assert_eq(refutations.length(), 2)
+  for refutation in refutations {
+    assert_true(refutation.new_effect().abs() >= 0.2)
   }
 }

@@ -3602,6 +3602,68 @@ The scenarios of the notebooks of the upstream.
 
 [0.0.83]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.83
 
+## [0.0.85] - 2026-11-11
+
+The ten cases of a binary treatment of the dummy outcome refuter, which are the
+last cases of the upstream the port did not mirror.
+
+### Added
+
+- the seven cases of the test file of the dummy outcome refuter whose treatment
+  is binary and whose transformation list carries an estimator, in the file
+  `src/tests/dummy_outcome_refuter.mbt`: the inner linear regression, the inner
+  nearest neighbours, the inner support vector regressor, the inner random
+  forest and the inner neural network, and the two cases of a custom model that
+  the upstream marks `xfail`.
+- the numbers of the upstream in `_verify/dummy_outcome_binary_reference.py`:
+  the script runs the ten binary treatment cases of the upstream and prints
+  their refuted effect, their tolerance and the covariates of their buckets.
+
+### Changed
+
+- the buckets of a binary treatment are the values of the treatment, the way the
+  upstream groups a treatment of booleans, and not the cut of its values over
+  the ranges of the columns of the frame. The upstream casts its binary
+  treatment to the dtype of a boolean, so its `preprocess_data_by_treatment`
+  groups it by its values and never cuts it. The port keeps the treatment in a
+  numeric column of zeros and ones, so it recognises a treatment of booleans by
+  its values.
+- the data set of the binary cases of the dummy outcome refuter carries an
+  instrument, like the data set of the upstream, so the covariates of a bucket
+  are the confounder and the instrument and the custom model of the upstream,
+  which needs two of them, works.
+- the script `_verify/upstream_test_coverage.py` holds an empty table of the
+  cases the port does not mirror: the port mirrors every test case of the
+  upstream.
+- the README states that the port mirrors every test case of the upstream, and
+  it states the two facts of the upstream that make the binary cases of the
+  dummy outcome refuter possible.
+
+### Notes
+
+- The upstream holds 469 test cases in its 74 test files, and the port holds 1298
+  test cases in the files that name them. Every case of the upstream is mirrored
+  by a case of the port. One file holds fewer cases of the port than of the
+  upstream, the file of the unit change, where two pairs of the upstream cases
+  share one port case each and one upstream case is mirrored by two port cases.
+- The two cases the upstream marks `xfail` fail the same way in the port. The
+  refuted effect of the custom model with a noise is 0.5009 and 0.5001, against
+  the tolerance of 0.2 of the upstream case, whose own effect is 0.513615. The
+  effect of the permuted custom model is 0.4982 and 0.4912. The upstream does
+  not reach the number of the second case at all on numpy 2: its permutation
+  writes the values into the column of the outcome in place, and the column of
+  a frame of pandas 3 is read only.
+- The eight other binary cases clear the tolerance of the upstream, and the port
+  agrees with the upstream on every one of them.
+- The reason the entries before this one give for the seven cases that were not
+  mirrored -- that the buckets of a binary treatment do not increase and that
+  the upstream therefore aborts with `ValueError: bins must increase
+  monotonically` -- was wrong. The upstream casts its binary treatment to the
+  dtype of a boolean and groups it by its values, so it never cuts it, and the
+  seven cases run.
+
+[0.0.85]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.85
+
 ## [0.0.84] - 2026-11-11
 
 The data set of the hidden confounder, and the proof that the port mirrors every

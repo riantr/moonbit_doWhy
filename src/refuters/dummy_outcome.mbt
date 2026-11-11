@@ -41,13 +41,18 @@
 /// `(max - min) of the column / (bucket_size_scale_factor * std of the
 /// treatment)`, in the column order of the frame, and the edges cut the
 /// treatment the way `pandas.cut` cuts it, so a row whose treatment lies at or
-/// below the first edge or above the last one takes part in no bucket. The two
-/// estimator cases of `tests/causal_refuters/test_dummy_outcome_refuter.py` rely
-/// on this: the frame of `dowhy.datasets.linear_dataset` is ordered
-/// `Z0, W0, v0, y`, whose ranges increase, so the edges increase as well and the
-/// branch runs. A frame whose ranges do not increase makes `pandas.cut` raise
-/// `ValueError: bins must increase monotonically`, and the port aborts with the
-/// same message.
+/// below the first edge or above the last one takes part in no bucket. The
+/// frame of `dowhy.datasets.linear_dataset` is ordered `Z0, W0, v0, y`, whose
+/// ranges increase, so the edges increase as well and the branch runs. A frame
+/// whose ranges do not increase makes `pandas.cut` raise `ValueError: bins must
+/// increase monotonically`, and the port aborts with the same message.
+///
+/// The upstream never cuts a treatment of booleans: its
+/// `preprocess_data_by_treatment` groups such a treatment by its values, and
+/// its `linear_dataset` casts its binary treatment to the dtype of a boolean,
+/// so a binary treatment is grouped into its two buckets. The port has no dtype
+/// of its own for a column, so it recognises a treatment of booleans by its
+/// values: a treatment whose values are only zero and one is grouped by them.
 
 ///|
 /// A transformation of the outcome of the dummy outcome refuter.
@@ -476,9 +481,12 @@ fn simulate_by_bucket(
 /// the data.
 ///
 /// A treatment whose column is discrete is grouped by its values, the way the
-/// upstream groups a treatment of booleans. A numeric treatment is grouped by the
-/// cut of its values over the edges that the ranges of the columns of the frame
-/// give, which is the port of the bucketing of the upstream.
+/// upstream groups a treatment of categories. A treatment whose values are only
+/// zero and one is grouped by them as well, because the upstream casts its
+/// binary treatment to the dtype of a boolean and groups it by its values.
+/// Every other numeric treatment is grouped by the cut of its values over the
+/// edges that the ranges of the columns of the frame give, which is the port of
+/// the bucketing of the upstream.
 fn treatment_buckets(
   data : @api.DataFrame,
   treatment_name : String,
@@ -488,6 +496,9 @@ fn treatment_buckets(
     return discrete_buckets(data.discrete(treatment_name))
   }
   let values = data.numeric(treatment_name)
+  if is_boolean_treatment(values) {
+    return boolean_buckets(values)
+  }
   let edges = bucket_edges(
     data, values, treatment_name, bucket_size_scale_factor,
   )
@@ -560,6 +571,42 @@ fn bucket_edges(
     }
   }
   edges
+}
+
+///|
+/// Whether the values are the ones of a treatment of booleans.
+///
+/// The upstream casts its binary treatment to the dtype of a boolean, and its
+/// `preprocess_data_by_treatment` groups a treatment of booleans by its values,
+/// so a treatment whose values are only zero and one is a treatment of booleans
+/// as far as the bucketing is concerned.
+fn is_boolean_treatment(values : Array[Double]) -> Bool {
+  let mut zero = false
+  let mut one = false
+  for value in values {
+    if value == 0.0 {
+      zero = true
+    } else if value == 1.0 {
+      one = true
+    } else {
+      return false
+    }
+  }
+  zero || one
+}
+
+///|
+/// The buckets of a treatment of booleans, one entry per value, in the ascending
+/// order of the values, the way the `groupby` of the upstream orders them.
+///
+/// The buckets are the ones of a discrete treatment, with the values of the
+/// treatment written as the text of a number.
+fn boolean_buckets(values : Array[Double]) -> Array[Array[Int32]] {
+  let texts : Array[String] = []
+  for value in values {
+    texts.push(if value == 0.0 { "0" } else { "1" })
+  }
+  discrete_buckets(texts)
 }
 
 ///|

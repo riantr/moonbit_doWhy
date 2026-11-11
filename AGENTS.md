@@ -1886,14 +1886,28 @@ README makes, so they are tracked in the repository:
   and `382` of the `1000` rows. The exact numbers vary between runs, because the
   upstream draws its frame with the global generator of numpy; the three buckets
   do not. A frame whose ranges do not increase makes `pandas.cut` raise
-  `ValueError: bins must increase monotonically`, which is why no binary
-  treatment case of the upstream file whose list carries an estimator can pass:
-  a binary treatment spans one unit while the outcome of the same frame spans
-  tens. Measured on a hand built frame in the same column order, at `1000` and
-  at `20000` rows: the continuous treatment gives three buckets, and the binary
-  one gives the edges `4.06, 26.048, 4.06, 93.103` (`4.027, 30.372, 4.027,
-  111.648` at the larger frame) and the `ValueError`. The port aborts with the
+  `ValueError: bins must increase monotonically`, and the port aborts with the
   same message.
+- **A binary treatment is not cut at all.** The upstream casts the binary
+  treatment of `dowhy.datasets.linear_dataset` to the dtype of a boolean
+  (`data.astype({tname: "bool"})`), and the `preprocess_data_by_treatment` of the
+  refuter takes the branch of the booleans, which groups the rows by the values
+  of the treatment, so a binary treatment has two buckets and the upstream never
+  calls `pandas.cut` on it. The port keeps the treatment in a numeric column of
+  zeros and ones, because the estimators of the port read a numeric treatment
+  and a discrete column cannot be fitted, so it recognises a treatment of
+  booleans by its values: a treatment whose values are only zero and one is
+  grouped by them. **The earlier belief of this file, that the buckets of a
+  binary treatment do not increase and that the upstream therefore aborts with
+  `bins must increase monotonically`, was wrong**: the upstream does not cut a
+  boolean treatment, and the ten binary cases of the upstream file run.
+- The data set of the upstream carries an instrument in its binary cases as well
+  as in its continuous ones, so the covariates of a bucket are the confounder
+  and the instrument (`['W0', 'Z0']`, measured by
+  `_verify/dummy_outcome_binary_reference.py`). The custom model of the upstream,
+  `simple_linear_outcome_model`, adds the first covariate to twice the second
+  one, so it needs the two of them: a binary case whose data set has no
+  instrument reads past the end of its covariates and fails.
 - The upstream conversion `np.vectorize(convert_to_binary)` of
   `dowhy.datasets.linear_dataset` is broken on numpy 2.5.1: `convert_to_binary`
   returns the one element array of `np.random.choice([0, 1], 1, p=...)`, so
@@ -1904,9 +1918,13 @@ README makes, so they are tracked in the repository:
   upstream that needs that dataset cannot be run here at all.
 - `permute` of the upstream refuter writes into the array it is given, so a case
   that permutes a read-only array raises `ValueError: output array is read-only`
-  on numpy 2.x. The upstream's own permutation cases of the dummy outcome
-  refuter therefore fail in this environment, and the port's own permutation
-  cases are the only evidence for that branch.
+  on numpy 2.x, and the case of the permuted custom model raises `ValueError:
+  assignment destination is read-only`, because it writes into the column of the
+  outcome of a frame of pandas 3. The upstream's own permutation cases of the
+  dummy outcome refuter therefore fail in this environment;
+  `_verify/dummy_outcome_binary_reference.py` runs the ten binary cases of the
+  upstream and prints the two errors, and the port's own permutation cases are
+  the evidence for that branch.
 - The refuter of the unobserved common cause shares one confounder between the
   treatment and the outcome: `_include_confounders_effect` draws a single
   `w_random` and uses it for both, adds `kappa_t * w` to the treatment and

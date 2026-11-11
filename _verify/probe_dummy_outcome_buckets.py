@@ -11,6 +11,16 @@ This script prints the real frame: its columns, dtypes, per-column ranges, the
 `num_bins` Series, the bucket edges and the size of every group.  That is what
 the port has to reproduce.
 
+The binary treatment is a different matter.  The upstream casts it to the dtype
+of a boolean (`data.astype({tname: "bool"})`), so its `preprocess_data_by_treatment`
+takes the branch of the booleans, which groups the rows by the values of the
+treatment, and the upstream never cuts it.  The frame of the last section of
+this script builds its binary treatment as a column of floats, so the cut of
+that frame does raise `ValueError: bins must increase monotonically`; that is a
+property of the hand built frame and not of the upstream.  The ten binary
+cases of `tests/causal_refuters/test_dummy_outcome_refuter.py` run, and
+`_verify/dummy_outcome_binary_reference.py` runs them and prints their numbers.
+
 Run: python _verify/probe_dummy_outcome_buckets.py
 """
 
@@ -114,6 +124,9 @@ for binary in (False,):
 print()
 print("=" * 70)
 print("does the bucketing survive a BINARY treatment in the same column order?")
+print("(the frame below is built by hand and its binary treatment is a column of")
+print(" floats, so it is not the frame of the upstream, whose binary treatment is")
+print(" a column of booleans and is grouped by its values, not cut)")
 print("=" * 70)
 print("`linear_dataset` with a binary treatment cannot be called on numpy 2.5.1,")
 print("because `convert_to_binary` returns the one element array of")

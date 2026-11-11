@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.84.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.85.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -43,15 +43,12 @@ file of the port names the file of the upstream it mirrors, and the script
 `_verify/upstream_test_coverage.py` maps the two lists.
 
 The script checks the test **cases** as well. The upstream holds 469 of them
-in its 74 files, and the port holds 1291 test cases in the files that name
-them. Seven of the cases of the upstream are not mirrored, and the script
-lists every one of them with the reason why: two of them are the cases the
-upstream marks `xfail` itself, and five of them are the cases the upstream
-aborts with `ValueError: bins must increase monotonically`, because the
-buckets of a binary treatment do not increase. One file holds fewer cases of
-the port than of the upstream, the file of the unit change, where two pairs of
-the upstream cases share one port case each and one upstream case is mirrored
-by two port cases.
+in its 74 files, and the port holds 1298 test cases in the files that name
+them. Every case of the upstream is mirrored by a case of the port, so the
+table of the cases the port does not mirror is empty. One file holds fewer
+cases of the port than of the upstream, the file of the unit change, where
+two pairs of the upstream cases share one port case each and one upstream
+case is mirrored by two port cases.
 
 ## Install
 
@@ -696,6 +693,18 @@ The `refuters` package differs from upstream in the following ways:
   treatment lies at or below the first edge takes part in no bucket. A frame
   whose ranges do not increase makes the port abort with the message of
   `pandas.cut`, `bins must increase monotonically.`
+- The upstream casts the binary treatment of `dowhy.datasets.linear_dataset` to
+  the dtype of a boolean, and its `preprocess_data_by_treatment` groups a
+  treatment of booleans by its values, so a binary treatment has two buckets
+  and the upstream never cuts it. The port keeps the treatment in a numeric
+  column of zeros and ones, because the estimators of the port read a numeric
+  treatment, so it recognises a treatment of booleans by its values: a
+  treatment whose values are only zero and one is grouped by them. The cut of
+  the other treatments is the one of the upstream.
+- The data set of the upstream carries an instrument in its binary cases as
+  well as in its continuous ones, so the covariates of a bucket are the
+  confounder and the instrument. The custom model of the upstream adds the
+  first covariate to twice the second one, so it needs the two of them.
 - The `svm` of the upstream is the `SVR` of scikit-learn; the port has a support
   vector regressor of its own, in the file
   `src/refuters/dummy_outcome_svm.mbt`, with the radial basis kernel, the
@@ -1210,6 +1219,14 @@ following ways:
   with its own generator, so the port runs the cases; the reference scripts
   hand the upstream the rows of the port, so the upstream runs on them as
   well.
+- The upstream permutes the outcome of the dummy outcome refuter in place: it
+  writes the permuted values into the column of the outcome of its frame of
+  pandas, and a column of a frame of pandas 3 is read only. The case of the
+  permutation of the whole outcome therefore raises `ValueError: output array
+  is read-only`, and the case of the permuted custom model raises `ValueError:
+  assignment destination is read-only`, before either of them reaches its
+  assertion. The port permutes its own copy of the outcome, so it reaches the
+  number of both cases.
 - The upstream test file of the regression discontinuity estimator is broken a
   second time. The estimator of the upstream keeps the name of the running
   variable, the threshold and the bandwidth at `None` when the caller does not
