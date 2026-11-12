@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.87.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.88.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -31,7 +31,7 @@ The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 | Causal discovery | `dowhy.graph_learners` (GES, CDT, LiNGAM) | **not ported** -- upstream delegates those to `causal-learn` / `cdt` / `lingam`, which this dependency-free port does not wrap |
 | Graphical causal models | `dowhy.gcm` | **partially ported** -- the configuration, the general helpers, the **CatBoost encoder** of the categorical columns, the p-value merging, the F-test, the marginal expectation, the bootstrap confidence intervals, the Kullback-Leibler divergences, the kernel density estimator, the Shapley values, the independence tests (the regression, **with and without categorical data**, the generalised covariance measure, the **kernel based** one, **with categorical data**, and the **randomised** one), the prediction models -- the linear one, the **polynomial** ones and the **decision tree** --, the **model that selects itself** out of a zoo of models --, the causal mechanisms, the stochastic models, **with the beta distribution, with the automatic selection of the family and with the Bayesian Gaussian mixture**, the noise of a causal model, **with a categorical root and with a categorical target**, the **feature relevance**, the **intrinsic causal influence**, **with a categorical target and with a categorical root**, the **equation parser**, the probabilistic causal models, the fitting of a causal model, the automatic assignment of the mechanisms, **with the selection of the model of a node by cross validation** and **with the model that selects itself**, the **test of a linear relationship** and the **missing values**, the **what-if queries**, **with the categorical variables and with the discrete data**, the **validation** layer, the **falsification** layer, **with the categorical data**, the **model evaluation** layer, the **anomaly detection** layer (the detection and the attribution, **with a non-linear mechanism** and **without a causal model**), the **unit change** layer, **with its dispatcher and with the predicates of the exceptions of the upstream**, the **uncertainty** estimates, the **distribution change** layer -- the plain one and the **multiply-robust** one -- and the **arrow strength** layer are ported |
 | Causal prediction | `dowhy.causal_prediction` | **not ported** -- upstream depends on PyTorch |
-| Notebooks | `docs/source/example_notebooks` | ported (the scenarios of **nineteen** of the notebooks run as test cases -- the **causal API**, the **interpreter**, the **basic graphical causal model**, the **eight estimators**, the **simple example**, the **dummy outcome refuter**, the **do sampler**, the **hidden confounder**, the **efficient backdoor**, the **ID algorithm**, the **complete adjustment**, the **mediation**, the **samples of a graphical causal model**, the **falsification**, the **readers of the graphs**, the **sales data set**, the **sensitivity analysis** and the **refuter of the conditional independences**; the **twenty-six** notebooks the port does not mirror are named by the script `_verify/upstream_test_coverage.py`, with the reason why) |
+| Notebooks | `docs/source/example_notebooks` | ported (the scenarios of **twenty** of the notebooks run as test cases -- the **causal API**, the **interpreter**, the **basic graphical causal model**, the **eight estimators**, the **simple example**, the **dummy outcome refuter**, the **do sampler**, the **hidden confounder**, the **efficient backdoor**, the **ID algorithm**, the **complete adjustment**, the **mediation**, the **samples of a graphical causal model**, the **falsification**, the **readers of the graphs**, the **sales data set**, the **sensitivity analysis** and the **refuter of the conditional independences** and the **optimized backdoor**; the **twenty-five** notebooks the port does not mirror are named by the script `_verify/upstream_test_coverage.py`, with the reason why) |
 
 Everything that is listed as ported is covered by tests that compare against
 the numbers the upstream implementation produces. The rows marked *not
@@ -65,8 +65,8 @@ documentation of the upstream: the upstream executes every notebook with
 `jupyter nbconvert` and asserts that no cell of it fails. A notebook is
 **mirrored** when a test case of the port runs its scenario and asserts the
 conclusion the notebook demonstrates, and the header of the test file of the
-port names the notebook it mirrors. The port mirrors 19 of the 45 notebooks
-and the table of the script names the 26 it does not mirror, with the reason
+port names the notebook it mirrors. The port mirrors 20 of the 45 notebooks
+and the table of the script names the 25 it does not mirror, with the reason
 why: the estimators of `econml` and the algorithms of `causal-learn` are not
 wrapped, the causal prediction of PyTorch is not ported, the data sets the
 upstream downloads from the network are not carried, and two notebooks group a

@@ -200,16 +200,10 @@ NOTEBOOKS: list[tuple[str, str]] = [
         "one treatment at a time",
     ),
     (
-        "dowhy_optimize_backdoor_example.ipynb",
-        "the notebook draws a random graph with `networkx` and identifies it "
-        "with the flag `optimize_backdoor` of the upstream, which the port does "
-        "not have",
-    ),
-    (
         "dowhy_ranking_methods.ipynb",
-        "the notebook ranks the units with the partial identification of the "
-        "upstream, which the port does not port, and it fits a model with "
-        "`xgboost`",
+        "the notebook compares the estimators of the upstream -- among them the "
+        "estimators of `econml` -- with the refuters on a data generating "
+        "process, and it fits a model with `xgboost`",
     ),
     (
         "dowhy_refutation_testing.ipynb",

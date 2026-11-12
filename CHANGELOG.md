@@ -34,6 +34,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   notebooks of the upstream the port mirrors and the ones it does not mirror,
   with the reason why.
 
+## [0.0.88] - 2026-11-13
+
+### Added
+
+- The port mirrors the scenario of the notebook of the optimized backdoor
+  search: it identifies a random graph twice, once with the vanilla search and
+  once with the optimized one.
+
+### Fixed
+
+- The table of the notebooks the port does not mirror named the flag
+  `optimize_backdoor` of the upstream as a feature the port does not have, and
+  it described the notebook of the ranking methods as one that ranks the units
+  with the partial identification of the upstream. The port has the flag, and
+  the notebook compares the estimators of the upstream -- among them the
+  estimators of `econml` -- with the refuters.
+
 ## [0.0.1] - 2026-10-31
 
 The first release. It is a port of DoWhy 0.14 (PyWhy) to MoonBit with zero

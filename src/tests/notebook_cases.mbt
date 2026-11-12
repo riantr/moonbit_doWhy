@@ -27,7 +27,9 @@
 /// * `dowhy-simple-iv-example.ipynb` -- the instrumental variable estimate and
 ///   the placebo refuter;
 /// * `graph_conditional_independence_refuter.ipynb` -- the refuter of the
-///   conditional independences of a graph.
+///   conditional independences of a graph;
+/// * `dowhy_optimize_backdoor_example.ipynb` -- the optimized backdoor
+///   search of a random graph.
 
 ///|
 /// The seed of the scenarios of the notebooks.
@@ -522,6 +524,71 @@ test "the instrumental variable notebook of the upstream estimates the effect of
   // `_verify/notebooks_reference.py` prints the new effect of the upstream,
   // which is -0.01055604085488724.
   assert_true(refutation.new_effect().abs() < 1.0)
+}
+
+///|
+/// The random graph of the notebook of the optimized backdoor search.
+///
+/// The notebook draws a random graph of ten nodes with `networkx` and keeps
+/// the edges that go from a lower number to a higher one, so that the graph
+/// is acyclic. The port draws its random graph with its own generator, and the
+/// graph of the data set it builds is the one of the case.
+fn notebook_optimize_backdoor_graph() -> (
+  @graph.DirectedGraph,
+  Array[String],
+  String,
+) {
+  let dataset = @datasets.dataset_from_random_graph(
+    10,
+    num_samples=1000,
+    prob_edge=0.5,
+    random_seed=100,
+  )
+  let graph = @graph.parse_gml(dataset.gml_graph())
+  (graph, dataset.treatments(), dataset.outcome())
+}
+
+///|
+test "the optimize backdoor notebook of the upstream identifies a random graph with the two searches" {
+  let (graph, treatments, outcome) = notebook_optimize_backdoor_graph()
+  let treatment = treatments[0]
+  let observed = graph.node_list()
+  let (vanilla, message) = @identifiers.identify_backdoor(
+    graph,
+    [treatment],
+    [outcome],
+    observed,
+    @identifiers.BACKDOOR_EXHAUSTIVE,
+  )
+  assert_eq(message, "")
+  let (optimized, message) = @identifiers.identify_backdoor(
+    graph,
+    [treatment],
+    [outcome],
+    observed,
+    @identifiers.BACKDOOR_DEFAULT,
+    optimize_backdoor=true,
+  )
+  assert_eq(message, "")
+  // The notebook identifies the graph twice, once with the vanilla search and
+  // once with the optimized one.
+  assert_true(vanilla.length() > 0)
+  // The optimized search returns no set when the paths of the pair are blocked
+  // already, and a set that blocks every backdoor path otherwise.
+  let bdoor_graph = @graph.do_surgery(
+    graph,
+    [treatment],
+    true,
+    false,
+    [outcome],
+    false,
+  )
+  for set in optimized {
+    let variables = set.adjustment_variables()
+    assert_true(
+      @graph.d_separated(bdoor_graph, [treatment], [outcome], variables),
+    )
+  }
 }
 
 ///|
