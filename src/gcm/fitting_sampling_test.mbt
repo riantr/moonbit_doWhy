@@ -8,6 +8,7 @@
 /// that the fit of the linear relation is exact and the tests do not depend on
 /// any random draw. The only randomness of the tests comes from the
 /// deterministic generator of the `utils` package.
+/// The cases of this file mirror the drawing of the samples of the notebook of the upstream.  The notebook `gcm_draw_samples.ipynb`.
 
 ///|
 /// The number of rows of the fixtures.

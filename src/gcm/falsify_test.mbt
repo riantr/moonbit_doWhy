@@ -14,6 +14,7 @@
 /// with the one-hot encoder, the way the upstream encodes the data of its
 /// independence tests, so the kernel based test of the port gets the same
 /// matrices the upstream gets.
+/// The cases of this file mirror the falsification of the notebook of the upstream.  The notebook `gcm_falsify_dag.ipynb`.
 
 ///|
 /// The significance level of the tests.

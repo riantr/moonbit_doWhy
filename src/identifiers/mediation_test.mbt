@@ -8,6 +8,7 @@
 ///
 /// The confounders of the two stages are the ones `_verify/two_stage_reference.py`
 /// computes with the upstream.
+/// The cases of this file mirror the identification of the notebook of the upstream.  The notebook `dowhy_mediation_analysis.ipynb`.
 
 ///|
 /// The graph of the upstream test.

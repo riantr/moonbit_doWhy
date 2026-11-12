@@ -30,6 +30,7 @@
 /// data set from the graph of the generator instead of from the graph of the
 /// test, which is the only difference between the two fixtures of the upstream;
 /// the port has one graph for both, so the case is the first one here.
+/// The cases of this file mirror the analysis of the sensitivity of the notebook of the upstream.  The notebook `sensitivity_analysis_testing.ipynb`.
 
 ///|
 /// The fixture of the upstream file: six common causes, five hundred rows, a

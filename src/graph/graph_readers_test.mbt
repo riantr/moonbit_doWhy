@@ -5,6 +5,7 @@
 /// `dowhy.utils.graph_operations.daggity_to_dot`. The graphs of the upstream
 /// tests are the fixtures here, and the expectations are the nodes and the
 /// edges that `networkx.parse_gml` and `pygraphviz` read out of them.
+/// The cases of this file mirror the readers of the graphs of the notebook of the upstream.  The notebook `load_graph_example.ipynb`.
 
 ///|
 /// The GML graph of the upstream test `test_graph_input`.

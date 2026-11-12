@@ -33,6 +33,7 @@
 /// is exact — a confounder of strength zero leaves the data alone, so the refuted
 /// effect is the estimate of the data down to the last bit — and the four
 /// backends of the gate would not finish the larger fixture.
+/// The cases of this file mirror the refuter of the unobserved common cause of the notebook of the upstream.  The notebook `sensitivity_analysis_testing.ipynb`.
 
 ///|
 /// The dataset of the binary treatment case: one common cause, a binary

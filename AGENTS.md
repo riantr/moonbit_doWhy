@@ -2026,3 +2026,30 @@ README makes, so they are tracked in the repository:
   `datasets.LinearConfig` for the port's own fixture; their defaults are the
   values the port already used, so every other fixture keeps its rows.
 
+
+- The number of the test cases of the upstream is the number of the cases
+  pytest collects in it, not the number of its test functions: a parametrized
+  test collects one case for every parameter of its fixture. The file
+  `_verify/upstream_collected_cases.json` holds the 635 collected cases and
+  the script `_verify/collect_upstream_cases.py` writes it. The coverage
+  script compares the port against those cases.
+- The notebooks of the upstream are the 45 cases of the file
+  `tests/test_notebooks.py`: the upstream executes every notebook of its
+  documentation with `jupyter nbconvert` and asserts that no cell of it fails.
+  A notebook is **mirrored** when a test case of the port runs its scenario
+  and asserts the conclusion the notebook demonstrates, and the header of the
+  test file of the port names the notebook it mirrors. The table `NOTEBOOKS` of
+  the coverage script names the 26 notebooks the port does not mirror, with
+  the reason why.
+- The notebooks of the upstream that draw their data set with
+  `dowhy.datasets.linear_dataset` do not draw the rows of the port: the port
+  draws them with a generator of its own, so the cases of the port assert the
+  conclusion of the notebook and not the number of the upstream. The notebooks
+  whose data set comes from `dowhy.datasets.xy_dataset` do carry the rows of
+  the upstream, because that data set is drawn with the generator of numpy.
+- The port draws the rows of a synthetic data set **row by row**, where the
+  upstream draws its columns **one after the other**. The rows of the two are
+  therefore different, and the numbers of an estimate computed on them differ
+  as well: the estimate of the instrumental variable of the notebook of the
+  upstream is 3.78 on the rows of the upstream and 4.03 on the rows of the
+  port, and the true effect of that notebook is four.

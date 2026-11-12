@@ -7,6 +7,7 @@
 /// the tests of the port do the same, and the script
 /// `_verify/id_identifier_reference.py` computes the strings with the upstream
 /// code itself.
+/// The six graphs of the notebook of the upstream are the six graphs of the cases of this file.  The notebook `identifying_effects_using_id_algorithm.ipynb`.
 
 ///|
 /// The graph of the edges and the nodes of the upstream test file.

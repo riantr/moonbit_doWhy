@@ -23,6 +23,7 @@
 /// as a reported error: MoonBit cannot catch the error the estimator raises,
 /// so the port aborts with the message of the upstream and
 /// `CausalEstimator::two_stage_error` reports that message before the fit.
+/// The cases of this file mirror the two stages of the estimator of the notebook of the upstream.  The notebook `dowhy_mediation_analysis.ipynb`.
 
 ///|
 /// The tolerance the upstream estimator tests use.

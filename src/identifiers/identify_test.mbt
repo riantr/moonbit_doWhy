@@ -5,6 +5,7 @@
 /// `test_frontdoor_identifier.py` and `test_complete_adjustment_identifier.py`)
 /// and the expected sets are the ones DoWhy 0.14 produces, which the script
 /// `_verify/gen_identifier_testdata.py` reads from the upstream source.
+/// The two graphs of the notebook of the upstream are two of the four graphs of the cases of the complete adjustment of this file.  The notebook `dowhy_generalized_covariate_adjustment_example.ipynb`.
 
 ///|
 /// Build the graph of a test case.

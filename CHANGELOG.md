@@ -5,6 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.87] - 2026-11-13
+
+### Added
+
+- The port mirrors the scenarios of nineteen of the notebooks of the
+  documentation of the upstream. The upstream executes every notebook with
+  `jupyter nbconvert` and asserts that no cell of it fails; the port runs the
+  scenario of the notebook as a test case and asserts the conclusion the
+  notebook demonstrates. The new file `src/tests/notebook_cases.mbt` holds the
+  eight scenarios that no other test file of the port ran: the eight
+  estimators, the simple example, the dummy outcome refuter, the do sampler,
+  the hidden confounder, the efficient backdoor, the instrumental variable and
+  the refuter of the conditional independences. The other eleven notebooks
+  were already covered by a test file of the port, which now names them.
+- `_verify/collect_upstream_cases.py` writes the file
+  `_verify/upstream_collected_cases.json`, which holds the 635 test cases
+  pytest collects in the upstream test suite.
+
+### Changed
+
+- The script `_verify/upstream_test_coverage.py` compares the port with the
+  cases pytest collects in the upstream instead of the test functions the
+  upstream defines. The number of the cases of the upstream rises from 469 to
+  635, because a parametrized test collects one case for every parameter of
+  its fixture. The script checks the table of the port that mirrors a
+  parametrized fixture against the fixture of the upstream, and it names the
+  notebooks of the upstream the port mirrors and the ones it does not mirror,
+  with the reason why.
+
 ## [0.0.1] - 2026-10-31
 
 The first release. It is a port of DoWhy 0.14 (PyWhy) to MoonBit with zero

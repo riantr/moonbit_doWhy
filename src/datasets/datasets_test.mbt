@@ -8,6 +8,7 @@
 /// which the upstream does not test.  The reference script
 /// `_verify/xy_dataset_reference.py` runs the upstream data set with the
 /// generator of numpy and prints the rows the port has to reproduce.
+/// The cases of this file mirror the data set of the sales of the notebook of the upstream.  The notebook `sales_attribution_intervention.ipynb`.
 
 ///|
 /// Whether two numeric columns hold the same values.
