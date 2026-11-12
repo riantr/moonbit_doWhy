@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.85.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.86.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -1216,22 +1216,35 @@ following ways:
   of today. Its `dowhy.datasets.linear_dataset` converts the treatment with
   `numpy.vectorize(convert_to_binary)`, and `convert_to_binary` returns an
   array of one element, which numpy 2 refuses with `ValueError: setting an
-  array element with a sequence`. The upstream 0.14 predates numpy 2. Every
+  array element with a sequence`. The upstream 0.14 predates numpy 2, and every
   upstream test file that uses a binary treatment therefore fails in the
-  upstream itself: the test file of the instrumental variable estimator for
-  its eight binary configurations, and the test file of the regression
-  discontinuity estimator for its only configuration. The port draws its rows
-  with its own generator, so the port runs the cases; the reference scripts
-  hand the upstream the rows of the port, so the upstream runs on them as
-  well.
+  upstream itself. Measured by running the upstream's own suite: **fifteen**
+  of its test files fail that way, and **69** of its cases do. They are the
+  files of the linear regression, the propensity score matching, the
+  propensity score weighting, the propensity score stratification, the doubly
+  robust, the generalised linear model, the instrumental variable and the
+  regression discontinuity estimators, the files of the add unobserved common
+  cause, of the placebo and of the dummy outcome refuters, the file of the
+  pandas do sampler, and the files of the causal graph and of the causal
+  model. The script `_verify/upstream_verdicts.py` runs the upstream's suite
+  and checks that list against the run, so the claim cannot rot. The port
+  draws its rows with its own generator, so the port runs the cases; the
+  reference scripts hand the upstream the rows of the port, so the upstream
+  runs on them as well.
 - The upstream permutes the outcome of the dummy outcome refuter in place: it
   writes the permuted values into the column of the outcome of its frame of
-  pandas, and a column of a frame of pandas 3 is read only. The case of the
-  permutation of the whole outcome therefore raises `ValueError: output array
-  is read-only`, and the case of the permuted custom model raises `ValueError:
-  assignment destination is read-only`, before either of them reaches its
-  assertion. The port permutes its own copy of the outcome, so it reaches the
-  number of both cases.
+  pandas, and a column of a frame of pandas 3 is read only. The two cases of a
+  continuous treatment raise before they reach their assertion: the case of
+  the permutation of the whole outcome raises `ValueError: output array is
+  read-only`, and the case of the permuted custom model raises `ValueError:
+  assignment destination is read-only`. The case of a binary treatment fails
+  earlier, with the numpy 2 error of the bullet above. The port permutes its
+  own copy of the outcome, so it reaches the number of every case.
+- The upstream's do sampler gives the `multi_class` argument to the
+  `LogisticRegression` of scikit-learn, and scikit-learn 1.7 removed that
+  argument, so the two cases of the upstream that use a discrete cause fail
+  with `TypeError: LogisticRegression.__init__() got an unexpected keyword
+  argument 'multi_class'`. The port's do sampler does not pass the argument.
 - The upstream test file of the regression discontinuity estimator is broken a
   second time. The estimator of the upstream keeps the name of the running
   variable, the threshold and the bandwidth at `None` when the caller does not

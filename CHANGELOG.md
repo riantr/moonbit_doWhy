@@ -3602,6 +3602,50 @@ The scenarios of the notebooks of the upstream.
 
 [0.0.83]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.83
 
+## [0.0.86] - 2026-11-12
+
+The verdicts of the upstream's own suite, and the correction of the claims
+about them.
+
+### Added
+
+- the script `_verify/upstream_verdicts.py`: it runs the upstream's own test
+  suite over the files that use a binary treatment and over the file of the
+  dummy outcome refuter, it records the verdict of every case, and it checks
+  the claims of the documentation against the run.
+- the three modules the tests of the upstream need and that were missing,
+  `flaky`, `cvxpy` and `nbformat`. With them the upstream's suite collects all
+  635 of its cases; without them thirty five of its files fail to import, so
+  it could not be run at all before.
+
+### Changed
+
+- the README and the AGENTS file state the measured numbers of the failures of
+  the upstream: **fifteen** of its test files and **69** of its cases fail with
+  the numpy 2 error of the binary treatment, **two** of its cases fail with the
+  read-only error of pandas 3, **two** of its cases fail on the scikit-learn
+  that removed the `multi_class` argument, and **one** of its cases is outside
+  its own tolerance.
+- the claim that the upstream breaks in the test file of the instrumental
+  variable estimator and in the test file of the regression discontinuity
+  estimator alone is retracted: it breaks in fifteen of its files, among them
+  the files of the causal graph, of the causal model, of the placebo refuter,
+  of the add unobserved common cause refuter and of the pandas do sampler.
+
+### Notes
+
+- The numbers of the port are the numbers of 0.0.85, because its code is
+  unchanged. The release carries the corrected documentation and the new
+  script.
+- The script is a report and not a gate step: the upstream's suite is slow,
+  some of its cases are flaky, and the modules its optional tests need are not
+  installed on the runner of the CI.
+- The upstream's suite cannot build a data set with a binary treatment at all
+  on numpy 2, so the reference scripts of the repository that need one build
+  the rows of the port in Python instead of calling `linear_dataset`.
+
+[0.0.86]: https://github.com/riantr/moonbit_doWhy/releases/tag/v0.0.86
+
 ## [0.0.85] - 2026-11-11
 
 The ten cases of a binary treatment of the dummy outcome refuter, which are the

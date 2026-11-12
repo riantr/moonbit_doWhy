@@ -1941,12 +1941,35 @@ README makes, so they are tracked in the repository:
   of this repository therefore build the rows of the port in Python instead of
   calling `linear_dataset` when the treatment is binary, and a case of the
   upstream that needs that dataset cannot be run here at all.
+- **The upstream's own suite runs in this environment, and it is the measure of
+  the claims above.** Its three missing modules -- `flaky`, `cvxpy` and
+  `nbformat` -- are installed, and the suite then collects all 635 of its
+  cases. Running the files that use a binary treatment gives **69** cases
+  that fail with the numpy 2 error, in **fifteen** files: the linear
+  regression, the propensity score matching, the propensity score weighting,
+  the propensity score stratification, the doubly robust, the generalised
+  linear model, the instrumental variable and the regression discontinuity
+  estimators, the add unobserved common cause, the placebo and the dummy
+  outcome refuters, the pandas do sampler, the causal graph and the causal
+  model. **The earlier belief of this file, that the upstream breaks in the
+  test file of the instrumental variable estimator and in the test file of the
+  regression discontinuity estimator alone, was wrong**: it breaks in fifteen
+  of its files.
+- `_verify/upstream_verdicts.py` runs the upstream's suite over the files that
+  use a binary treatment and over the file of the dummy outcome refuter, and
+  it checks the claims of this file against the run: the list of the files
+  that fail with the numpy 2 error, the two cases of the permutation that
+  fail with the read-only error of pandas 3, the two cases the upstream marks
+  `xfail`, and the two cases of the do sampler that fail on the scikit-learn
+  without `multi_class`. It is a report and not a gate step, because the
+  upstream's suite is slow and some of its cases are flaky.
 - `permute` of the upstream refuter writes into the array it is given, so a case
   that permutes a read-only array raises `ValueError: output array is read-only`
   on numpy 2.x, and the case of the permuted custom model raises `ValueError:
   assignment destination is read-only`, because it writes into the column of the
-  outcome of a frame of pandas 3. The upstream's own permutation cases of the
-  dummy outcome refuter therefore fail in this environment;
+  outcome of a frame of pandas 3. **The two cases of a continuous treatment**
+  of the dummy outcome refuter therefore fail in this environment, and the case
+  of a binary treatment fails earlier, with the numpy 2 error.
   `_verify/dummy_outcome_binary_reference.py` runs the ten binary cases of the
   upstream and prints the two errors, and the port's own permutation cases are
   the evidence for that branch.
