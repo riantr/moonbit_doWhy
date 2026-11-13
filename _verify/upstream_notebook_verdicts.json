@@ -1,0 +1,1390 @@
+{
+ "upstream": "D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14",
+ "runner": "nbclient.NotebookClient, the engine of `jupyter nbconvert --execute`",
+ "repairs_of_the_upstream": [
+  "the root of the package is put on `sys.path` of the kernel, because the interpreter of this machine ignores `PYTHONPATH`",
+  "`convert_to_binary` and `stochastically_convert_to_three_level_categorical` of `dowhy.datasets` return a scalar instead of the one element array of `numpy.random.choice`, which `numpy.vectorize` cannot broadcast under numpy 2",
+  "the `numpy` of `dowhy.causal_refuters.add_unobserved_common_cause` returns the one element array of `numpy.std` that the module indexes",
+  "the `astype` of pandas 3 casts an object column of zeroes and ones to `bool`, which the refuter of the unobserved common cause needs",
+  "the helper of the refuter of the unobserved common cause puts the columns of the treatment and of the outcome as objects, because pandas 3 refuses the zeroes and the ones in a boolean column"
+ ],
+ "notebooks": [
+  {
+   "notebook": "DoWhy-The Causal Story Behind Hotel Booking Cancellations.ipynb",
+   "verdict": "failed",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 4,
+      "ename": "URLError",
+      "evalue": "<urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>",
+      "traceback": [
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\io\\common.py:282, in urlopen(*args, **kwargs)\n    276 \"\"\"\n    277 Lazy-import wrapper for stdlib urlopen, as that imports a big chunk of\n    278 the stdlib.\n    279 \"\"\"\n    280 import urllib.request\n--> 282 return urllib.request.urlopen(*args, **kwargs)\n",
+       "File urllib\\request.py:189, in urlopen(url, data, timeout, context)\n",
+       "File urllib\\request.py:489, in OpenerDirector.open(self, fullurl, data, timeout)\n",
+       "File urllib\\request.py:506, in OpenerDirector._open(self, req, data)\n",
+       "File urllib\\request.py:466, in OpenerDirector._call_chain(self, chain, kind, meth_name, *args)\n",
+       "File urllib\\request.py:1367, in HTTPSHandler.https_open(self, req)\n   1366 'Could not get source, probably due dynamically evaluated source code.'\n",
+       "File urllib\\request.py:1326, in AbstractHTTPHandler.do_open(self, http_class, req, **http_conn_args)\n",
+       "URLError: <urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>"
+      ]
+     },
+     {
+      "cell": 5,
+      "ename": "NameError",
+      "evalue": "name 'dataset' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[3], line 1\n----> 1 dataset.columns\n",
+       "NameError: name 'dataset' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 5,
+      "ename": "URLError",
+      "evalue": "<urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>",
+      "traceback": [
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\io\\common.py:282, in urlopen(*args, **kwargs)\n    276 \"\"\"\n    277 Lazy-import wrapper for stdlib urlopen, as that imports a big chunk of\n    278 the stdlib.\n    279 \"\"\"\n    280 import urllib.request\n--> 282 return urllib.request.urlopen(*args, **kwargs)\n",
+       "File urllib\\request.py:189, in urlopen(url, data, timeout, context)\n",
+       "File urllib\\request.py:489, in OpenerDirector.open(self, fullurl, data, timeout)\n",
+       "File urllib\\request.py:506, in OpenerDirector._open(self, req, data)\n",
+       "File urllib\\request.py:466, in OpenerDirector._call_chain(self, chain, kind, meth_name, *args)\n",
+       "File urllib\\request.py:1367, in HTTPSHandler.https_open(self, req)\n   1366 'Could not get source, probably due dynamically evaluated source code.'\n",
+       "File urllib\\request.py:1326, in AbstractHTTPHandler.do_open(self, http_class, req, **http_conn_args)\n",
+       "URLError: <urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>"
+      ]
+     },
+     {
+      "cell": 6,
+      "ename": "NameError",
+      "evalue": "name 'dataset' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[4], line 1\n----> 1 dataset.columns\n",
+       "NameError: name 'dataset' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "counterfactual_fairness_dowhy.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "do_sampler_demo.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "dowhy-conditional-treatment-effects.ipynb",
+   "verdict": "failed",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 21,
+      "ename": "ValueError",
+      "evalue": "setting an array element with a sequence.",
+      "traceback": [
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "ValueError                                Traceback (most recent call last)",
+       "Cell In[14], line 1\n----> 1 data_binary = dowhy.datasets.linear_dataset(BETA, num_common_causes=4, num_samples=10000,\n      2                                     num_instruments=1, num_effect_modifiers=2,\n      3                                     treatment_is_binary=True, outcome_is_binary=True)\n      4 # convert boolean values to {0,1} numeric\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:298, in linear_dataset(beta, num_common_causes, num_samples, num_instruments, num_effect_modifiers, num_treatments, num_frontdoor_variables, treatment_is_binary, treatment_is_category, outcome_is_binary, stochastic_discretization, num_discrete_common_causes, num_discrete_instruments, num_discrete_effect_modifiers, stddev_treatment_noise, stddev_outcome_noise, one_hot_encode)\n    296 # Converting treatment to binary if required\n    297 if treatment_is_binary:\n--> 298     t = np.vectorize(convert_to_binary)(t)\n    299 elif treatment_is_category:\n    300     t = np.vectorize(stochastically_convert_to_three_level_categorical)(t)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2529, in vectorize.__call__(self, *args, **kwargs)\n   2526     self._init_stage_2(*args, **kwargs)\n   2527     return self\n-> 2529 return self._call_as_normal(*args, **kwargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2522, in vectorize._call_as_normal(self, *args, **kwargs)\n   2519     vargs = [args[_i] for _i in inds]\n   2520     vargs.extend([kwargs[_n] for _n in names])\n-> 2522 return self._vectorize_call(func=func, args=vargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2613, in vectorize._vectorize_call(self, func, args)\n   2610 outputs = ufunc(*args, out=...)\n   2612 if ufunc.nout == 1:\n-> 2613     res = asanyarray(outputs, dtype=otypes[0])\n   2614 else:\n   2615     res = tuple(asanyarray(x, dtype=t)\n   2616                 for x, t in zip(outputs, otypes))\n",
+       "ValueError: setting an array element with a sequence."
+      ]
+     },
+     {
+      "cell": 23,
+      "ename": "NameError",
+      "evalue": "name 'model_binary' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[15], line 3\n      1 from sklearn.linear_model import LogisticRegressionCV\n      2 #todo needs binary y\n----> 3 drlearner_estimate = model_binary.estimate_effect(identified_estimand_binary, \n      4                                 method_name=\"backdoor.econml.dr.LinearDRLearner\",\n      5                                 confidence_intervals=False,\n      6                                 method_params={\"init_params\":{\n",
+       "NameError: name 'model_binary' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 24,
+      "ename": "TypeError",
+      "evalue": "LogisticRegressionCV.__init__() got an unexpected keyword argument 'multi_class'",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "TypeError                                 Traceback (most recent call last)",
+       "Cell In[16], line 7\n      3 drlearner_estimate = model_binary.estimate_effect(identified_estimand_binary, \n      4                                 method_name=\"backdoor.econml.dr.LinearDRLearner\",\n      5                                 confidence_intervals=False,\n      6                                 method_params={\"init_params\":{\n----> 7                                                     'model_propensity': LogisticRegressionCV(cv=3, solver='lbfgs', multi_class='auto')\n      8                                                     },\n      9                                                \"fit_params\":{}\n     10                                               })\n",
+       "TypeError: LogisticRegressionCV.__init__() got an unexpected keyword argument 'multi_class'"
+      ]
+     }
+    ],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "dowhy-simple-iv-example.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "dowhy_causal_api.ipynb",
+   "verdict": "ok_with_the_repair",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 2,
+      "ename": "ValueError",
+      "evalue": "setting an array element with a sequence.",
+      "traceback": [
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "ValueError                                Traceback (most recent call last)",
+       "Cell In[2], line 1\n----> 1 data = dowhy.datasets.linear_dataset(beta=5,\n      2         num_common_causes=1,\n      3         num_instruments = 0,\n      4         num_samples=1000,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:298, in linear_dataset(beta, num_common_causes, num_samples, num_instruments, num_effect_modifiers, num_treatments, num_frontdoor_variables, treatment_is_binary, treatment_is_category, outcome_is_binary, stochastic_discretization, num_discrete_common_causes, num_discrete_instruments, num_discrete_effect_modifiers, stddev_treatment_noise, stddev_outcome_noise, one_hot_encode)\n    296 # Converting treatment to binary if required\n    297 if treatment_is_binary:\n--> 298     t = np.vectorize(convert_to_binary)(t)\n    299 elif treatment_is_category:\n    300     t = np.vectorize(stochastically_convert_to_three_level_categorical)(t)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2529, in vectorize.__call__(self, *args, **kwargs)\n   2526     self._init_stage_2(*args, **kwargs)\n   2527     return self\n-> 2529 return self._call_as_normal(*args, **kwargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2522, in vectorize._call_as_normal(self, *args, **kwargs)\n   2519     vargs = [args[_i] for _i in inds]\n   2520     vargs.extend([kwargs[_n] for _n in names])\n-> 2522 return self._vectorize_call(func=func, args=vargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2613, in vectorize._vectorize_call(self, func, args)\n   2610 outputs = ufunc(*args, out=...)\n   2612 if ufunc.nout == 1:\n-> 2613     res = asanyarray(outputs, dtype=otypes[0])\n   2614 else:\n   2615     res = tuple(asanyarray(x, dtype=t)\n   2616                 for x, t in zip(outputs, otypes))\n",
+       "ValueError: setting an array element with a sequence."
+      ]
+     },
+     {
+      "cell": 3,
+      "ename": "NameError",
+      "evalue": "name 'df' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[3], line 2\n      1 # data['df'] is just a regular pandas.DataFrame\n----> 2 df.causal.do(x=treatment,\n      3              variable_types={treatment: 'b', outcome: 'c', common_cause: 'c'},\n      4              outcome=outcome,\n      5              common_causes=[common_cause],\n",
+       "NameError: name 'df' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "dowhy_confounder_example.ipynb",
+   "verdict": "failed",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 6,
+      "ename": "FileNotFoundError",
+      "evalue": "[WinError 2] \"dot\" not found in path.",
+      "traceback": [
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\causal_model.py:471, in CausalModel.view_model(self, layout, size, file_name)\n    461 def view_model(self, layout=None, size=(8, 6), file_name=\"causal_model\"):\n    462     \"\"\"View the causal DAG.\n    463 \n    464     :param layout: string specifying the layout of the graph.\n   (...)    469 \n    470     \"\"\"\n--> 471     self._graph.view_graph(layout, size, file_name)\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\causal_graph.py:121, in CausalGraph.view_graph(self, layout, size, file_name)\n    120 def view_graph(self, layout=None, size=None, file_name=\"causal_model\"):\n--> 121     plot(self._graph, layout_prog=layout, figure_size=size, filename=file_name + \".png\")\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\utils\\plotting.py:91, in plot(causal_graph, layout_prog, causal_strengths, colors, filename, display_plot, figure_size, **kwargs)\n     82 from dowhy.utils.networkx_plotting import plot_causal_graph_networkx\n     84 _logger.info(\n     85     \"Pygraphviz installation not found, falling back to networkx plotting. \"\n     86     \"For better looking plots, consider installing pygraphviz. Note This requires both the Python \"\n     87     \"pygraphviz package (``pip install pygraphviz``) and the shared system library (e.g. \"\n     88     \"``brew install graphviz`` or ``apt-get install graphviz``)\"\n     89 )\n---> 91 plot_causal_graph_networkx(\n     92     causal_graph,\n     93     layout_prog=layout_prog,\n     94     causal_strengths=causal_strengths,\n     95     colors=colors,\n     96     filename=filename,\n     97     display_plot=display_plot,\n     98     figure_size=figure_size,\n     99     **kwargs,\n    100 )\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\utils\\networkx_plotting.py:72, in plot_causal_graph_networkx(causal_graph, layout_prog, causal_strengths, colors, filename, display_plot, label_wrap_length, figure_size)\n     66 edge_widths = {\n     67     (s, t): 2 if causal_strengths[(s, t)] is None else _calc_arrow_width(causal_strengths[(s, t)], max_strength)\n     68     for (s, t) in causal_graph.edges()\n     69 }\n     71 if layout_prog is not None:\n---> 72     layout = nx_pydot.pydot_layout(causal_graph, prog=layout_prog)\n     73     if figure_size is not None:\n     74         figure = plt.figure(figsize=figure_size)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\networkx\\drawing\\nx_pydot.py:329, in pydot_layout(G, prog, root)\n    325     P.set(\"root\", str(root))\n    327 # List of low-level bytes comprising a string in the dot language converted\n    328 # from the passed graph with the passed external GraphViz command.\n--> 329 D_bytes = P.create_dot(prog=prog)\n    331 # Unique string decoded from these bytes with the preferred locale encoding\n    332 D = str(D_bytes, encoding=getpreferredencoding())\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pydot\\core.py:181, in __generate_format_methods.<locals>.__create_method(self, f, prog, encoding)\n    174 def __create_method(\n    175     self: Any,\n    176     f: str = frmt,\n    177     prog: str | None = None,\n    178     encoding: str | None = None,\n    179 ) -> Any:\n    180     \"\"\"Refer to docstring of method `create`.\"\"\"\n--> 181     return self.create(format=f, prog=prog, encoding=encoding)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pydot\\core.py:1833, in Dot.create(self, prog, format, encoding)\n   1831     args = list(e.args)  # type: ignore\n   1832     args[1] = f'\"{prog}\" not found in path.'  # type: ignore\n-> 1833     raise OSError(*args)\n   1834 else:\n   1835     raise\n",
+       "FileNotFoundError: [WinError 2] \"dot\" not found in path."
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 7,
+      "ename": "FileNotFoundError",
+      "evalue": "[WinError 2] \"dot\" not found in path.",
+      "traceback": [
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\causal_model.py:471, in CausalModel.view_model(self, layout, size, file_name)\n    461 def view_model(self, layout=None, size=(8, 6), file_name=\"causal_model\"):\n    462     \"\"\"View the causal DAG.\n    463 \n    464     :param layout: string specifying the layout of the graph.\n   (...)    469 \n    470     \"\"\"\n--> 471     self._graph.view_graph(layout, size, file_name)\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\causal_graph.py:121, in CausalGraph.view_graph(self, layout, size, file_name)\n    120 def view_graph(self, layout=None, size=None, file_name=\"causal_model\"):\n--> 121     plot(self._graph, layout_prog=layout, figure_size=size, filename=file_name + \".png\")\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\utils\\plotting.py:91, in plot(causal_graph, layout_prog, causal_strengths, colors, filename, display_plot, figure_size, **kwargs)\n     82 from dowhy.utils.networkx_plotting import plot_causal_graph_networkx\n     84 _logger.info(\n     85     \"Pygraphviz installation not found, falling back to networkx plotting. \"\n     86     \"For better looking plots, consider installing pygraphviz. Note This requires both the Python \"\n     87     \"pygraphviz package (``pip install pygraphviz``) and the shared system library (e.g. \"\n     88     \"``brew install graphviz`` or ``apt-get install graphviz``)\"\n     89 )\n---> 91 plot_causal_graph_networkx(\n     92     causal_graph,\n     93     layout_prog=layout_prog,\n     94     causal_strengths=causal_strengths,\n     95     colors=colors,\n     96     filename=filename,\n     97     display_plot=display_plot,\n     98     figure_size=figure_size,\n     99     **kwargs,\n    100 )\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\utils\\networkx_plotting.py:72, in plot_causal_graph_networkx(causal_graph, layout_prog, causal_strengths, colors, filename, display_plot, label_wrap_length, figure_size)\n     66 edge_widths = {\n     67     (s, t): 2 if causal_strengths[(s, t)] is None else _calc_arrow_width(causal_strengths[(s, t)], max_strength)\n     68     for (s, t) in causal_graph.edges()\n     69 }\n     71 if layout_prog is not None:\n---> 72     layout = nx_pydot.pydot_layout(causal_graph, prog=layout_prog)\n     73     if figure_size is not None:\n     74         figure = plt.figure(figsize=figure_size)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\networkx\\drawing\\nx_pydot.py:329, in pydot_layout(G, prog, root)\n    325     P.set(\"root\", str(root))\n    327 # List of low-level bytes comprising a string in the dot language converted\n    328 # from the passed graph with the passed external GraphViz command.\n--> 329 D_bytes = P.create_dot(prog=prog)\n    331 # Unique string decoded from these bytes with the preferred locale encoding\n    332 D = str(D_bytes, encoding=getpreferredencoding())\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pydot\\core.py:181, in __generate_format_methods.<locals>.__create_method(self, f, prog, encoding)\n    174 def __create_method(\n    175     self: Any,\n    176     f: str = frmt,\n    177     prog: str | None = None,\n    178     encoding: str | None = None,\n    179 ) -> Any:\n    180     \"\"\"Refer to docstring of method `create`.\"\"\"\n--> 181     return self.create(format=f, prog=prog, encoding=encoding)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pydot\\core.py:1833, in Dot.create(self, prog, format, encoding)\n   1831     args = list(e.args)  # type: ignore\n   1832     args[1] = f'\"{prog}\" not found in path.'  # type: ignore\n-> 1833     raise OSError(*args)\n   1834 else:\n   1835     raise\n",
+       "FileNotFoundError: [WinError 2] \"dot\" not found in path."
+      ]
+     }
+    ],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "dowhy_demo_dummy_outcome_refuter.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "dowhy_doubly_robust_estimator.ipynb",
+   "verdict": "ok_with_the_repair",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 3,
+      "ename": "ValueError",
+      "evalue": "setting an array element with a sequence.",
+      "traceback": [
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "ValueError                                Traceback (most recent call last)",
+       "Cell In[2], line 5\n      1 ATE = 10\n      2 \n      3 # ========================================================\n      4 # Lets start by using the linear_dataset() helper method, but we will tweak the values to fit our toy example\n----> 5 data = dowhy.datasets.linear_dataset(beta=ATE,\n      6         num_common_causes=2,\n      7         num_instruments = 0,\n      8         num_treatments=1,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:298, in linear_dataset(beta, num_common_causes, num_samples, num_instruments, num_effect_modifiers, num_treatments, num_frontdoor_variables, treatment_is_binary, treatment_is_category, outcome_is_binary, stochastic_discretization, num_discrete_common_causes, num_discrete_instruments, num_discrete_effect_modifiers, stddev_treatment_noise, stddev_outcome_noise, one_hot_encode)\n    296 # Converting treatment to binary if required\n    297 if treatment_is_binary:\n--> 298     t = np.vectorize(convert_to_binary)(t)\n    299 elif treatment_is_category:\n    300     t = np.vectorize(stochastically_convert_to_three_level_categorical)(t)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2529, in vectorize.__call__(self, *args, **kwargs)\n   2526     self._init_stage_2(*args, **kwargs)\n   2527     return self\n-> 2529 return self._call_as_normal(*args, **kwargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2522, in vectorize._call_as_normal(self, *args, **kwargs)\n   2519     vargs = [args[_i] for _i in inds]\n   2520     vargs.extend([kwargs[_n] for _n in names])\n-> 2522 return self._vectorize_call(func=func, args=vargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2613, in vectorize._vectorize_call(self, func, args)\n   2610 outputs = ufunc(*args, out=...)\n   2612 if ufunc.nout == 1:\n-> 2613     res = asanyarray(outputs, dtype=otypes[0])\n   2614 else:\n   2615     res = tuple(asanyarray(x, dtype=t)\n   2616                 for x, t in zip(outputs, otypes))\n",
+       "ValueError: setting an array element with a sequence."
+      ]
+     },
+     {
+      "cell": 5,
+      "ename": "NameError",
+      "evalue": "name 'df_linear' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[3], line 1\n----> 1 df_linear_sample = df_linear.sample(n=1000, random_state=0)\n      2 colors_linear = df_linear_sample[\"v0\"].map({0: \"red\", 1: \"green\"})\n      3 df_nonlinear_sample = df_nonlinear.sample(n=1000, random_state=0)\n      4 colors_nonlinear = df_nonlinear_sample[\"v0\"].map({0: \"red\", 1: \"green\"})\n",
+       "NameError: name 'df_linear' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "dowhy_efficient_backdoor_example.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "dowhy_estimation_methods.ipynb",
+   "verdict": "ok_with_the_repair",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 4,
+      "ename": "ValueError",
+      "evalue": "setting an array element with a sequence.",
+      "traceback": [
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "ValueError                                Traceback (most recent call last)",
+       "Cell In[3], line 1\n----> 1 data = dowhy.datasets.linear_dataset(beta=10,\n      2         num_common_causes=5,\n      3         num_instruments = 2,\n      4         num_treatments=1,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:298, in linear_dataset(beta, num_common_causes, num_samples, num_instruments, num_effect_modifiers, num_treatments, num_frontdoor_variables, treatment_is_binary, treatment_is_category, outcome_is_binary, stochastic_discretization, num_discrete_common_causes, num_discrete_instruments, num_discrete_effect_modifiers, stddev_treatment_noise, stddev_outcome_noise, one_hot_encode)\n    296 # Converting treatment to binary if required\n    297 if treatment_is_binary:\n--> 298     t = np.vectorize(convert_to_binary)(t)\n    299 elif treatment_is_category:\n    300     t = np.vectorize(stochastically_convert_to_three_level_categorical)(t)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2529, in vectorize.__call__(self, *args, **kwargs)\n   2526     self._init_stage_2(*args, **kwargs)\n   2527     return self\n-> 2529 return self._call_as_normal(*args, **kwargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2522, in vectorize._call_as_normal(self, *args, **kwargs)\n   2519     vargs = [args[_i] for _i in inds]\n   2520     vargs.extend([kwargs[_n] for _n in names])\n-> 2522 return self._vectorize_call(func=func, args=vargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2613, in vectorize._vectorize_call(self, func, args)\n   2610 outputs = ufunc(*args, out=...)\n   2612 if ufunc.nout == 1:\n-> 2613     res = asanyarray(outputs, dtype=otypes[0])\n   2614 else:\n   2615     res = tuple(asanyarray(x, dtype=t)\n   2616                 for x, t in zip(outputs, otypes))\n",
+       "ValueError: setting an array element with a sequence."
+      ]
+     },
+     {
+      "cell": 8,
+      "ename": "NameError",
+      "evalue": "name 'df' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[4], line 3\n      1 # With graph\n      2 model=CausalModel(\n----> 3         data = df,\n      4         treatment=data[\"treatment_name\"],\n      5         outcome=data[\"outcome_name\"],\n      6         graph=data[\"gml_graph\"],\n",
+       "NameError: name 'df' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "dowhy_example_effect_of_memberrewards_program.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "dowhy_functional_api.ipynb",
+   "verdict": "ok_with_the_repair",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 4,
+      "ename": "ValueError",
+      "evalue": "setting an array element with a sequence.",
+      "traceback": [
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "ValueError                                Traceback (most recent call last)",
+       "Cell In[2], line 10\n      6 NUM_INSTRUMENTS = 2\n      7 NUM_EFFECT_MODIFIERS = 2\n      8 \n      9 # Creating a Linear Dataset with the given parameters\n---> 10 data = linear_dataset(\n     11     beta=BETA,\n     12     num_common_causes=NUM_CONFOUNDERS,\n     13     num_instruments=NUM_INSTRUMENTS,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:298, in linear_dataset(beta, num_common_causes, num_samples, num_instruments, num_effect_modifiers, num_treatments, num_frontdoor_variables, treatment_is_binary, treatment_is_category, outcome_is_binary, stochastic_discretization, num_discrete_common_causes, num_discrete_instruments, num_discrete_effect_modifiers, stddev_treatment_noise, stddev_outcome_noise, one_hot_encode)\n    296 # Converting treatment to binary if required\n    297 if treatment_is_binary:\n--> 298     t = np.vectorize(convert_to_binary)(t)\n    299 elif treatment_is_category:\n    300     t = np.vectorize(stochastically_convert_to_three_level_categorical)(t)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2529, in vectorize.__call__(self, *args, **kwargs)\n   2526     self._init_stage_2(*args, **kwargs)\n   2527     return self\n-> 2529 return self._call_as_normal(*args, **kwargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2522, in vectorize._call_as_normal(self, *args, **kwargs)\n   2519     vargs = [args[_i] for _i in inds]\n   2520     vargs.extend([kwargs[_n] for _n in names])\n-> 2522 return self._vectorize_call(func=func, args=vargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2613, in vectorize._vectorize_call(self, func, args)\n   2610 outputs = ufunc(*args, out=...)\n   2612 if ufunc.nout == 1:\n-> 2613     res = asanyarray(outputs, dtype=otypes[0])\n   2614 else:\n   2615     res = tuple(asanyarray(x, dtype=t)\n   2616                 for x, t in zip(outputs, otypes))\n",
+       "ValueError: setting an array element with a sequence."
+      ]
+     },
+     {
+      "cell": 6,
+      "ename": "NameError",
+      "evalue": "name 'graph' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[3], line 2\n      1 # Default identify_effect call example:\n----> 2 identified_estimand = identify_effect(graph, treatment_name, outcome_name, observed_nodes)\n      3 \n      4 # auto_identify_effect example with extra parameters:\n      5 identified_estimand_auto = identify_effect_auto(\n",
+       "NameError: name 'graph' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "dowhy_generalized_covariate_adjustment_estimation_example.ipynb",
+   "verdict": "ok_with_the_repair",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 2,
+      "ename": "ValueError",
+      "evalue": "setting an array element with a sequence.",
+      "traceback": [
+       "ValueError                                Traceback (most recent call last)",
+       "Cell In[2], line 18\n     14     (\"L\", \"V3\"),\n     15     (\"L\", \"V2\"),\n     16 ]\n     17 graph = nx.DiGraph(edges)\n---> 18 data = dowhy.datasets.linear_dataset_from_graph(\n     19     graph,\n     20     treatments=treatments,\n     21     outcome=outcome,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:770, in linear_dataset_from_graph(graph, treatments, outcome, treatments_are_binary, outcome_is_binary, variable_type_dict, num_samples)\n    766         currset = cs\n    768     return df, continuous_cols, discrete_cols, binary_cols\n--> 770 df, continuous_cols, discrete_cols, binary_cols = _compute_y()\n    772 # Compute ATE:\n    773 # If all non-treatment variables are continuous, then can be computed from the\n    774 # graph directly\n    775 if all(variable_type_dict[x] == CONTINUOUS for x in variable_type_dict.keys() if x not in treatments):\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:763, in linear_dataset_from_graph.<locals>._compute_y(intervene)\n    760     continuous_cols.append(node)\n    761 else:\n    762     # nums = np.random.normal(0, 1, num_samples)\n--> 763     df[node] = np.vectorize(convert_to_binary)(t_observed)\n    764     discrete_cols.append(node)\n    765     binary_cols.append(node)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2529, in vectorize.__call__(self, *args, **kwargs)\n   2526     self._init_stage_2(*args, **kwargs)\n   2527     return self\n-> 2529 return self._call_as_normal(*args, **kwargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2522, in vectorize._call_as_normal(self, *args, **kwargs)\n   2519     vargs = [args[_i] for _i in inds]\n   2520     vargs.extend([kwargs[_n] for _n in names])\n-> 2522 return self._vectorize_call(func=func, args=vargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2613, in vectorize._vectorize_call(self, func, args)\n   2610 outputs = ufunc(*args, out=...)\n   2612 if ufunc.nout == 1:\n-> 2613     res = asanyarray(outputs, dtype=otypes[0])\n   2614 else:\n   2615     res = tuple(asanyarray(x, dtype=t)\n   2616                 for x, t in zip(outputs, otypes))\n",
+       "ValueError: setting an array element with a sequence."
+      ]
+     },
+     {
+      "cell": 4,
+      "ename": "NameError",
+      "evalue": "name 'data' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[3], line 1\n----> 1 data[\"ate\"]\n",
+       "NameError: name 'data' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "dowhy_generalized_covariate_adjustment_example.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "dowhy_ihdp_data_example.ipynb",
+   "verdict": "failed",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 3,
+      "ename": "URLError",
+      "evalue": "<urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>",
+      "traceback": [
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\io\\common.py:282, in urlopen(*args, **kwargs)\n    276 \"\"\"\n    277 Lazy-import wrapper for stdlib urlopen, as that imports a big chunk of\n    278 the stdlib.\n    279 \"\"\"\n    280 import urllib.request\n--> 282 return urllib.request.urlopen(*args, **kwargs)\n",
+       "File urllib\\request.py:189, in urlopen(url, data, timeout, context)\n",
+       "File urllib\\request.py:489, in OpenerDirector.open(self, fullurl, data, timeout)\n",
+       "File urllib\\request.py:506, in OpenerDirector._open(self, req, data)\n",
+       "File urllib\\request.py:466, in OpenerDirector._call_chain(self, chain, kind, meth_name, *args)\n",
+       "File urllib\\request.py:1367, in HTTPSHandler.https_open(self, req)\n   1366 'Could not get source, probably due dynamically evaluated source code.'\n",
+       "File urllib\\request.py:1326, in AbstractHTTPHandler.do_open(self, http_class, req, **http_conn_args)\n",
+       "URLError: <urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>"
+      ]
+     },
+     {
+      "cell": 5,
+      "ename": "NameError",
+      "evalue": "name 'data' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[3], line 3\n      1 # Create a causal model from the data and given common causes.\n      2 model=CausalModel(\n----> 3         data = data,\n      4         treatment='treatment',\n      5         outcome='y_factual',\n      6         common_causes=[\"x\"+str(i) for  i in range(1,26)]\n",
+       "NameError: name 'data' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 4,
+      "ename": "URLError",
+      "evalue": "<urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>",
+      "traceback": [
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\io\\common.py:282, in urlopen(*args, **kwargs)\n    276 \"\"\"\n    277 Lazy-import wrapper for stdlib urlopen, as that imports a big chunk of\n    278 the stdlib.\n    279 \"\"\"\n    280 import urllib.request\n--> 282 return urllib.request.urlopen(*args, **kwargs)\n",
+       "File urllib\\request.py:189, in urlopen(url, data, timeout, context)\n",
+       "File urllib\\request.py:489, in OpenerDirector.open(self, fullurl, data, timeout)\n",
+       "File urllib\\request.py:506, in OpenerDirector._open(self, req, data)\n",
+       "File urllib\\request.py:466, in OpenerDirector._call_chain(self, chain, kind, meth_name, *args)\n",
+       "File urllib\\request.py:1367, in HTTPSHandler.https_open(self, req)\n   1366 'Could not get source, probably due dynamically evaluated source code.'\n",
+       "File urllib\\request.py:1326, in AbstractHTTPHandler.do_open(self, http_class, req, **http_conn_args)\n",
+       "URLError: <urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>"
+      ]
+     },
+     {
+      "cell": 6,
+      "ename": "NameError",
+      "evalue": "name 'data' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[4], line 3\n      1 # Create a causal model from the data and given common causes.\n      2 model=CausalModel(\n----> 3         data = data,\n      4         treatment='treatment',\n      5         outcome='y_factual',\n      6         common_causes=[\"x\"+str(i) for  i in range(1,26)]\n",
+       "NameError: name 'data' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "dowhy_interpreter.ipynb",
+   "verdict": "ok_with_the_repair",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 4,
+      "ename": "ValueError",
+      "evalue": "setting an array element with a sequence.",
+      "traceback": [
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "ValueError                                Traceback (most recent call last)",
+       "Cell In[3], line 1\n----> 1 data = dowhy.datasets.linear_dataset(beta=1,\n      2         num_common_causes=5,\n      3         num_instruments = 2,\n      4         num_treatments=1,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:298, in linear_dataset(beta, num_common_causes, num_samples, num_instruments, num_effect_modifiers, num_treatments, num_frontdoor_variables, treatment_is_binary, treatment_is_category, outcome_is_binary, stochastic_discretization, num_discrete_common_causes, num_discrete_instruments, num_discrete_effect_modifiers, stddev_treatment_noise, stddev_outcome_noise, one_hot_encode)\n    296 # Converting treatment to binary if required\n    297 if treatment_is_binary:\n--> 298     t = np.vectorize(convert_to_binary)(t)\n    299 elif treatment_is_category:\n    300     t = np.vectorize(stochastically_convert_to_three_level_categorical)(t)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2529, in vectorize.__call__(self, *args, **kwargs)\n   2526     self._init_stage_2(*args, **kwargs)\n   2527     return self\n-> 2529 return self._call_as_normal(*args, **kwargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2522, in vectorize._call_as_normal(self, *args, **kwargs)\n   2519     vargs = [args[_i] for _i in inds]\n   2520     vargs.extend([kwargs[_n] for _n in names])\n-> 2522 return self._vectorize_call(func=func, args=vargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2613, in vectorize._vectorize_call(self, func, args)\n   2610 outputs = ufunc(*args, out=...)\n   2612 if ufunc.nout == 1:\n-> 2613     res = asanyarray(outputs, dtype=otypes[0])\n   2614 else:\n   2615     res = tuple(asanyarray(x, dtype=t)\n   2616                 for x, t in zip(outputs, otypes))\n",
+       "ValueError: setting an array element with a sequence."
+      ]
+     },
+     {
+      "cell": 8,
+      "ename": "NameError",
+      "evalue": "name 'df' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[4], line 3\n      1 # With graph\n      2 model=CausalModel(\n----> 3         data = df,\n      4         treatment=data[\"treatment_name\"],\n      5         outcome=data[\"outcome_name\"],\n      6         graph=data[\"gml_graph\"],\n",
+       "NameError: name 'df' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "dowhy_lalonde_example.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "dowhy_mediation_analysis.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "dowhy_multiple_treatments.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "dowhy_optimize_backdoor_example.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "dowhy_ranking_methods.ipynb",
+   "verdict": "failed",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 5,
+      "ename": "TypeError",
+      "evalue": "LogisticRegressionCV.__init__() got an unexpected keyword argument 'multi_class'",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "TypeError                                 Traceback (most recent call last)",
+       "Cell In[4], line 35\n     31                                     'model_t': GradientBoostingRegressor(),\n     32                                     \"model_final\":LassoCV(fit_intercept=False),\n     33                                     'featurizer':PolynomialFeatures(degree=1, include_bias=True)},\n     34                      \"fit_params\":{}},\n---> 35                     {\"init_params\":{ 'model_propensity': LogisticRegressionCV(cv=3, solver='lbfgs', multi_class='auto'),\n     36                         },\n     37                     \"fit_params\":{}\n     38                     },\n",
+       "TypeError: LogisticRegressionCV.__init__() got an unexpected keyword argument 'multi_class'"
+      ]
+     },
+     {
+      "cell": 11,
+      "ename": "NameError",
+      "evalue": "name 'estimator_tuples' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[8], line 14\n     10     experiment_id='1',\n     11     num_experiments=10, # 10\n     12     sample_sizes=sample_size,\n     13     dgps=dgp_list,\n---> 14     estimators=estimator_tuples,\n     15     refuters=refuter_tuples,\n     16     simulate_unobserved_confounding = False\n     17 )\n",
+       "NameError: name 'estimator_tuples' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 6,
+      "ename": "TypeError",
+      "evalue": "LogisticRegressionCV.__init__() got an unexpected keyword argument 'multi_class'",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "TypeError                                 Traceback (most recent call last)",
+       "Cell In[5], line 35\n     31                                     'model_t': GradientBoostingRegressor(),\n     32                                     \"model_final\":LassoCV(fit_intercept=False),\n     33                                     'featurizer':PolynomialFeatures(degree=1, include_bias=True)},\n     34                      \"fit_params\":{}},\n---> 35                     {\"init_params\":{ 'model_propensity': LogisticRegressionCV(cv=3, solver='lbfgs', multi_class='auto'),\n     36                         },\n     37                     \"fit_params\":{}\n     38                     },\n",
+       "TypeError: LogisticRegressionCV.__init__() got an unexpected keyword argument 'multi_class'"
+      ]
+     },
+     {
+      "cell": 12,
+      "ename": "NameError",
+      "evalue": "name 'estimator_tuples' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[9], line 14\n     10     experiment_id='1',\n     11     num_experiments=10, # 10\n     12     sample_sizes=sample_size,\n     13     dgps=dgp_list,\n---> 14     estimators=estimator_tuples,\n     15     refuters=refuter_tuples,\n     16     simulate_unobserved_confounding = False\n     17 )\n",
+       "NameError: name 'estimator_tuples' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "dowhy_refutation_testing.ipynb",
+   "verdict": "failed",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 6,
+      "ename": "URLError",
+      "evalue": "<urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>",
+      "traceback": [
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\io\\common.py:282, in urlopen(*args, **kwargs)\n    276 \"\"\"\n    277 Lazy-import wrapper for stdlib urlopen, as that imports a big chunk of\n    278 the stdlib.\n    279 \"\"\"\n    280 import urllib.request\n--> 282 return urllib.request.urlopen(*args, **kwargs)\n",
+       "File urllib\\request.py:189, in urlopen(url, data, timeout, context)\n",
+       "File urllib\\request.py:489, in OpenerDirector.open(self, fullurl, data, timeout)\n",
+       "File urllib\\request.py:506, in OpenerDirector._open(self, req, data)\n",
+       "File urllib\\request.py:466, in OpenerDirector._call_chain(self, chain, kind, meth_name, *args)\n",
+       "File urllib\\request.py:1367, in HTTPSHandler.https_open(self, req)\n   1366 'Could not get source, probably due dynamically evaluated source code.'\n",
+       "File urllib\\request.py:1326, in AbstractHTTPHandler.do_open(self, http_class, req, **http_conn_args)\n",
+       "URLError: <urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>"
+      ]
+     },
+     {
+      "cell": 12,
+      "ename": "NameError",
+      "evalue": "name 'data' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[4], line 9\n      5 for i in range(1, 26):\n      6     common_causes += [\"x\"+str(i)]\n      7 \n      8 ihdp_model = CausalModel(\n----> 9                 data=data,\n     10                 treatment='treatment',\n     11                 outcome='y_factual',\n     12                 common_causes=common_causes\n",
+       "NameError: name 'data' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "failed",
+    "errors": [],
+    "failure": "CellTimeoutError: A cell timed out while it was being executed, after 240 seconds.\nThe message was: Cell execution timed out.\nHere is a preview of the cell contents:\n-------------------\ndata = pd.read_csv(\"https://raw.githubusercontent.com/AMLab-Amsterdam/CEVAE/master/datasets/IHDP/csv/ihdp_npci_1.csv\", header = None)\ncol =  [\"treatment\", \"y_factual\", \"y_cfactual\", \"mu0\", \"mu1\" ,]\nfor i in range(1"
+   }
+  },
+  {
+   "notebook": "dowhy_refuter_assess_overlap.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "dowhy_refuter_notebook.ipynb",
+   "verdict": "failed",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 10,
+      "ename": "ValueError",
+      "evalue": "setting an array element with a sequence.",
+      "traceback": [
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "ValueError                                Traceback (most recent call last)",
+       "Cell In[5], line 10\n      6 NUM_INSTRUMENTS = 3\n      7 NUM_EFFECT_MODIFIERS = 2\n      8 \n      9 # Creating a Linear Dataset with the given parameters\n---> 10 linear_data = linear_dataset(\n     11             beta = BETA,\n     12             num_common_causes = NUM_CONFOUNDERS,\n     13             num_instruments = NUM_INSTRUMENTS,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:298, in linear_dataset(beta, num_common_causes, num_samples, num_instruments, num_effect_modifiers, num_treatments, num_frontdoor_variables, treatment_is_binary, treatment_is_category, outcome_is_binary, stochastic_discretization, num_discrete_common_causes, num_discrete_instruments, num_discrete_effect_modifiers, stddev_treatment_noise, stddev_outcome_noise, one_hot_encode)\n    296 # Converting treatment to binary if required\n    297 if treatment_is_binary:\n--> 298     t = np.vectorize(convert_to_binary)(t)\n    299 elif treatment_is_category:\n    300     t = np.vectorize(stochastically_convert_to_three_level_categorical)(t)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2529, in vectorize.__call__(self, *args, **kwargs)\n   2526     self._init_stage_2(*args, **kwargs)\n   2527     return self\n-> 2529 return self._call_as_normal(*args, **kwargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2522, in vectorize._call_as_normal(self, *args, **kwargs)\n   2519     vargs = [args[_i] for _i in inds]\n   2520     vargs.extend([kwargs[_n] for _n in names])\n-> 2522 return self._vectorize_call(func=func, args=vargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2613, in vectorize._vectorize_call(self, func, args)\n   2610 outputs = ufunc(*args, out=...)\n   2612 if ufunc.nout == 1:\n-> 2613     res = asanyarray(outputs, dtype=otypes[0])\n   2614 else:\n   2615     res = tuple(asanyarray(x, dtype=t)\n   2616                 for x, t in zip(outputs, otypes))\n",
+       "ValueError: setting an array element with a sequence."
+      ]
+     },
+     {
+      "cell": 12,
+      "ename": "NameError",
+      "evalue": "name 'datasets' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[6], line 3\n      1 dataset_num = 1\n      2 if inspect_datasets is True:\n----> 3     for data in datasets:\n      4         print(\"####### Dataset {}###########################################################################################\".format(dataset_num))\n      5         print(data['df'].head())\n      6         print(\"#############################################################################################################\")\n",
+       "NameError: name 'datasets' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "failed",
+    "errors": [],
+    "failure": "CellTimeoutError: A cell timed out while it was being executed, after 240 seconds.\nThe message was: Cell execution timed out.\nHere is a preview of the cell contents:\n-------------------\nrefutation_list = []\nfor estimand in identified_estimands:\n    for estimate in estimate_list: \n        for refuter in refuter_list:\n            ref = model.refute_estimate(estimand, estimate,method_name=refuter)\n  "
+   }
+  },
+  {
+   "notebook": "dowhy_simple_example.ipynb",
+   "verdict": "ok_with_the_repair",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 3,
+      "ename": "ValueError",
+      "evalue": "setting an array element with a sequence.",
+      "traceback": [
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "ValueError                                Traceback (most recent call last)",
+       "Cell In[2], line 1\n----> 1 data = dowhy.datasets.linear_dataset(beta=10,\n      2         num_common_causes=5,\n      3         num_instruments = 2,\n      4         num_effect_modifiers=1,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:298, in linear_dataset(beta, num_common_causes, num_samples, num_instruments, num_effect_modifiers, num_treatments, num_frontdoor_variables, treatment_is_binary, treatment_is_category, outcome_is_binary, stochastic_discretization, num_discrete_common_causes, num_discrete_instruments, num_discrete_effect_modifiers, stddev_treatment_noise, stddev_outcome_noise, one_hot_encode)\n    296 # Converting treatment to binary if required\n    297 if treatment_is_binary:\n--> 298     t = np.vectorize(convert_to_binary)(t)\n    299 elif treatment_is_category:\n    300     t = np.vectorize(stochastically_convert_to_three_level_categorical)(t)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2529, in vectorize.__call__(self, *args, **kwargs)\n   2526     self._init_stage_2(*args, **kwargs)\n   2527     return self\n-> 2529 return self._call_as_normal(*args, **kwargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2522, in vectorize._call_as_normal(self, *args, **kwargs)\n   2519     vargs = [args[_i] for _i in inds]\n   2520     vargs.extend([kwargs[_n] for _n in names])\n-> 2522 return self._vectorize_call(func=func, args=vargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2613, in vectorize._vectorize_call(self, func, args)\n   2610 outputs = ufunc(*args, out=...)\n   2612 if ufunc.nout == 1:\n-> 2613     res = asanyarray(outputs, dtype=otypes[0])\n   2614 else:\n   2615     res = tuple(asanyarray(x, dtype=t)\n   2616                 for x, t in zip(outputs, otypes))\n",
+       "ValueError: setting an array element with a sequence."
+      ]
+     },
+     {
+      "cell": 4,
+      "ename": "NameError",
+      "evalue": "name 'df' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[3], line 1\n----> 1 df.head()\n",
+       "NameError: name 'df' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "dowhy_twins_example.ipynb",
+   "verdict": "failed",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 5,
+      "ename": "URLError",
+      "evalue": "<urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>",
+      "traceback": [
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\io\\common.py:282, in urlopen(*args, **kwargs)\n    276 \"\"\"\n    277 Lazy-import wrapper for stdlib urlopen, as that imports a big chunk of\n    278 the stdlib.\n    279 \"\"\"\n    280 import urllib.request\n--> 282 return urllib.request.urlopen(*args, **kwargs)\n",
+       "File urllib\\request.py:189, in urlopen(url, data, timeout, context)\n",
+       "File urllib\\request.py:489, in OpenerDirector.open(self, fullurl, data, timeout)\n",
+       "File urllib\\request.py:506, in OpenerDirector._open(self, req, data)\n",
+       "File urllib\\request.py:466, in OpenerDirector._call_chain(self, chain, kind, meth_name, *args)\n",
+       "File urllib\\request.py:1367, in HTTPSHandler.https_open(self, req)\n   1366 'Could not get source, probably due dynamically evaluated source code.'\n",
+       "File urllib\\request.py:1326, in AbstractHTTPHandler.do_open(self, http_class, req, **http_conn_args)\n",
+       "URLError: <urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>"
+      ]
+     },
+     {
+      "cell": 7,
+      "ename": "NameError",
+      "evalue": "name 't' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[4], line 4\n      1 #Since data has pair property,processing the data to get separate row for each twin so that each child can be treated as an instance\n      2 data = []\n      3 \n----> 4 for i in range(len(t.values)):\n      5 \n      6     #select only if both <=2kg\n      7     if t.iloc[i].values[1]>=2000 or t.iloc[i].values[2]>=2000:\n",
+       "NameError: name 't' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 6,
+      "ename": "URLError",
+      "evalue": "<urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>",
+      "traceback": [
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\io\\common.py:282, in urlopen(*args, **kwargs)\n    276 \"\"\"\n    277 Lazy-import wrapper for stdlib urlopen, as that imports a big chunk of\n    278 the stdlib.\n    279 \"\"\"\n    280 import urllib.request\n--> 282 return urllib.request.urlopen(*args, **kwargs)\n",
+       "File urllib\\request.py:189, in urlopen(url, data, timeout, context)\n",
+       "File urllib\\request.py:489, in OpenerDirector.open(self, fullurl, data, timeout)\n",
+       "File urllib\\request.py:506, in OpenerDirector._open(self, req, data)\n",
+       "File urllib\\request.py:466, in OpenerDirector._call_chain(self, chain, kind, meth_name, *args)\n",
+       "File urllib\\request.py:1367, in HTTPSHandler.https_open(self, req)\n   1366 'Could not get source, probably due dynamically evaluated source code.'\n",
+       "File urllib\\request.py:1326, in AbstractHTTPHandler.do_open(self, http_class, req, **http_conn_args)\n",
+       "URLError: <urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>"
+      ]
+     },
+     {
+      "cell": 8,
+      "ename": "NameError",
+      "evalue": "name 't' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[5], line 4\n      1 #Since data has pair property,processing the data to get separate row for each twin so that each child can be treated as an instance\n      2 data = []\n      3 \n----> 4 for i in range(len(t.values)):\n      5 \n      6     #select only if both <=2kg\n      7     if t.iloc[i].values[1]>=2000 or t.iloc[i].values[2]>=2000:\n",
+       "NameError: name 't' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "gcm_401k_analysis.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "gcm_basic_example.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "gcm_counterfactual_medical_dry_eyes.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "gcm_cps2015_dist_change_robust.ipynb",
+   "verdict": "failed",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 6,
+      "ename": "AttributeError",
+      "evalue": "The following error was raised: 'function' object has no attribute '__sklearn_tags__'. It seems that there are no classes that implement `__sklearn_tags__` in the MRO and/or all classes in the MRO call `super().__sklearn_tags__()`. Make sure to inherit from `BaseEstimator` which implements `__sklearn_tags__` (or alternatively define `__sklearn_tags__` but we don't recommend this approach). Note th",
+      "traceback": [
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\gcm\\shapley.py:586, in _evaluate_set_function(set_func, evaluation_subsets, parallel_context, show_progressbar)\n    583     evaluation_subsets = list(evaluation_subsets)\n    585 random_seeds = np.random.randint(np.iinfo(np.int32).max, size=len(evaluation_subsets))\n--> 586 subset_results = parallel_context(\n    587     delayed(parallel_job)(evaluation_subsets[i], int(random_seeds[i]))\n    588     for i in tqdm(\n    589         range(len(evaluation_subsets)),\n    590         desc=\"Evaluating set functions...\",\n    591         position=0,\n    592         leave=True,\n    593         disable=not config.show_progress_bars or not show_progressbar,\n    594     )\n    595 )\n    597 subset_to_result_map = {}\n    598 for subset, result in zip(evaluation_subsets, subset_results):\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\joblib\\parallel.py:2072, in Parallel.__call__(self, iterable)\n   2066 # The first item from the output is blank, but it makes the interpreter\n   2067 # progress until it enters the Try/Except block of the generator and\n   2068 # reaches the first `yield` statement. This starts the asynchronous\n   2069 # dispatch of the tasks to the workers.\n   2070 next(output)\n-> 2072 return output if self.return_generator else list(output)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\joblib\\parallel.py:1682, in Parallel._get_outputs(self, iterator, pre_dispatch)\n   1679     yield\n   1681     with self._backend.retrieval_context():\n-> 1682         yield from self._retrieve()\n   1684 except GeneratorExit:\n   1685     # The generator has been garbage collected before being fully\n   1686     # consumed. This aborts the remaining tasks if possible and warn\n   1687     # the user if necessary.\n   1688     self._exception = True\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\joblib\\parallel.py:1784, in Parallel._retrieve(self)\n   1778 while self._wait_retrieval():\n   1779     # If the callback thread of a worker has signaled that its task\n   1780     # triggered an exception, or if the retrieval loop has raised an\n   1781     # exception (e.g. `GeneratorExit`), exit the loop and surface the\n   1782     # worker traceback.\n   1783     if self._aborting:\n-> 1784         self._raise_error_fast()\n   1785         break\n   1787     nb_jobs = len(self._jobs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\joblib\\parallel.py:1859, in Parallel._raise_error_fast(self)\n   1855 # If this error job exists, immediately raise the error by\n   1856 # calling get_result. This job might not exists if abort has been\n   1857 # called directly or if the generator is gc'ed.\n   1858 if error_job is not None:\n-> 1859     error_job.get_result(self.timeout)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\joblib\\parallel.py:758, in BatchCompletionCallBack.get_result(self, timeout)\n    752 backend = self.parallel._backend\n    754 if backend.supports_retrieve_callback:\n    755     # We assume that the result has already been retrieved by the\n    756     # callback thread, and is stored internally. It's just waiting to\n    757     # be returned.\n--> 758     return self._return_or_raise()\n    760 # For other backends, the main thread needs to run the retrieval step.\n    761 try:\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\joblib\\parallel.py:773, in BatchCompletionCallBack._return_or_raise(self)\n    771 try:\n    772     if self.status == TASK_ERROR:\n--> 773         raise self._result\n    774     return self._result\n    775 finally:\n",
+       "AttributeError: The following error was raised: 'function' object has no attribute '__sklearn_tags__'. It seems that there are no classes that implement `__sklearn_tags__` in the MRO and/or all classes in the MRO call `super().__sklearn_tags__()`. Make sure to inherit from `BaseEstimator` which implements `__sklearn_tags__` (or alternatively define `__sklearn_tags__` but we don't recommend this approach). Note that `BaseEstimator` needs to be on the right side of other Mixins in the inheritance order."
+      ]
+     },
+     {
+      "cell": 10,
+      "ename": "AttributeError",
+      "evalue": "The following error was raised: 'function' object has no attribute '__sklearn_tags__'. It seems that there are no classes that implement `__sklearn_tags__` in the MRO and/or all classes in the MRO call `super().__sklearn_tags__()`. Make sure to inherit from `BaseEstimator` which implements `__sklearn_tags__` (or alternatively define `__sklearn_tags__` but we don't recommend this approach). Note th",
+      "traceback": [
+       "\nDuring handling of the above exception, another exception occurred:\n",
+       "AttributeError                            Traceback (most recent call last)",
+       "Cell In[5], line 15\n     11 scores = {}\n     12 \n     13 # Here we compute the theta^c parameters that make up the Shapley Values (see paper):\n     14 for C in all_combos:\n---> 15     scores[''.join(str(x) for x in C)] = ThetaC(C).est_scores(\n     16         X_eval,\n     17         y_eval,\n     18         T_eval,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\gcm\\distribution_change_robust.py:470, in ThetaC.est_scores(self, X_eval, y_eval, T_eval, X_train, y_train, T_train, w_eval, w_train, method, regressor, classifier, calibrator, X_calib, T_calib, w_calib, all_indep, crop)\n    456 self._train_cla(\n    457     X_train,\n    458     T_train,\n   (...)    465     w_calib=w_calib,\n    466 )\n    468 ratio = n1 / n0\n--> 470 self._get_alphas(X_eval, T_eval, ratio, calibrator=calibrator, crop=crop)\n    472 for k in range(self.K_simpl):\n    473     ind = T_eval == self.C_simpl[k + 1][0]  # Select sample C_{k+1} \\in {0,1}\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\gcm\\distribution_change_robust.py:246, in ThetaC._get_alphas(self, X_eval, T_eval, ratio, calibrator, crop)\n    242 var = self.C_simpl[0][1]  # Select right variables\n    243 p = np.minimum(\n    244     np.maximum(self.cla_dict[0].predict_probabilities(X_eval[np.ix_(ind, var)])[:, 1], crop), 1 - crop\n    245 )\n--> 246 if calibrator is not None and is_regressor(calibrator):\n    247     p = np.minimum(np.maximum(self.calib_dict[0].predict(p[:, np.newaxis]), crop), 1 - crop)\n    248 elif calibrator is not None and is_classifier(calibrator):\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\sklearn\\base.py:1304, in is_regressor(estimator)\n   1276 def is_regressor(estimator):\n   1277     \"\"\"Return True if the given estimator is (probably) a regressor.\n   1278 \n   1279     Parameters\n   (...)   1302     False\n   1303     \"\"\"\n-> 1304     return get_tags(estimator).estimator_type == \"regressor\"\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\sklearn\\utils\\_tags.py:289, in get_tags(estimator)\n    282 except AttributeError as exc:\n    283     if \"object has no attribute '__sklearn_tags__'\" in str(exc):\n    284         # Happens when `__sklearn_tags__` is implemented by calling\n    285         # `super().__sklearn_tags__()` but there is no `__sklearn_tags__`\n    286         # method in the base class. Typically happens when only inheriting\n    287         # from Mixins.\n--> 289         raise AttributeError(\n    290             f\"The following error was raised: {exc}. It seems that \"\n    291             \"there are no classes that implement `__sklearn_tags__` \"\n    292             \"in the MRO and/or all classes in the MRO call \"\n    293             \"`super().__sklearn_tags__()`. Make sure to inherit from \"\n    294             \"`BaseEstimator` which implements `__sklearn_tags__` (or \"\n    295             \"alternatively define `__sklearn_tags__` but we don't recommend \"\n    296             \"this approach). Note that `BaseEstimator` needs to be on the \"\n    297             \"right side of other Mixins in the inheritance order.\"\n    298         )\n    299     else:\n    300         raise\n",
+       "AttributeError: The following error was raised: 'function' object has no attribute '__sklearn_tags__'. It seems that there are no classes that implement `__sklearn_tags__` in the MRO and/or all classes in the MRO call `super().__sklearn_tags__()`. Make sure to inherit from `BaseEstimator` which implements `__sklearn_tags__` (or alternatively define `__sklearn_tags__` but we don't recommend this approach). Note that `BaseEstimator` needs to be on the right side of other Mixins in the inheritance order."
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 7,
+      "ename": "AttributeError",
+      "evalue": "The following error was raised: 'function' object has no attribute '__sklearn_tags__'. It seems that there are no classes that implement `__sklearn_tags__` in the MRO and/or all classes in the MRO call `super().__sklearn_tags__()`. Make sure to inherit from `BaseEstimator` which implements `__sklearn_tags__` (or alternatively define `__sklearn_tags__` but we don't recommend this approach). Note th",
+      "traceback": [
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\gcm\\shapley.py:586, in _evaluate_set_function(set_func, evaluation_subsets, parallel_context, show_progressbar)\n    583     evaluation_subsets = list(evaluation_subsets)\n    585 random_seeds = np.random.randint(np.iinfo(np.int32).max, size=len(evaluation_subsets))\n--> 586 subset_results = parallel_context(\n    587     delayed(parallel_job)(evaluation_subsets[i], int(random_seeds[i]))\n    588     for i in tqdm(\n    589         range(len(evaluation_subsets)),\n    590         desc=\"Evaluating set functions...\",\n    591         position=0,\n    592         leave=True,\n    593         disable=not config.show_progress_bars or not show_progressbar,\n    594     )\n    595 )\n    597 subset_to_result_map = {}\n    598 for subset, result in zip(evaluation_subsets, subset_results):\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\joblib\\parallel.py:2072, in Parallel.__call__(self, iterable)\n   2066 # The first item from the output is blank, but it makes the interpreter\n   2067 # progress until it enters the Try/Except block of the generator and\n   2068 # reaches the first `yield` statement. This starts the asynchronous\n   2069 # dispatch of the tasks to the workers.\n   2070 next(output)\n-> 2072 return output if self.return_generator else list(output)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\joblib\\parallel.py:1682, in Parallel._get_outputs(self, iterator, pre_dispatch)\n   1679     yield\n   1681     with self._backend.retrieval_context():\n-> 1682         yield from self._retrieve()\n   1684 except GeneratorExit:\n   1685     # The generator has been garbage collected before being fully\n   1686     # consumed. This aborts the remaining tasks if possible and warn\n   1687     # the user if necessary.\n   1688     self._exception = True\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\joblib\\parallel.py:1784, in Parallel._retrieve(self)\n   1778 while self._wait_retrieval():\n   1779     # If the callback thread of a worker has signaled that its task\n   1780     # triggered an exception, or if the retrieval loop has raised an\n   1781     # exception (e.g. `GeneratorExit`), exit the loop and surface the\n   1782     # worker traceback.\n   1783     if self._aborting:\n-> 1784         self._raise_error_fast()\n   1785         break\n   1787     nb_jobs = len(self._jobs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\joblib\\parallel.py:1859, in Parallel._raise_error_fast(self)\n   1855 # If this error job exists, immediately raise the error by\n   1856 # calling get_result. This job might not exists if abort has been\n   1857 # called directly or if the generator is gc'ed.\n   1858 if error_job is not None:\n-> 1859     error_job.get_result(self.timeout)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\joblib\\parallel.py:758, in BatchCompletionCallBack.get_result(self, timeout)\n    752 backend = self.parallel._backend\n    754 if backend.supports_retrieve_callback:\n    755     # We assume that the result has already been retrieved by the\n    756     # callback thread, and is stored internally. It's just waiting to\n    757     # be returned.\n--> 758     return self._return_or_raise()\n    760 # For other backends, the main thread needs to run the retrieval step.\n    761 try:\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\joblib\\parallel.py:773, in BatchCompletionCallBack._return_or_raise(self)\n    771 try:\n    772     if self.status == TASK_ERROR:\n--> 773         raise self._result\n    774     return self._result\n    775 finally:\n",
+       "AttributeError: The following error was raised: 'function' object has no attribute '__sklearn_tags__'. It seems that there are no classes that implement `__sklearn_tags__` in the MRO and/or all classes in the MRO call `super().__sklearn_tags__()`. Make sure to inherit from `BaseEstimator` which implements `__sklearn_tags__` (or alternatively define `__sklearn_tags__` but we don't recommend this approach). Note that `BaseEstimator` needs to be on the right side of other Mixins in the inheritance order."
+      ]
+     },
+     {
+      "cell": 11,
+      "ename": "AttributeError",
+      "evalue": "The following error was raised: 'function' object has no attribute '__sklearn_tags__'. It seems that there are no classes that implement `__sklearn_tags__` in the MRO and/or all classes in the MRO call `super().__sklearn_tags__()`. Make sure to inherit from `BaseEstimator` which implements `__sklearn_tags__` (or alternatively define `__sklearn_tags__` but we don't recommend this approach). Note th",
+      "traceback": [
+       "\nDuring handling of the above exception, another exception occurred:\n",
+       "AttributeError                            Traceback (most recent call last)",
+       "Cell In[6], line 15\n     11 scores = {}\n     12 \n     13 # Here we compute the theta^c parameters that make up the Shapley Values (see paper):\n     14 for C in all_combos:\n---> 15     scores[''.join(str(x) for x in C)] = ThetaC(C).est_scores(\n     16         X_eval,\n     17         y_eval,\n     18         T_eval,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\gcm\\distribution_change_robust.py:470, in ThetaC.est_scores(self, X_eval, y_eval, T_eval, X_train, y_train, T_train, w_eval, w_train, method, regressor, classifier, calibrator, X_calib, T_calib, w_calib, all_indep, crop)\n    456 self._train_cla(\n    457     X_train,\n    458     T_train,\n   (...)    465     w_calib=w_calib,\n    466 )\n    468 ratio = n1 / n0\n--> 470 self._get_alphas(X_eval, T_eval, ratio, calibrator=calibrator, crop=crop)\n    472 for k in range(self.K_simpl):\n    473     ind = T_eval == self.C_simpl[k + 1][0]  # Select sample C_{k+1} \\in {0,1}\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\gcm\\distribution_change_robust.py:246, in ThetaC._get_alphas(self, X_eval, T_eval, ratio, calibrator, crop)\n    242 var = self.C_simpl[0][1]  # Select right variables\n    243 p = np.minimum(\n    244     np.maximum(self.cla_dict[0].predict_probabilities(X_eval[np.ix_(ind, var)])[:, 1], crop), 1 - crop\n    245 )\n--> 246 if calibrator is not None and is_regressor(calibrator):\n    247     p = np.minimum(np.maximum(self.calib_dict[0].predict(p[:, np.newaxis]), crop), 1 - crop)\n    248 elif calibrator is not None and is_classifier(calibrator):\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\sklearn\\base.py:1304, in is_regressor(estimator)\n   1276 def is_regressor(estimator):\n   1277     \"\"\"Return True if the given estimator is (probably) a regressor.\n   1278 \n   1279     Parameters\n   (...)   1302     False\n   1303     \"\"\"\n-> 1304     return get_tags(estimator).estimator_type == \"regressor\"\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\sklearn\\utils\\_tags.py:289, in get_tags(estimator)\n    282 except AttributeError as exc:\n    283     if \"object has no attribute '__sklearn_tags__'\" in str(exc):\n    284         # Happens when `__sklearn_tags__` is implemented by calling\n    285         # `super().__sklearn_tags__()` but there is no `__sklearn_tags__`\n    286         # method in the base class. Typically happens when only inheriting\n    287         # from Mixins.\n--> 289         raise AttributeError(\n    290             f\"The following error was raised: {exc}. It seems that \"\n    291             \"there are no classes that implement `__sklearn_tags__` \"\n    292             \"in the MRO and/or all classes in the MRO call \"\n    293             \"`super().__sklearn_tags__()`. Make sure to inherit from \"\n    294             \"`BaseEstimator` which implements `__sklearn_tags__` (or \"\n    295             \"alternatively define `__sklearn_tags__` but we don't recommend \"\n    296             \"this approach). Note that `BaseEstimator` needs to be on the \"\n    297             \"right side of other Mixins in the inheritance order.\"\n    298         )\n    299     else:\n    300         raise\n",
+       "AttributeError: The following error was raised: 'function' object has no attribute '__sklearn_tags__'. It seems that there are no classes that implement `__sklearn_tags__` in the MRO and/or all classes in the MRO call `super().__sklearn_tags__()`. Make sure to inherit from `BaseEstimator` which implements `__sklearn_tags__` (or alternatively define `__sklearn_tags__` but we don't recommend this approach). Note that `BaseEstimator` needs to be on the right side of other Mixins in the inheritance order."
+      ]
+     }
+    ],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "gcm_draw_samples.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "gcm_falsify_dag.ipynb",
+   "verdict": "failed",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 14,
+      "ename": "URLError",
+      "evalue": "<urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>",
+      "traceback": [
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\io\\common.py:282, in urlopen(*args, **kwargs)\n    276 \"\"\"\n    277 Lazy-import wrapper for stdlib urlopen, as that imports a big chunk of\n    278 the stdlib.\n    279 \"\"\"\n    280 import urllib.request\n--> 282 return urllib.request.urlopen(*args, **kwargs)\n",
+       "File urllib\\request.py:189, in urlopen(url, data, timeout, context)\n",
+       "File urllib\\request.py:489, in OpenerDirector.open(self, fullurl, data, timeout)\n",
+       "File urllib\\request.py:506, in OpenerDirector._open(self, req, data)\n",
+       "File urllib\\request.py:466, in OpenerDirector._call_chain(self, chain, kind, meth_name, *args)\n",
+       "File urllib\\request.py:1367, in HTTPSHandler.https_open(self, req)\n   1366 'Could not get source, probably due dynamically evaluated source code.'\n",
+       "File urllib\\request.py:1326, in AbstractHTTPHandler.do_open(self, http_class, req, **http_conn_args)\n",
+       "URLError: <urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>"
+      ]
+     },
+     {
+      "cell": 15,
+      "ename": "NameError",
+      "evalue": "name 'g_sachs' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[9], line 1\n----> 1 plot(g_sachs)\n",
+       "NameError: name 'g_sachs' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 15,
+      "ename": "URLError",
+      "evalue": "<urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>",
+      "traceback": [
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\io\\common.py:282, in urlopen(*args, **kwargs)\n    276 \"\"\"\n    277 Lazy-import wrapper for stdlib urlopen, as that imports a big chunk of\n    278 the stdlib.\n    279 \"\"\"\n    280 import urllib.request\n--> 282 return urllib.request.urlopen(*args, **kwargs)\n",
+       "File urllib\\request.py:189, in urlopen(url, data, timeout, context)\n",
+       "File urllib\\request.py:489, in OpenerDirector.open(self, fullurl, data, timeout)\n",
+       "File urllib\\request.py:506, in OpenerDirector._open(self, req, data)\n",
+       "File urllib\\request.py:466, in OpenerDirector._call_chain(self, chain, kind, meth_name, *args)\n",
+       "File urllib\\request.py:1367, in HTTPSHandler.https_open(self, req)\n   1366 'Could not get source, probably due dynamically evaluated source code.'\n",
+       "File urllib\\request.py:1326, in AbstractHTTPHandler.do_open(self, http_class, req, **http_conn_args)\n",
+       "URLError: <urlopen error [WinError 10054] \u8fdc\u7a0b\u4e3b\u673a\u5f3a\u8feb\u5173\u95ed\u4e86\u4e00\u4e2a\u73b0\u6709\u7684\u8fde\u63a5\u3002>"
+      ]
+     },
+     {
+      "cell": 16,
+      "ename": "NameError",
+      "evalue": "name 'g_sachs' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[10], line 1\n----> 1 plot(g_sachs)\n",
+       "NameError: name 'g_sachs' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "gcm_icc.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "gcm_online_shop.ipynb",
+   "verdict": "failed",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 43,
+      "ename": "KeyError",
+      "evalue": "0",
+      "traceback": [
+       "KeyError: 0",
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "KeyError                                  Traceback (most recent call last)",
+       "Cell In[16], line 2\n      1 first_day_2022 = pd.read_csv('2022 First Day.csv', index_col='Date')\n----> 2 (first_day_2022['Sold Units'][0] / data_2021['Sold Units'][0] - 1) * 100\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\series.py:959, in Series.__getitem__(self, key)\n    954     key = unpack_1tuple(key)\n    956 elif key_is_scalar:\n    957     # Note: GH#50617 in 3.0 we changed int key to always be treated as\n    958     #  a label, matching DataFrame behavior.\n--> 959     return self._get_value(key)\n    961 # Convert generator to list before going through hashable part\n    962 # (We will iterate through the generator there to check for slices)\n    963 if is_iterator(key):\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\series.py:1046, in Series._get_value(self, label, takeable)\n   1043     return self._values[label]\n   1045 # Similar to Index.get_value, but we do not fall back to positional\n-> 1046 loc = self.index.get_loc(label)\n   1048 if is_integer(loc):\n   1049     return self._values[loc]\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\indexes\\base.py:3648, in Index.get_loc(self, key)\n   3643     if isinstance(casted_key, slice) or (\n   3644         isinstance(casted_key, abc.Iterable)\n   3645         and any(isinstance(x, slice) for x in casted_key)\n   3646     ):\n   3647         raise InvalidIndexError(key) from err\n-> 3648     raise KeyError(key) from err\n   3649 except TypeError:\n   3650     # If we have a listlike key, _check_indexing_error will raise\n   3651     #  InvalidIndexError. Otherwise we fall through and re-raise\n   3652     #  the TypeError.\n   3653     self._check_indexing_error(key)\n",
+       "KeyError: 0"
+      ]
+     },
+     {
+      "cell": 45,
+      "ename": "KeyError",
+      "evalue": "0",
+      "traceback": [
+       "KeyError: 0",
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "KeyError                                  Traceback (most recent call last)",
+       "Cell In[17], line 1\n----> 1 (1 - first_day_2022['Profit'][0] / data_2021['Profit'][0]) * 100\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\series.py:959, in Series.__getitem__(self, key)\n    954     key = unpack_1tuple(key)\n    956 elif key_is_scalar:\n    957     # Note: GH#50617 in 3.0 we changed int key to always be treated as\n    958     #  a label, matching DataFrame behavior.\n--> 959     return self._get_value(key)\n    961 # Convert generator to list before going through hashable part\n    962 # (We will iterate through the generator there to check for slices)\n    963 if is_iterator(key):\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\series.py:1046, in Series._get_value(self, label, takeable)\n   1043     return self._values[label]\n   1045 # Similar to Index.get_value, but we do not fall back to positional\n-> 1046 loc = self.index.get_loc(label)\n   1048 if is_integer(loc):\n   1049     return self._values[loc]\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\indexes\\base.py:3648, in Index.get_loc(self, key)\n   3643     if isinstance(casted_key, slice) or (\n   3644         isinstance(casted_key, abc.Iterable)\n   3645         and any(isinstance(x, slice) for x in casted_key)\n   3646     ):\n   3647         raise InvalidIndexError(key) from err\n-> 3648     raise KeyError(key) from err\n   3649 except TypeError:\n   3650     # If we have a listlike key, _check_indexing_error will raise\n   3651     #  InvalidIndexError. Otherwise we fall through and re-raise\n   3652     #  the TypeError.\n   3653     self._check_indexing_error(key)\n",
+       "KeyError: 0"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 44,
+      "ename": "KeyError",
+      "evalue": "0",
+      "traceback": [
+       "KeyError: 0",
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "KeyError                                  Traceback (most recent call last)",
+       "Cell In[17], line 2\n      1 first_day_2022 = pd.read_csv('2022 First Day.csv', index_col='Date')\n----> 2 (first_day_2022['Sold Units'][0] / data_2021['Sold Units'][0] - 1) * 100\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\series.py:959, in Series.__getitem__(self, key)\n    954     key = unpack_1tuple(key)\n    956 elif key_is_scalar:\n    957     # Note: GH#50617 in 3.0 we changed int key to always be treated as\n    958     #  a label, matching DataFrame behavior.\n--> 959     return self._get_value(key)\n    961 # Convert generator to list before going through hashable part\n    962 # (We will iterate through the generator there to check for slices)\n    963 if is_iterator(key):\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\series.py:1046, in Series._get_value(self, label, takeable)\n   1043     return self._values[label]\n   1045 # Similar to Index.get_value, but we do not fall back to positional\n-> 1046 loc = self.index.get_loc(label)\n   1048 if is_integer(loc):\n   1049     return self._values[loc]\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\indexes\\base.py:3648, in Index.get_loc(self, key)\n   3643     if isinstance(casted_key, slice) or (\n   3644         isinstance(casted_key, abc.Iterable)\n   3645         and any(isinstance(x, slice) for x in casted_key)\n   3646     ):\n   3647         raise InvalidIndexError(key) from err\n-> 3648     raise KeyError(key) from err\n   3649 except TypeError:\n   3650     # If we have a listlike key, _check_indexing_error will raise\n   3651     #  InvalidIndexError. Otherwise we fall through and re-raise\n   3652     #  the TypeError.\n   3653     self._check_indexing_error(key)\n",
+       "KeyError: 0"
+      ]
+     },
+     {
+      "cell": 46,
+      "ename": "KeyError",
+      "evalue": "0",
+      "traceback": [
+       "KeyError: 0",
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "KeyError                                  Traceback (most recent call last)",
+       "Cell In[18], line 1\n----> 1 (1 - first_day_2022['Profit'][0] / data_2021['Profit'][0]) * 100\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\series.py:959, in Series.__getitem__(self, key)\n    954     key = unpack_1tuple(key)\n    956 elif key_is_scalar:\n    957     # Note: GH#50617 in 3.0 we changed int key to always be treated as\n    958     #  a label, matching DataFrame behavior.\n--> 959     return self._get_value(key)\n    961 # Convert generator to list before going through hashable part\n    962 # (We will iterate through the generator there to check for slices)\n    963 if is_iterator(key):\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\series.py:1046, in Series._get_value(self, label, takeable)\n   1043     return self._values[label]\n   1045 # Similar to Index.get_value, but we do not fall back to positional\n-> 1046 loc = self.index.get_loc(label)\n   1048 if is_integer(loc):\n   1049     return self._values[loc]\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\indexes\\base.py:3648, in Index.get_loc(self, key)\n   3643     if isinstance(casted_key, slice) or (\n   3644         isinstance(casted_key, abc.Iterable)\n   3645         and any(isinstance(x, slice) for x in casted_key)\n   3646     ):\n   3647         raise InvalidIndexError(key) from err\n-> 3648     raise KeyError(key) from err\n   3649 except TypeError:\n   3650     # If we have a listlike key, _check_indexing_error will raise\n   3651     #  InvalidIndexError. Otherwise we fall through and re-raise\n   3652     #  the TypeError.\n   3653     self._check_indexing_error(key)\n",
+       "KeyError: 0"
+      ]
+     }
+    ],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "gcm_rca_microservice_architecture.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "gcm_supply_chain_dist_change.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "graph_conditional_independence_refuter.ipynb",
+   "verdict": "ok_with_the_repair",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 4,
+      "ename": "ValueError",
+      "evalue": "setting an array element with a sequence.",
+      "traceback": [
+       "Cell In[3], line 1\n----> 1 data = dowhy.datasets.dataset_from_random_graph(num_vars = 10,\n      2                                                 num_samples = 5000,\n      3                                                 prob_edge = 0.3,\n      4                                                 random_seed = 100,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:847, in dataset_from_random_graph(num_vars, num_samples, prob_edge, random_seed, prob_type_of_data)\n    844     else:\n    845         variable_type_dict[node] = BINARY\n--> 847 return linear_dataset_from_graph(\n    848     DAG, treatments, outcome, variable_type_dict=variable_type_dict, num_samples=num_samples\n    849 )\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:770, in linear_dataset_from_graph(graph, treatments, outcome, treatments_are_binary, outcome_is_binary, variable_type_dict, num_samples)\n    766         currset = cs\n    768     return df, continuous_cols, discrete_cols, binary_cols\n--> 770 df, continuous_cols, discrete_cols, binary_cols = _compute_y()\n    772 # Compute ATE:\n    773 # If all non-treatment variables are continuous, then can be computed from the\n    774 # graph directly\n    775 if all(variable_type_dict[x] == CONTINUOUS for x in variable_type_dict.keys() if x not in treatments):\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:763, in linear_dataset_from_graph.<locals>._compute_y(intervene)\n    760     continuous_cols.append(node)\n    761 else:\n    762     # nums = np.random.normal(0, 1, num_samples)\n--> 763     df[node] = np.vectorize(convert_to_binary)(t_observed)\n    764     discrete_cols.append(node)\n    765     binary_cols.append(node)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2529, in vectorize.__call__(self, *args, **kwargs)\n   2526     self._init_stage_2(*args, **kwargs)\n   2527     return self\n-> 2529 return self._call_as_normal(*args, **kwargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2522, in vectorize._call_as_normal(self, *args, **kwargs)\n   2519     vargs = [args[_i] for _i in inds]\n   2520     vargs.extend([kwargs[_n] for _n in names])\n-> 2522 return self._vectorize_call(func=func, args=vargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2613, in vectorize._vectorize_call(self, func, args)\n   2610 outputs = ufunc(*args, out=...)\n   2612 if ufunc.nout == 1:\n-> 2613     res = asanyarray(outputs, dtype=otypes[0])\n   2614 else:\n   2615     res = tuple(asanyarray(x, dtype=t)\n   2616                 for x, t in zip(outputs, otypes))\n",
+       "ValueError: setting an array element with a sequence."
+      ]
+     },
+     {
+      "cell": 10,
+      "ename": "NameError",
+      "evalue": "name 'df' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[5], line 2\n      1 model=CausalModel(\n----> 2         data = df,\n      3         treatment=data[\"treatment_name\"],\n      4         outcome=data[\"outcome_name\"],\n      5         graph=graph_string\n",
+       "NameError: name 'df' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "identifying_effects_using_id_algorithm.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "lalonde_pandas_api.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "load_graph_example.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "sales_attribution_intervention.ipynb",
+   "verdict": "ok",
+   "as_is": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   },
+   "with_the_repair": null
+  },
+  {
+   "notebook": "sensitivity_analysis_nonparametric_estimators.ipynb",
+   "verdict": "ok_with_the_repair",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 6,
+      "ename": "ValueError",
+      "evalue": "setting an array element with a sequence.",
+      "traceback": [
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "ValueError                                Traceback (most recent call last)",
+       "Cell In[3], line 2\n      1 np.random.seed(101)\n----> 2 data = dowhy.datasets.partially_linear_dataset(beta = 10,\n      3                                                num_common_causes = 7,\n      4                                                num_unobserved_common_causes=1,\n      5                                                strength_unobserved_confounding=10,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:904, in partially_linear_dataset(beta, num_common_causes, num_unobserved_common_causes, strength_unobserved_confounding, num_samples, num_treatments, treatment_is_binary, treatment_is_category, outcome_is_binary, stochastic_discretization, num_discrete_common_causes, stddev_treatment_noise, stddev_outcome_noise, one_hot_encode, training_sample_size, random_state)\n    902 T += W_with_dummy @ c1\n    903 if treatment_is_binary:\n--> 904     T = np.vectorize(convert_to_binary)(x=T)\n    906 # strength of unobserved confounding\n    907 strength_vec = np.ones(W_with_dummy.shape[1])\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2529, in vectorize.__call__(self, *args, **kwargs)\n   2526     self._init_stage_2(*args, **kwargs)\n   2527     return self\n-> 2529 return self._call_as_normal(*args, **kwargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2522, in vectorize._call_as_normal(self, *args, **kwargs)\n   2519     vargs = [args[_i] for _i in inds]\n   2520     vargs.extend([kwargs[_n] for _n in names])\n-> 2522 return self._vectorize_call(func=func, args=vargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2613, in vectorize._vectorize_call(self, func, args)\n   2610 outputs = ufunc(*args, out=...)\n   2612 if ufunc.nout == 1:\n-> 2613     res = asanyarray(outputs, dtype=otypes[0])\n   2614 else:\n   2615     res = tuple(asanyarray(x, dtype=t)\n   2616                 for x, t in zip(outputs, otypes))\n",
+       "ValueError: setting an array element with a sequence."
+      ]
+     },
+     {
+      "cell": 8,
+      "ename": "NameError",
+      "evalue": "name 'data' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[4], line 1\n----> 1 data[\"ate\"]\n",
+       "NameError: name 'data' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "sensitivity_analysis_testing.ipynb",
+   "verdict": "ok_with_the_repair",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 4,
+      "ename": "ValueError",
+      "evalue": "setting an array element with a sequence.",
+      "traceback": [
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "ValueError                                Traceback (most recent call last)",
+       "Cell In[2], line 2\n      1 np.random.seed(100)\n----> 2 data = dowhy.datasets.linear_dataset( beta = 10,\n      3                                       num_common_causes = 7,\n      4                                       num_samples = 500,\n      5                                       num_treatments = 1,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:298, in linear_dataset(beta, num_common_causes, num_samples, num_instruments, num_effect_modifiers, num_treatments, num_frontdoor_variables, treatment_is_binary, treatment_is_category, outcome_is_binary, stochastic_discretization, num_discrete_common_causes, num_discrete_instruments, num_discrete_effect_modifiers, stddev_treatment_noise, stddev_outcome_noise, one_hot_encode)\n    296 # Converting treatment to binary if required\n    297 if treatment_is_binary:\n--> 298     t = np.vectorize(convert_to_binary)(t)\n    299 elif treatment_is_category:\n    300     t = np.vectorize(stochastically_convert_to_three_level_categorical)(t)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2529, in vectorize.__call__(self, *args, **kwargs)\n   2526     self._init_stage_2(*args, **kwargs)\n   2527     return self\n-> 2529 return self._call_as_normal(*args, **kwargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2522, in vectorize._call_as_normal(self, *args, **kwargs)\n   2519     vargs = [args[_i] for _i in inds]\n   2520     vargs.extend([kwargs[_n] for _n in names])\n-> 2522 return self._vectorize_call(func=func, args=vargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2613, in vectorize._vectorize_call(self, func, args)\n   2610 outputs = ufunc(*args, out=...)\n   2612 if ufunc.nout == 1:\n-> 2613     res = asanyarray(outputs, dtype=otypes[0])\n   2614 else:\n   2615     res = tuple(asanyarray(x, dtype=t)\n   2616                 for x, t in zip(outputs, otypes))\n",
+       "ValueError: setting an array element with a sequence."
+      ]
+     },
+     {
+      "cell": 5,
+      "ename": "NameError",
+      "evalue": "name 'data' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[3], line 2\n      1 model = CausalModel(\n----> 2             data=data[\"df\"],\n      3             treatment=data[\"treatment_name\"],\n      4             outcome=data[\"outcome_name\"],\n      5             graph=data[\"gml_graph\"],\n",
+       "NameError: name 'data' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "ok",
+    "errors": [],
+    "failure": ""
+   }
+  },
+  {
+   "notebook": "tutorial-causalinference-machinelearning-using-dowhy-econml.ipynb",
+   "verdict": "failed",
+   "as_is": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 4,
+      "ename": "ValueError",
+      "evalue": "setting an array element with a sequence.",
+      "traceback": [
+       "\nThe above exception was the direct cause of the following exception:\n",
+       "ValueError                                Traceback (most recent call last)",
+       "Cell In[1], line 14\n     10 from sklearn.exceptions import DataConversionWarning\n     11 warnings.filterwarnings(action='ignore', category=DataConversionWarning)\n     12 \n     13 # Load some sample data\n---> 14 data = dowhy.datasets.linear_dataset(\n     15     beta=10,\n     16     num_common_causes=5,\n     17     num_instruments=2,\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\datasets.py:298, in linear_dataset(beta, num_common_causes, num_samples, num_instruments, num_effect_modifiers, num_treatments, num_frontdoor_variables, treatment_is_binary, treatment_is_category, outcome_is_binary, stochastic_discretization, num_discrete_common_causes, num_discrete_instruments, num_discrete_effect_modifiers, stddev_treatment_noise, stddev_outcome_noise, one_hot_encode)\n    296 # Converting treatment to binary if required\n    297 if treatment_is_binary:\n--> 298     t = np.vectorize(convert_to_binary)(t)\n    299 elif treatment_is_category:\n    300     t = np.vectorize(stochastically_convert_to_three_level_categorical)(t)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2529, in vectorize.__call__(self, *args, **kwargs)\n   2526     self._init_stage_2(*args, **kwargs)\n   2527     return self\n-> 2529 return self._call_as_normal(*args, **kwargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2522, in vectorize._call_as_normal(self, *args, **kwargs)\n   2519     vargs = [args[_i] for _i in inds]\n   2520     vargs.extend([kwargs[_n] for _n in names])\n-> 2522 return self._vectorize_call(func=func, args=vargs)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_function_base_impl.py:2613, in vectorize._vectorize_call(self, func, args)\n   2610 outputs = ufunc(*args, out=...)\n   2612 if ufunc.nout == 1:\n-> 2613     res = asanyarray(outputs, dtype=otypes[0])\n   2614 else:\n   2615     res = tuple(asanyarray(x, dtype=t)\n   2616                 for x, t in zip(outputs, otypes))\n",
+       "ValueError: setting an array element with a sequence."
+      ]
+     },
+     {
+      "cell": 6,
+      "ename": "NameError",
+      "evalue": "name 'data' is not defined",
+      "traceback": [
+       "---------------------------------------------------------------------------",
+       "NameError                                 Traceback (most recent call last)",
+       "Cell In[2], line 3\n      1 # I. Create a causal model from the data and domain knowledge.\n      2 model = CausalModel(\n----> 3     data=data[\"df\"],\n      4     treatment=data[\"treatment_name\"],\n      5     outcome=data[\"outcome_name\"],\n      6     common_causes=data[\"common_causes_names\"],\n",
+       "NameError: name 'data' is not defined"
+      ]
+     }
+    ],
+    "failure": ""
+   },
+   "with_the_repair": {
+    "verdict": "failed",
+    "errors": [
+     {
+      "cell": 9,
+      "ename": "FileNotFoundError",
+      "evalue": "[WinError 2] \"dot\" not found in path.",
+      "traceback": [
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\causal_model.py:471, in CausalModel.view_model(self, layout, size, file_name)\n    461 def view_model(self, layout=None, size=(8, 6), file_name=\"causal_model\"):\n    462     \"\"\"View the causal DAG.\n    463 \n    464     :param layout: string specifying the layout of the graph.\n   (...)    469 \n    470     \"\"\"\n--> 471     self._graph.view_graph(layout, size, file_name)\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\causal_graph.py:121, in CausalGraph.view_graph(self, layout, size, file_name)\n    120 def view_graph(self, layout=None, size=None, file_name=\"causal_model\"):\n--> 121     plot(self._graph, layout_prog=layout, figure_size=size, filename=file_name + \".png\")\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\utils\\plotting.py:91, in plot(causal_graph, layout_prog, causal_strengths, colors, filename, display_plot, figure_size, **kwargs)\n     82 from dowhy.utils.networkx_plotting import plot_causal_graph_networkx\n     84 _logger.info(\n     85     \"Pygraphviz installation not found, falling back to networkx plotting. \"\n     86     \"For better looking plots, consider installing pygraphviz. Note This requires both the Python \"\n     87     \"pygraphviz package (``pip install pygraphviz``) and the shared system library (e.g. \"\n     88     \"``brew install graphviz`` or ``apt-get install graphviz``)\"\n     89 )\n---> 91 plot_causal_graph_networkx(\n     92     causal_graph,\n     93     layout_prog=layout_prog,\n     94     causal_strengths=causal_strengths,\n     95     colors=colors,\n     96     filename=filename,\n     97     display_plot=display_plot,\n     98     figure_size=figure_size,\n     99     **kwargs,\n    100 )\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\utils\\networkx_plotting.py:72, in plot_causal_graph_networkx(causal_graph, layout_prog, causal_strengths, colors, filename, display_plot, label_wrap_length, figure_size)\n     66 edge_widths = {\n     67     (s, t): 2 if causal_strengths[(s, t)] is None else _calc_arrow_width(causal_strengths[(s, t)], max_strength)\n     68     for (s, t) in causal_graph.edges()\n     69 }\n     71 if layout_prog is not None:\n---> 72     layout = nx_pydot.pydot_layout(causal_graph, prog=layout_prog)\n     73     if figure_size is not None:\n     74         figure = plt.figure(figsize=figure_size)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\networkx\\drawing\\nx_pydot.py:329, in pydot_layout(G, prog, root)\n    325     P.set(\"root\", str(root))\n    327 # List of low-level bytes comprising a string in the dot language converted\n    328 # from the passed graph with the passed external GraphViz command.\n--> 329 D_bytes = P.create_dot(prog=prog)\n    331 # Unique string decoded from these bytes with the preferred locale encoding\n    332 D = str(D_bytes, encoding=getpreferredencoding())\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pydot\\core.py:181, in __generate_format_methods.<locals>.__create_method(self, f, prog, encoding)\n    174 def __create_method(\n    175     self: Any,\n    176     f: str = frmt,\n    177     prog: str | None = None,\n    178     encoding: str | None = None,\n    179 ) -> Any:\n    180     \"\"\"Refer to docstring of method `create`.\"\"\"\n--> 181     return self.create(format=f, prog=prog, encoding=encoding)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pydot\\core.py:1833, in Dot.create(self, prog, format, encoding)\n   1831     args = list(e.args)  # type: ignore\n   1832     args[1] = f'\"{prog}\" not found in path.'  # type: ignore\n-> 1833     raise OSError(*args)\n   1834 else:\n   1835     raise\n",
+       "FileNotFoundError: [WinError 2] \"dot\" not found in path."
+      ]
+     },
+     {
+      "cell": 11,
+      "ename": "FileNotFoundError",
+      "evalue": "[WinError 2] \"dot\" not found in path.",
+      "traceback": [
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\causal_model.py:471, in CausalModel.view_model(self, layout, size, file_name)\n    461 def view_model(self, layout=None, size=(8, 6), file_name=\"causal_model\"):\n    462     \"\"\"View the causal DAG.\n    463 \n    464     :param layout: string specifying the layout of the graph.\n   (...)    469 \n    470     \"\"\"\n--> 471     self._graph.view_graph(layout, size, file_name)\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\causal_graph.py:121, in CausalGraph.view_graph(self, layout, size, file_name)\n    120 def view_graph(self, layout=None, size=None, file_name=\"causal_model\"):\n--> 121     plot(self._graph, layout_prog=layout, figure_size=size, filename=file_name + \".png\")\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\utils\\plotting.py:91, in plot(causal_graph, layout_prog, causal_strengths, colors, filename, display_plot, figure_size, **kwargs)\n     82 from dowhy.utils.networkx_plotting import plot_causal_graph_networkx\n     84 _logger.info(\n     85     \"Pygraphviz installation not found, falling back to networkx plotting. \"\n     86     \"For better looking plots, consider installing pygraphviz. Note This requires both the Python \"\n     87     \"pygraphviz package (``pip install pygraphviz``) and the shared system library (e.g. \"\n     88     \"``brew install graphviz`` or ``apt-get install graphviz``)\"\n     89 )\n---> 91 plot_causal_graph_networkx(\n     92     causal_graph,\n     93     layout_prog=layout_prog,\n     94     causal_strengths=causal_strengths,\n     95     colors=colors,\n     96     filename=filename,\n     97     display_plot=display_plot,\n     98     figure_size=figure_size,\n     99     **kwargs,\n    100 )\n",
+       "File D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14\\dowhy\\utils\\networkx_plotting.py:72, in plot_causal_graph_networkx(causal_graph, layout_prog, causal_strengths, colors, filename, display_plot, label_wrap_length, figure_size)\n     66 edge_widths = {\n     67     (s, t): 2 if causal_strengths[(s, t)] is None else _calc_arrow_width(causal_strengths[(s, t)], max_strength)\n     68     for (s, t) in causal_graph.edges()\n     69 }\n     71 if layout_prog is not None:\n---> 72     layout = nx_pydot.pydot_layout(causal_graph, prog=layout_prog)\n     73     if figure_size is not None:\n     74         figure = plt.figure(figsize=figure_size)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\networkx\\drawing\\nx_pydot.py:329, in pydot_layout(G, prog, root)\n    325     P.set(\"root\", str(root))\n    327 # List of low-level bytes comprising a string in the dot language converted\n    328 # from the passed graph with the passed external GraphViz command.\n--> 329 D_bytes = P.create_dot(prog=prog)\n    331 # Unique string decoded from these bytes with the preferred locale encoding\n    332 D = str(D_bytes, encoding=getpreferredencoding())\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pydot\\core.py:181, in __generate_format_methods.<locals>.__create_method(self, f, prog, encoding)\n    174 def __create_method(\n    175     self: Any,\n    176     f: str = frmt,\n    177     prog: str | None = None,\n    178     encoding: str | None = None,\n    179 ) -> Any:\n    180     \"\"\"Refer to docstring of method `create`.\"\"\"\n--> 181     return self.create(format=f, prog=prog, encoding=encoding)\n",
+       "File ~\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pydot\\core.py:1833, in Dot.create(self, prog, format, encoding)\n   1831     args = list(e.args)  # type: ignore\n   1832     args[1] = f'\"{prog}\" not found in path.'  # type: ignore\n-> 1833     raise OSError(*args)\n   1834 else:\n   1835     raise\n",
+       "FileNotFoundError: [WinError 2] \"dot\" not found in path."
+      ]
+     }
+    ],
+    "failure": ""
+   }
+  }
+ ]
+}

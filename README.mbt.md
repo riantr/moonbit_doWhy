@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.88.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.89.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -49,6 +49,12 @@ every parameter of its fixture. The file `_verify/upstream_collected_cases.json`
 holds the 635 cases pytest collects, and the script
 `_verify/collect_upstream_cases.py` writes it.
 
+The upstream runs its cases with two tasks. The task `test`, which its own
+gate runs, leaves the cases marked `advanced` and the ones marked `econml`
+out: it runs 620 of the 635 cases. The task `test_advanced` of the nightly
+run keeps every one of them, so the 635 are the cases the port has to mirror,
+and the file of the collected cases holds the 15 deselected cases as well.
+
 Every one of the 635 cases of the upstream is mirrored by a case of the port,
 so the table of the cases the port does not mirror is empty. Two files need a
 note. The file of the backdoor identifier holds five test functions that
@@ -73,6 +79,25 @@ upstream downloads from the network are not carried, and two notebooks group a
 table or fit a propensity score with a decision tree, which the port does not
 do. The upstream itself ignores one more notebook, the one that learns the
 causal graph with the algorithms of `causal-learn`.
+
+The upstream does not run its notebooks in this environment as they are: the
+upstream is 0.14 and this machine has numpy 2.5 and pandas 3, and three places
+of the upstream are broken by them -- the two functions of `dowhy.datasets`
+that return the one element array of `numpy.random.choice`, the `numpy.std` of
+`dowhy.causal_refuters.add_unobserved_common_cause` and the boolean columns
+of the same refuter -- and the interpreter of this machine runs in the
+isolated mode, which ignores `PYTHONPATH`. The script
+`_verify/upstream_notebook_verdicts.py` runs the 45 notebooks with the runner
+of the upstream -- `jupyter nbconvert --execute` -- twice, once as they are
+and once with the five repairs those four things need, and the file
+`_verify/upstream_notebook_verdicts.json` holds the verdict of every one of
+them. The verdicts of the 45 notebooks are: **23** of them run as they are,
+**10** run once the repairs are applied, and **12** fail for a reason of the
+environment -- the `dot` binary of graphviz is missing, the network refuses
+the download of a data set, or a function of scikit-learn has changed. Two
+of the notebooks the port mirrors are among the twelve: the one of the hidden
+confounder draws its graph with graphviz, and the one of the falsification
+downloads its data set. The port needs neither.
 
 The check of the cases is a count, and a count hides a case that was replaced
 by another one in a file whose port holds many more cases than its upstream.

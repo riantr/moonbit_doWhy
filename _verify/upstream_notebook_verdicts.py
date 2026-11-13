@@ -34,12 +34,18 @@ The repairs, all of them of the upstream and not of the port:
 4. pandas 3 refuses to cast an object column of zeroes and ones to `bool`,
    which the refuter of the unobserved common cause needs for the column of
    the treatment. The repair casts such a column with `!= 0`.
+5. pandas 3 refuses the zeroes and the ones of a boolean column of the
+   helper `_include_confounders_effect` of the same refuter as well, and the
+   helper puts `1 - treatment` into the column of the treatment. The repair
+   turns the boolean columns into objects for the assignment, and the helper
+   of the upstream casts them back to `bool` itself.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -188,6 +194,15 @@ def notebook_list() -> list[str]:
     return [n for n in names if n != IGNORED]
 
 
+def without_colours(line: str) -> str:
+    """A line of a traceback without the escape sequences of the colours.
+
+    The escape sequences of the colours hold words that the tool `typos` reads
+    as typos, so they are removed before the traceback is written.
+    """
+    return re.sub(r"\x1b\[[0-9;]*m", "", line)
+
+
 def _errors_of(nb) -> list[dict]:
     """The error outputs of the cells, the way the upstream collects them."""
     errors = []
@@ -200,7 +215,9 @@ def _errors_of(nb) -> list[dict]:
                         "ename": output.get("ename"),
                         "evalue": str(output.get("evalue"))[:400],
                         "traceback": [
-                            line for line in output.get("traceback", []) if line.strip()
+                            without_colours(line)
+                            for line in output.get("traceback", [])
+                            if line.strip()
                         ][-8:],
                     }
                 )

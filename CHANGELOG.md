@@ -5,6 +5,36 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.89] - 2026-11-13
+
+### Added
+
+- The script `_verify/upstream_notebook_verdicts.py` runs the 45 notebooks of
+  the upstream with the runner of the upstream -- `jupyter nbconvert --execute`
+  -- and records the verdict of every one of them in the file
+  `_verify/upstream_notebook_verdicts.json`. The upstream is 0.14 and this
+  machine has numpy 2.5 and pandas 3, and three places of the upstream are
+  broken by them, and the interpreter of the machine runs in the isolated
+  mode, which ignores `PYTHONPATH`, so the script runs every notebook twice:
+  once as it is, and once with the five repairs those four things need. The
+  verdicts of the 45 notebooks are 23 that run as they are, 10 that run with
+  the repairs and 12 that fail for a reason of the environment: the `dot`
+  binary of graphviz is missing, the network refuses the download of a data
+  set, or a function of scikit-learn has changed.
+- The script `_verify/collect_upstream_cases.py` collects the cases of the
+  upstream twice, once every case and once the cases the task `test` of the
+  upstream runs. That task leaves the cases marked `advanced` and the ones
+  marked `econml` out, so it runs 620 of the 635 cases; the task
+  `test_advanced` of the nightly run keeps every one of them. The file of the
+  collected cases holds the two numbers and the 15 deselected cases.
+
+### Changed
+
+- The script `_verify/upstream_test_coverage.py` prints the two numbers of the
+  upstream and the verdict of the run of the upstream for every notebook of
+  the documentation, next to the notebooks the port mirrors and the ones it
+  does not mirror.
+
 ## [0.0.88] - 2026-11-13
 
 ### Added
