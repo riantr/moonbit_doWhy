@@ -176,8 +176,9 @@ NOTEBOOKS: list[tuple[str, str]] = [
     ),
     (
         "dowhy_example_effect_of_memberrewards_program.ipynb",
-        "the notebook groups a table of one row per user and per month, and the "
-        "port has no group by",
+        "the notebook groups a table of one row per user and per month and "
+        "aggregates the spend of every group, and the group by of the port "
+        "returns the rows of every group but aggregates nothing",
     ),
     (
         "dowhy_functional_api.ipynb",
@@ -240,33 +241,39 @@ NOTEBOOKS: list[tuple[str, str]] = [
     ),
     (
         "gcm_401k_analysis.ipynb",
-        "the notebook reads the data set of the 401k pension, and the port "
-        "carries no copy of it",
+        "the notebook reads the data set of the 401k pension, which the "
+        "upstream ships with its documentation, and the port carries no copy "
+        "of it",
     ),
     (
         "gcm_counterfactual_medical_dry_eyes.ipynb",
         "the notebook reads the data set of the patients of the dry eyes "
-        "study, and the port carries no copy of it",
+        "study, which the upstream ships with its documentation, and the port "
+        "carries no copy of it",
     ),
     (
         "gcm_cps2015_dist_change_robust.ipynb",
-        "the notebook reads the data set of the CPS 2015 survey, and the port "
-        "carries no copy of it",
+        "the notebook reads the data set of the CPS 2015 survey, which the "
+        "upstream ships with its documentation, and the port carries no copy "
+        "of it",
     ),
     (
         "gcm_icc.ipynb",
         "the notebook reads the data set of the river and the data set of the "
-        "cars, and the port carries no copy of them",
+        "cars, which the upstream ships with its documentation, and the port "
+        "carries no copy of them",
     ),
     (
         "gcm_online_shop.ipynb",
-        "the notebook reads the three data sets of the online shop, and the "
-        "port carries no copy of them",
+        "the notebook reads the three data sets of the online shop, which the "
+        "upstream ships with its documentation, and the port carries no copy "
+        "of them",
     ),
     (
         "gcm_rca_microservice_architecture.ipynb",
         "the notebook reads the three data sets of the microservice "
-        "architecture, and the port carries no copy of them",
+        "architecture, which the upstream ships with its documentation, and "
+        "the port carries no copy of them",
     ),
     (
         "gcm_supply_chain_dist_change.ipynb",
