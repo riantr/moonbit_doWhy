@@ -614,3 +614,110 @@ print("the number of the conditional independences the data satisfies")
 print(refutation.number_of_constraints_satisfied)
 print("the number of the implications that hold true")
 print(refutation.number_of_constraints_satisfied)
+
+
+header("the doubly robust estimator of the upstream")
+np.random.seed(SEED)
+
+from sklearn.tree import DecisionTreeClassifier  # noqa: E402
+
+ATE = 10
+base_data = dowhy.datasets.linear_dataset(
+    beta=ATE,
+    num_common_causes=2,
+    num_instruments=0,
+    num_treatments=1,
+    num_samples=20000,
+    treatment_is_binary=True,
+    outcome_is_binary=False,
+    stddev_treatment_noise=10,
+)
+base = base_data["df"]
+mean_w0 = base["W0"].mean()
+mean_w1 = base["W1"].mean()
+
+
+def assign_treatment_linear(row):
+    linear_term = 1.5 * row["W0"] + 1.5 * row["W1"]
+    prob = 1 / (1 + np.exp(-1 * linear_term))
+    return np.random.binomial(1, prob)
+
+
+def assign_treatment_nonlinear(row):
+    if row["W0"] < mean_w0 and row["W1"] < mean_w1:
+        return int(np.random.rand() < 0.9)
+    return int(np.random.rand() < 0.1)
+
+
+def assign_effect_linear(row):
+    return 6.5 * row["W0"] + 5.5 * row["W1"] + ATE * row["v0"]
+
+
+def assign_effect_nonlinear(row):
+    if row["W0"] < mean_w0 and row["W1"] < mean_w1:
+        return 2 * (row["W0"] ** 2) + 2 * (row["W1"] ** 2) + ATE * row["v0"]
+    return 2 * (row["W0"] ** 3) + 2 * (row["W1"] ** 3) + ATE * row["v0"]
+
+
+def build(assign_treatment, assign_effect):
+    frame = base.copy(deep=True)
+    frame["v0"] = frame.apply(assign_treatment, axis=1)
+    frame["y"] = frame.apply(assign_effect, axis=1)
+    return frame
+
+
+def decision_tree():
+    return DecisionTreeClassifier(max_depth=2, min_samples_leaf=2000, random_state=42)
+
+
+for name, frame in (
+    ("linear", build(assign_treatment_linear, assign_effect_linear)),
+    ("non-linear", build(assign_treatment_nonlinear, assign_effect_nonlinear)),
+):
+    model = CausalModel(
+        data=frame,
+        treatment="v0",
+        outcome="y",
+        graph=base_data["gml_graph"],
+    )
+    estimand = model.identify_effect(proceed_when_unidentifiable=True)
+    print("the estimate of the linear regression of the " + name + " data set")
+    print(model.estimate_effect(estimand, method_name="backdoor.linear_regression").value)
+    if name == "non-linear":
+        # The estimators of the upstream write the column of the propensity
+        # score into the frame of the caller, so a second estimator of the
+        # propensity score finds the column and builds no model of its own. The
+        # doubly robust estimator with the default of the upstream therefore
+        # runs before the estimators of the propensity score.
+        print("the estimate of the doubly robust estimator with the default of the upstream")
+        print(
+            model.estimate_effect(
+                estimand,
+                method_name="backdoor.doubly_robust",
+                target_units="ate",
+            ).value
+        )
+    print("the estimate of the propensity score weighting of the " + name + " data set")
+    print(
+        model.estimate_effect(
+            estimand,
+            method_name="backdoor.propensity_score_weighting",
+            target_units="ate",
+            method_params={
+                "weighting_scheme": "ips_weight",
+                "propensity_score_model": decision_tree(),
+            },
+        ).value
+    )
+    print("the estimate of the doubly robust estimator of the " + name + " data set")
+    print(
+        model.estimate_effect(
+            estimand,
+            method_name="backdoor.doubly_robust",
+            target_units="ate",
+            method_params={
+                "propensity_score_model": decision_tree(),
+                "propensity_score_column": "propensity_score_dr",
+            },
+        ).value
+    )

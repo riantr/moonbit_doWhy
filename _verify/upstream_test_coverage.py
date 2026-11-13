@@ -80,6 +80,7 @@ Usage:
 
     python _verify/upstream_test_coverage.py
     python _verify/upstream_test_coverage.py --audit
+    python _verify/upstream_test_coverage.py --require-verdicts
 """
 
 from __future__ import annotations
@@ -107,6 +108,7 @@ PORT = Path(
 ) / "src"
 HERE = Path(__file__).resolve().parent
 COLLECTED = HERE / "upstream_collected_cases.json"
+VERDICTS = HERE / "upstream_notebook_verdicts.json"
 
 # The file of the upstream whose cases are the notebooks of its documentation.
 NOTEBOOKS_FILE = "test_notebooks.py"
@@ -163,9 +165,14 @@ NOTEBOOKS: list[tuple[str, str]] = [
         "estimators of `econml`, which this dependency-free port does not wrap",
     ),
     (
-        "dowhy_doubly_robust_estimator.ipynb",        "the notebook fits the propensity score of the doubly robust estimator "
-        "with a decision tree of scikit-learn, and the estimators of the port "
-        "fit it with the logistic regression of the upstream",
+        "dowhy_doubly_robust_estimator.ipynb",
+        "the notebook fits the propensity score of the doubly robust estimator with a decision "
+        "tree of scikit-learn, and the estimators of the port cannot be given another model: "
+        "they fit it with the logistic regression of the upstream, with which the doubly "
+        "robust estimator does not recover the effect of the non-linear data set of the "
+        "notebook: the script `_verify/notebooks_reference.py` prints the numbers of the "
+        "upstream, which are 16.38626788728829 with the default of the upstream and "
+        "10.021069467511563 with the decision tree of the notebook",
     ),
     (
         "dowhy_example_effect_of_memberrewards_program.ipynb",
@@ -340,6 +347,23 @@ def upstream_cases(path: str, collected: dict[str, list[str]]) -> list[str]:
     return collected.get(path, [])
 
 
+def notebook_verdicts() -> dict[str, str]:
+    """The verdict of the run of the upstream for every notebook.
+
+    The file holds the verdict of the runner of the upstream for every
+    notebook of the documentation of the upstream. The script
+    `_verify/upstream_notebook_verdicts.py` writes it; the run it needs takes
+    hours, so the file is a measurement that is committed with the repository.
+    """
+    if not VERDICTS.exists():
+        return {}
+    data = json.loads(VERDICTS.read_text(encoding="utf-8"))
+    return {
+        record["notebook"]: record.get("verdict", "")
+        for record in data.get("notebooks", [])
+    }
+
+
 def port_case_count(text: str) -> int:
     """The number of the test blocks of a file of the port."""
     return len(re.findall(r'^\s*test\s+"', text, re.MULTILINE))
@@ -438,6 +462,7 @@ def main() -> int:
     # The audit prints the mapping of the files whose margin is the tightest.
     # The verdict of the script is the same with and without it.
     audit = "--audit" in sys.argv[1:]
+    require_verdicts = "--require-verdicts" in sys.argv[1:]
     upstream = upstream_files()
     collected = collected_cases()
     by_name: dict[str, list[str]] = defaultdict(list)
@@ -676,6 +701,41 @@ def main() -> int:
         print(f"    not mirrored   {name}")
         print(f"        {reason}")
     print()
+    # ------------------------------------------------- the run of the upstream
+    verdicts = notebook_verdicts()
+    print("--- the run of the notebooks of the upstream")
+    if not verdicts:
+        message = (
+            "test_notebooks.py: the file of the verdicts of the notebooks is missing: "
+            "run `python _verify/upstream_notebook_verdicts.py` to write it"
+        )
+        if require_verdicts:
+            failures.append(message)
+            print("the file of the verdicts is missing")
+        else:
+            print(
+                "the file of the verdicts is missing, the run of the upstream is not measured"
+            )
+    else:
+        counts: dict[str, int] = {}
+        for verdict in verdicts.values():
+            counts[verdict] = counts.get(verdict, 0) + 1
+        print(
+            f"the runner of the upstream ran {len(verdicts)} notebook(s): "
+            + ", ".join(f"{name} {count}" for name, count in sorted(counts.items()))
+        )
+        print()
+        for name in upstream_notebooks:
+            if name not in verdicts:
+                failures.append(
+                    f"test_notebooks.py: the file of the verdicts holds no verdict for "
+                    f"the notebook {name}"
+                )
+                continue
+            state = "mirrored" if name in mirrored else "not mirrored"
+            print(f"    {verdicts[name]:20s} {state:12s} {name}")
+        print()
+
     print("--- the notebooks the upstream itself ignores")
     for name, reason in IGNORED_BY_UPSTREAM:
         print(f"    ignored   {name}")

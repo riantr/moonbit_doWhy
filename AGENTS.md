@@ -2086,6 +2086,23 @@ README makes, so they are tracked in the repository:
   conclusion of the notebook and not the number of the upstream. The notebooks
   whose data set comes from `dowhy.datasets.xy_dataset` do carry the rows of
   the upstream, because that data set is drawn with the generator of numpy.
+- **The estimators of the upstream write the column of the propensity score
+  into the frame of the caller.** The `PropensityScoreEstimator.fit` of the
+  upstream builds a `LogisticRegression` only when the column of the propensity
+  score is not in the data, so the second estimator of the propensity score of
+  the same frame finds the column, builds no model of its own, and fails with
+  `AttributeError: 'NoneType' object has no attribute 'predict_proba'`. The
+  script `_verify/notebooks_reference.py` therefore runs the doubly robust
+  estimator of the upstream before the estimators of the propensity score.
+- The notebook of the doubly robust estimator hands the estimator of the
+  upstream a **decision tree** of scikit-learn as its propensity score model,
+  and the estimators of the port cannot be given another model: they fit it
+  with the logistic regression of the upstream. The difference shows on the
+  non-linear data set of the notebook, whose treatment is drawn from a step
+  function of the common causes: the doubly robust estimator of the upstream
+  gives 10.021069467511563 with the decision tree and 16.38626788728829 with
+  its own default, and the estimator of the port gives 15.608471458857723 with
+  the logistic regression, on the rows of the port.
 - The port draws the rows of a synthetic data set **row by row**, where the
   upstream draws its columns **one after the other**. The rows of the two are
   therefore different, and the numbers of an estimate computed on them differ
