@@ -320,6 +320,21 @@ def collected_cases() -> dict[str, list[str]]:
     }
 
 
+def collected_meta() -> dict:
+    """The numbers of the collected cases of the upstream.
+
+    The task `test` of the upstream, which its own gate runs, leaves the
+    cases marked `advanced` and the ones marked `econml` out; the task
+    `test_advanced` of the nightly run keeps them.
+    """
+    data = json.loads(COLLECTED.read_text(encoding="utf-8"))
+    return {
+        "total": data["total"],
+        "default_total": data.get("default_total", data["total"]),
+        "deselected": data.get("deselected", []),
+    }
+
+
 def upstream_cases(path: str, collected: dict[str, list[str]]) -> list[str]:
     """The test cases pytest collects in an upstream file."""
     return collected.get(path, [])
@@ -585,7 +600,12 @@ def main() -> int:
                 failures.append(f"{path}: the upstream holds no case {name}")
         print(f"{path:<58} {up:>8} {port:>6} {gap:>5}  {note}")
     print()
+    meta = collected_meta()
     print(f"the upstream holds {total_up} test cases")
+    print(
+        f"the default task of the upstream runs {meta['default_total']} of them and leaves "
+        f"{len(meta['deselected'])} out; the nightly task runs every one of them"
+    )
     print(f"the port holds {total_port} test cases in the files that name them")
     print(f"the table holds {len(NOT_MIRRORED)} case(s) that are not mirrored")
     print(f"the port declares {declared} test blocks; the runner has to report the same number")

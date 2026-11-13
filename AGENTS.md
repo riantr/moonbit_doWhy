@@ -2033,6 +2033,45 @@ README makes, so they are tracked in the repository:
   `_verify/upstream_collected_cases.json` holds the 635 collected cases and
   the script `_verify/collect_upstream_cases.py` writes it. The coverage
   script compares the port against those cases.
+- The upstream runs its cases with two tasks. The task `test`, which its own
+  gate runs, leaves the cases marked `advanced` and the ones marked `econml`
+  out: it runs **620** of the 635 cases. The task `test_advanced` of the
+  nightly run keeps every one of them, so the **635** are the cases the port
+  has to mirror. The file of the collected cases holds the 15 deselected
+  cases as well.
+- **The notebooks of the upstream do not run in this environment as they are.**
+  The upstream is 0.14 and this machine has numpy 2.5 and pandas 3, and four
+  places of the upstream are broken by them:
+  - `dowhy.datasets.convert_to_binary` and
+    `dowhy.datasets.stochastically_convert_to_three_level_categorical` return
+    the one element array of `numpy.random.choice`, and `numpy.vectorize`
+    cannot broadcast it under numpy 2. Every notebook that draws its data
+    with `linear_dataset` and a binary treatment fails with
+    `ValueError: setting an array element with a sequence`.
+  - `dowhy.causal_refuters.add_unobserved_common_cause` indexes the result of
+    `numpy.std` as if it were an array, and numpy returns a scalar for it:
+    `IndexError: invalid index to scalar variable`.
+  - The same module puts `1 - treatment` into the column of the treatment, and
+    pandas 3 refuses the zeroes and the ones in a boolean column:
+    `TypeError: Invalid value '...' for dtype 'bool'`.
+  - The `astype` of pandas 3 refuses to cast an object column of zeroes and
+    ones to `bool`, which the same module needs for the column of the
+    treatment.
+- The script `_verify/upstream_notebook_verdicts.py` runs the notebooks with
+  the runner of the upstream -- `nbclient.NotebookClient`, the engine of
+  `jupyter nbconvert --execute` -- twice: once as they are, and once with the
+  repairs that the list above names. The file
+  `_verify/upstream_notebook_verdicts.json` holds the verdict of every one of
+  the 45 notebooks, so that the claims of the port about the notebooks are
+  checked against a run of the upstream and not against a reading of them.
+- The interpreter of this machine runs in the **isolated mode** of the file
+  `python313._pth`, which ignores `PYTHONPATH` and holds neither the working
+  directory nor the `PYTHONPATH` on the path of a process. The upstream puts
+  the root of its package on `PYTHONPATH` so that its notebooks can import
+  `dowhy`, and the runner of the port puts the root on the `sys.path` of the
+  kernel of the notebook instead. A script of `_verify/` that imports the
+  upstream has to do the same with `sys.path.insert`.
+
 - The notebooks of the upstream are the 45 cases of the file
   `tests/test_notebooks.py`: the upstream executes every notebook of its
   documentation with `jupyter nbconvert` and asserts that no cell of it fails.

@@ -780,6 +780,25 @@
    "tests/utils/test_plotting.py::test_when_plot_does_not_raise_exception"
   ]
  },
+ "default_files": 72,
+ "default_total": 620,
+ "deselected": [
+  "tests/causal_refuters/test_add_unobserved_common_cause.py::TestAddUnobservedCommonCauseRefuter::test_non_parametric_sensitivity_given_strength_of_confounding[backdoor.econml.dml.KernelDML-2-benchmark_common_causes0-non-parametric-partial-R2]",
+  "tests/causal_refuters/test_add_unobserved_common_cause.py::TestAddUnobservedCommonCauseRefuter::test_partially_linear_sensitivity_given_strength_of_confounding[backdoor.econml.dml.dml.LinearDML-2-benchmark_common_causes0-non-parametric-partial-R2]",
+  "tests/test_notebooks.py::test_notebook[DoWhy-The Causal Story Behind Hotel Booking Cancellations.ipynb]",
+  "tests/test_notebooks.py::test_notebook[do_sampler_demo.ipynb]",
+  "tests/test_notebooks.py::test_notebook[dowhy-conditional-treatment-effects.ipynb]",
+  "tests/test_notebooks.py::test_notebook[dowhy_functional_api.ipynb]",
+  "tests/test_notebooks.py::test_notebook[dowhy_lalonde_example.ipynb]",
+  "tests/test_notebooks.py::test_notebook[dowhy_optimize_backdoor_example.ipynb]",
+  "tests/test_notebooks.py::test_notebook[dowhy_ranking_methods.ipynb]",
+  "tests/test_notebooks.py::test_notebook[dowhy_refutation_testing.ipynb]",
+  "tests/test_notebooks.py::test_notebook[dowhy_refuter_notebook.ipynb]",
+  "tests/test_notebooks.py::test_notebook[dowhy_twins_example.ipynb]",
+  "tests/test_notebooks.py::test_notebook[lalonde_pandas_api.ipynb]",
+  "tests/test_notebooks.py::test_notebook[sensitivity_analysis_nonparametric_estimators.ipynb]",
+  "tests/test_notebooks.py::test_notebook[tutorial-causalinference-machinelearning-using-dowhy-econml.ipynb]"
+ ],
  "files": 72,
  "total": 635,
  "upstream": "D:\\src\\MiniMax\\git\\dowhy\\dowhy-0.14"

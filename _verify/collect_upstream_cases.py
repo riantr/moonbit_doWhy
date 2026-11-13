@@ -12,6 +12,11 @@ The script writes the cases pytest collects, per file, into the file
 test cases of the upstream it compares with the port is the number pytest
 really collects.
 
+The script collects the cases twice: once every case, and once the cases the
+task `test` of the upstream runs, which leaves out the cases marked `advanced`
+and the ones marked `econml`. The task `test_advanced` of the nightly run of
+the upstream keeps them, so the file holds both numbers.
+
 Usage:
 
     python _verify/collect_upstream_cases.py
@@ -44,20 +49,22 @@ OUT = Path(
 ) / "_verify" / "upstream_collected_cases.json"
 
 
-def main() -> int:
-    env = dict(os.environ)
-    env["PYTHONPATH"] = str(ROOT)
+def collect(env: dict, markers: str = "") -> dict[str, list[str]]:
+    """The cases pytest collects, per file, with and without the markers."""
+    command = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "tests",
+        "--collect-only",
+        "-q",
+        "-p",
+        "no:randomly",
+    ]
+    if markers:
+        command += ["-m", markers]
     proc = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pytest",
-            "tests",
-            "--collect-only",
-            "-q",
-            "-p",
-            "no:randomly",
-        ],
+        command,
         cwd=ROOT,
         env=env,
         capture_output=True,
@@ -74,15 +81,34 @@ def main() -> int:
         if not path.startswith("tests"):
             continue
         cases[path.replace("\\", "/")].append(line)
+    return cases
+
+
+def main() -> int:
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(ROOT)
+
+    cases = collect(env)
     if not cases:
         print("pytest collected no case")
-        print(proc.stdout[-2000:])
-        print(proc.stderr[-2000:])
         return 1
+
+    # The task `test` of the upstream, which its own gate runs, leaves out the
+    # cases marked `advanced` and the ones marked `econml`; the task
+    # `test_advanced` of the nightly run keeps them.
+    default_cases = collect(env, markers="not advanced and not econml")
+    default_names = {name for names in default_cases.values() for name in names}
+    deselected = sorted(
+        name for names in cases.values() for name in names if name not in default_names
+    )
+
     data = {
         "upstream": str(ROOT),
         "total": sum(len(names) for names in cases.values()),
         "files": len(cases),
+        "default_total": sum(len(names) for names in default_cases.values()),
+        "default_files": len(default_cases),
+        "deselected": deselected,
         "cases": {path: sorted(names) for path, names in sorted(cases.items())},
     }
     OUT.write_text(
@@ -91,12 +117,14 @@ def main() -> int:
         newline="",
     )
     print("collected", data["total"], "cases in", data["files"], "files")
+    print(
+        "the default task of the upstream runs",
+        data["default_total"],
+        "of them and leaves",
+        len(deselected),
+        "out",
+    )
     print("wrote", OUT)
-    if proc.returncode != 0:
-        # A file whose import fails is a collection error: the script reports it
-        # and the file is not part of the result.
-        print("--- the collection errors of pytest ---")
-        print(proc.stdout[-3000:])
     return 0
 
 
