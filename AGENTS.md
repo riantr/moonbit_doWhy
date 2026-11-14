@@ -2071,6 +2071,17 @@ README makes, so they are tracked in the repository:
   `dowhy`, and the runner of the port puts the root on the `sys.path` of the
   kernel of the notebook instead. A script of `_verify/` that imports the
   upstream has to do the same with `sys.path.insert`.
+- The **imports of a package live in its `moon.pkg` and not in its `.mbt`
+  files**, and the toolchain of this repository ignores an import statement
+  in a `.mbt` file: the compiler reports that the package is not imported.
+  The quick start of the README therefore shows the `moon.pkg` and the
+  program of the `main.mbt` separately. The script
+  `_verify/consumer_smoke.py` takes the two blocks of the quick start out of
+  the README, installs the published package of the registry with `moon add`
+  into a throwaway project and runs the program on the four targets of the
+  package, so that the quick start is checked against the package the user
+  gets and not only against the source tree. The script needs the network
+  and the `moon` of the toolchain, so it is not a step of the gate.
 
 - The notebooks of the upstream are the 45 cases of the file
   `tests/test_notebooks.py`: the upstream executes every notebook of its
@@ -2078,8 +2089,9 @@ README makes, so they are tracked in the repository:
   A notebook is **mirrored** when a test case of the port runs its scenario
   and asserts the conclusion the notebook demonstrates, and the header of the
   test file of the port names the notebook it mirrors. The table `NOTEBOOKS` of
-  the coverage script names the 26 notebooks the port does not mirror, with
-  the reason why.
+  the coverage script names the 25 notebooks the port does not mirror, with
+  the reason why, and the upstream itself ignores one more notebook, the one
+  that learns the causal graph with the algorithms of `causal-learn`.
 - The notebooks of the upstream that draw their data set with
   `dowhy.datasets.linear_dataset` do not draw the rows of the port: the port
   draws them with a generator of its own, so the cases of the port assert the

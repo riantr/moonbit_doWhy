@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.89.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.90.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -110,49 +110,71 @@ twelve files whose margin is the tightest, so that the mapping can be read.
 moon add riantr/moonbit_dowhy
 ```
 
+The imports of a package live in the `moon.pkg` of the package that uses
+them and not in its `.mbt` files, so the manifest of the package that
+calls the port names them:
+
+```moonbit
+// cmd/main/moon.pkg
+import {
+  "riantr/moonbit_dowhy",
+  "riantr/moonbit_dowhy/datasets",
+}
+
+pkgtype(kind: "executable")
+```
+
 ## Quick start
 
 ```moonbit
-import "riantr/moonbit_dowhy"
-import "riantr/moonbit_dowhy/datasets"
+// cmd/main/main.mbt
+fn main {
+  // Build a confounded data set: `W0 -> v0`, `W0 -> y`, `v0 -> y`.
+  let dataset = @datasets.linear_dataset(
+    42,
+    1000,
+    @datasets.LinearConfig::confounded(),
+  )
 
-/// Build a confounded data set: `W0 -> v0`, `W0 -> y`, `v0 -> y`.
-let dataset = @datasets.linear_dataset(
-  42,
-  1000,
-  @datasets.LinearConfig::confounded(),
-)
+  // Build the model. The graph is derived from the semantic roles of the
+  // variables when no explicit graph is given.
+  let model = @moonbit_dowhy.CausalModel::new(
+    dataset.frame(),
+    dataset.treatments(),
+    [dataset.outcome()],
+    None,
+    dataset.common_causes(),
+    dataset.instruments(),
+    dataset.effect_modifiers(),
+    dataset.frontdoor_variables(),
+  )
 
-/// Build the model. The graph is derived from the semantic roles of the
-/// variables when no explicit graph is given.
-let model = @moonbit_dowhy.CausalModel::new(
-  dataset.frame(),
-  dataset.treatments(),
-  [dataset.outcome()],
-  None,
-  dataset.common_causes(),
-  dataset.instruments(),
-  dataset.effect_modifiers(),
-  dataset.frontdoor_variables(),
-)
+  // Identify the effect with the backdoor criterion.
+  let estimand = model.identify_effect("backdoor")
+  let adjustment = estimand.get_adjustment_set(estimand.identifier_method())
+  println("adjustment set: " + adjustment.join(", "))
 
-/// Identify the effect with the backdoor criterion.
-let estimand = model.identify_effect("backdoor")
+  // Estimate the average treatment effect.
+  let estimate = model.estimate_effect(
+    "backdoor.linear_regression",
+    1.0,
+    0.0,
+    "ate",
+  )
 
-/// Estimate the average treatment effect.
-let estimate = model.estimate_effect(
-  "backdoor.linear_regression",
-  1.0,
-  0.0,
-  "ate",
-)
-
-println("ATE: " + estimate.estimate().to_string())
-println("95% CI: [" + estimate.confidence_interval_lower().to_string() +
-  ", " + estimate.confidence_interval_upper().to_string() + "]")
+  println("ATE: " + estimate.estimate().to_string())
+  println("95% CI: [" + estimate.confidence_interval_lower().to_string() +
+    ", " + estimate.confidence_interval_upper().to_string() + "]")
+}
 ```
 
-A runnable version of this snippet lives in [`examples/quick_start.mbt`](examples/quick_start.mbt).
+A runnable version of this snippet lives in
+[`src/examples/quick_start.mbt`](src/examples/quick_start.mbt). The script
+`_verify/consumer_smoke.py` takes the two blocks above out of this file,
+installs the published package of the registry into a throwaway project and
+runs the program on the four targets of the package, so that this quick
+start is checked against the package a user gets and not only against the
+source tree.
 
 ## Package layout
 

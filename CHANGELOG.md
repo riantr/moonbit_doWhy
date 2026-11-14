@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.90] - 2026-11-14
+
+### Fixed
+
+- The quick start of the README showed the imports of the package inside
+  the `.mbt` file of the program. The toolchain of this release takes the
+  imports of a package from its `moon.pkg` and ignores the ones of its
+  `.mbt` files, so a program that was written as the quick start showed it
+  was written does not build: the compiler reports that the package is not
+  imported. The quick start shows the `moon.pkg` now, and the script
+  `_verify/consumer_smoke.py` runs the quick start of the README against
+  the published package on the four targets of the package.
+- The quick start of the README was the body of the entry point and not the
+  whole file, and it bound the estimand without using it, which the
+  compiler reports as an unused value. It is a whole program now, and it
+  prints the adjustment set of the estimand.
+- The link of the quick start to the runnable version of the snippet named
+  `examples/quick_start.mbt`, and the file is `src/examples/quick_start.mbt`.
+
 ## [0.0.89] - 2026-11-13
 
 ### Added
