@@ -375,15 +375,17 @@ fn forest_predict_row(
   x : @utils.Matrix,
   row : Int32,
 ) -> Double {
-  let mut index = 0
   let mut node = tree.nodes[0]
   while node.feature >= 0 {
-    if x.get(row, node.feature) <= node.threshold {
-      index = node.left
+    let feature = node.feature
+    let threshold = node.threshold
+    let left = node.left
+    let right = node.right
+    if x.get(row, feature) <= threshold {
+      node = tree.nodes[left]
     } else {
-      index = node.right
+      node = tree.nodes[right]
     }
-    node = tree.nodes[index]
   }
   node.value
 }

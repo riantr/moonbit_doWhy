@@ -1963,6 +1963,58 @@ README makes, so they are tracked in the repository:
   `xfail`, and the two cases of the do sampler that fail on the scikit-learn
   without `multi_class`. It is a report and not a gate step, because the
   upstream's suite is slow and some of its cases are flaky.
+- **The tree is audited by the static analyzer of the registry, and the two
+  findings it gives are two dead stores.** The analyzer is the package
+  `riantr/moonbit_static_analysis`, and it runs on the tree without touching
+  it: `moonx riantr/moonbit_static_analysis@latest <the path of the tree>`.
+  **The CLI cannot exit non-zero**, so a caller has to read the report and not
+  the exit code. MEASURED on the release of 0.0.93: the scan reads **246**
+  files, understands **228** of them (**92.6%**), and reports **2** actionable
+  findings, both of them of the family `MSA-015` (a dead store: the value a
+  write put in the name is read on no path before the name is written again),
+  both with the confidence `high`. The rest is **1716** notices, which are the
+  scope limits of the frontend -- a `test` block, a `const`, a `struct`, an
+  `enum`, an `if` used as a value and an anonymous function literal -- and not
+  defects of the tree.
+  - The finding of `src/refuters/dummy_outcome_models.mbt` was a **dead store**:
+    the `index` of the walk of a tree was bound to zero and then written in
+    the two arms of the `if` before anything read it. The fix reads the four
+    fields of the node into locals and fetches the child inside the arm that
+    is taken, so the `if` stays a **statement**. The numbers of the forest are
+    **identical** before and after the change -- MEASURED with a probe that
+    prints the three refuted effects of the forest of the dummy outcome
+    refuter, `-1.316749893149489`, `4.700611528154843` and
+    `-1.0294556710155225` in both runs -- and the scan reads the same number of
+    files, notices and unreliable regions before and after.
+  - The finding of `src/utils/stats.mbt` is a **dead store too**, and it is
+    **kept on purpose**. The `x` of `normal_ppf` is bound to zero and then
+    written in each of the three arms of the `if` before anything reads it,
+    and the only way to remove the dead store is to make the arms the value of
+    an `if` used as a value. MEASURED: that change makes the frontend of the
+    analyzer stop reading the file at the `if`, so the file becomes `PARTIAL`
+    (`read up to line 274`) and the findings after that line are **counted and
+    not shown** -- a deliberate dead store placed after the `if` was **not
+    reported** in that run. The finding would therefore disappear because the
+    analyzer loses sight of the code, and not because the code got better, so
+    the dead store stays and the finding is a known one.
+  - **The blind spot of the analyzer on this tree is a `for` loop whose
+    variable is a tuple pattern**, and it is the only one. MEASURED: the 18
+    files the analyzer does not finish are reported by the reason of the
+    failure, and all three reasons are that one construct -- a `for` loop whose
+    variable is a tuple pattern, as `for (from, to) in edges` -- read as the
+    unexpected token of the comma, as `expected loop variable` and as
+    `expected a struct literal field here`. The 18 files are the ones of the
+    temporal graph, of the three files of the plotting, of the efficient
+    backdoor, of the causal graph and of its directed graph, of the falsify
+    layer and of its test, of the random graph of the data sets, of the PC
+    algorithm, of the graph test and of the test of the causal model. The
+    **14** findings of the files after that line are **withheld**, so the
+    report of the scan is a report of the **228** files it reads and not of the
+    246 of the tree.
+    The construct is idiomatic MoonBit and the tool itself says that what it
+    cannot read measures its own blind spot and not the code, so the loops
+    stay as they are. Rewriting them would buy the tool its coverage and cost
+    the tree the shape of its own loops.
 - **The counts that the documents publish are measured again, and the documents
   have to state the measured number.** The README and this file publish a
   number of counts -- the cases of the upstream, the notebooks, the verdicts of

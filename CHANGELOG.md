@@ -5,6 +5,41 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.93] - 2026-11-22
+
+### Fixed
+
+- The walk of a tree of the forest of the dummy outcome refuter bound the
+  index of the node to zero and then wrote it in the two arms of the `if`
+  before anything read it, so the zero was dead. The function reads the four
+  fields of the node into locals and fetches the child inside the arm that is
+  taken, and the `if` stays a statement. The numbers of the forest are
+  identical before and after the change: the three refuted effects of the
+  forest of the dummy outcome refuter are `-1.316749893149489`,
+  `4.700611528154843` and `-1.0294556710155225` in both runs, measured with a
+  probe that prints them.
+
+### Added
+
+- The tree is audited by the static analyzer of the registry, the package
+  `riantr/moonbit_static_analysis`, with the command
+  `moonx riantr/moonbit_static_analysis@latest <the path of the tree>`. The
+  analyzer reads the tree and never writes to it, and **its CLI cannot exit
+  non-zero**, so a caller has to read the report and not the exit code. The
+  scan of the release of 0.0.93 reads **246** files, understands **228** of
+  them (**92.6%**) and reports **2** actionable findings, both of them of the
+  family `MSA-015` (a dead store) and both with the confidence `high`. The
+  1716 notices of the scan are the scope limits of the frontend -- a `test`
+  block, a `const`, a `struct`, an `enum`, an `if` used as a value and an
+  anonymous function literal -- and not defects of the tree.
+- The finding of `src/utils/stats.mbt` is **kept on purpose**, and the reason is
+  measured: the only way to remove the dead store of the `x` of `normal_ppf` is
+  to make the arms of its `if` the value of an `if` used as a value, and that
+  makes the frontend of the analyzer stop reading the file at the `if`, so the
+  file becomes `PARTIAL` and the findings after that line are counted and not
+  shown. The finding would disappear because the analyzer loses sight of the
+  code, and not because the code got better.
+
 ## [0.0.92] - 2026-11-22
 
 ### Added
