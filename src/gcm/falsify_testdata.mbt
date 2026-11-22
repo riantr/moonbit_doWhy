@@ -5,6 +5,46 @@
 /// by hand.
 
 ///|
+/// The number of the permutations of the nodes of a graph of 4 nodes,
+/// without the original order.
+pub const FALSIFY_PERMUTATION_COUNT_4_EXCLUDED : Int64 = 23L
+
+///|
+/// The number of the permutations of the nodes of a graph of 4 nodes,
+/// with the original order.
+pub const FALSIFY_PERMUTATION_COUNT_4 : Int64 = 24L
+
+///|
+/// The number of the permutations of the nodes of a graph of 13 nodes,
+/// without the original order.
+pub const FALSIFY_PERMUTATION_COUNT_13_EXCLUDED : Int64 = 6227020799L
+
+///|
+/// The number of the permutations of the nodes of a graph of 13 nodes,
+/// with the original order.
+pub const FALSIFY_PERMUTATION_COUNT_13 : Int64 = 6227020800L
+
+///|
+/// The number of the permutations of the nodes of a graph of 17 nodes,
+/// without the original order.
+pub const FALSIFY_PERMUTATION_COUNT_17_EXCLUDED : Int64 = 355687428095999L
+
+///|
+/// The number of the permutations of the nodes of a graph of 17 nodes,
+/// with the original order.
+pub const FALSIFY_PERMUTATION_COUNT_17 : Int64 = 355687428096000L
+
+///|
+/// The number of the permutations of the nodes of a graph of 20 nodes,
+/// without the original order.
+pub const FALSIFY_PERMUTATION_COUNT_20_EXCLUDED : Int64 = 2432902008176639999L
+
+///|
+/// The number of the permutations of the nodes of a graph of 20 nodes,
+/// with the original order.
+pub const FALSIFY_PERMUTATION_COUNT_20 : Int64 = 2432902008176640000L
+
+///|
 /// The data of the collider fixture, whose graph is `X -> Z <- Y`.
 pub fn falsify_collider_frame() -> @api.DataFrame {
   let x = [

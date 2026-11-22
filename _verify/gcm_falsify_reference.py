@@ -428,5 +428,44 @@ def main() -> None:
         print(f"  mec = {len(result.summary[falsify.FalsifyConst.MEC])} graphs")
 
 
+    # ------------------------------------------------------------------
+    # C. The number of the permutations of the nodes of a graph.
+    #
+    # The upstream takes the factorial of the number of the nodes with
+    # `math.factorial`, whose integers have no limit, and it raises an error
+    # when the number of the permutations of a graph of more than twenty nodes
+    # does not fit in a signed sixty four bit integer. The numbers below are
+    # the ones the upstream itself computes, and the port has to reproduce
+    # them: the factorial of thirteen does not fit in a thirty two bit
+    # integer.
+    # ------------------------------------------------------------------
+    print("PERMUTATION_COUNT")
+    for count in (4, 13, 17, 20):
+        for exclude in (True, False):
+            graph = nx.DiGraph()
+            graph.add_nodes_from([f"X{index}" for index in range(count)])
+            generator = falsify._PermuteNodes(
+                graph,
+                exclude_original_order=exclude,
+                n_permutations=-1,
+            )
+            print(
+                f"  nodes={count} exclude={int(exclude)} "
+                f"length={generator.length}"
+            )
+    graph = nx.DiGraph()
+    graph.add_nodes_from([f"X{index}" for index in range(21)])
+    try:
+        falsify._PermuteNodes(
+            graph,
+            exclude_original_order=True,
+            n_permutations=-1,
+        )
+    except ValueError as error:
+        print(f"  nodes=21 exclude=1 -> {type(error).__name__}: {error}")
+    else:
+        print("  nodes=21 exclude=1 -> no error")
+
+
 if __name__ == "__main__":
     main()

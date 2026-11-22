@@ -65,6 +65,7 @@ AGENTS = ROOT / "AGENTS.md"
 COLLECTED = HERE / "upstream_collected_cases.json"
 VERDICTS = HERE / "upstream_notebook_verdicts.json"
 SUITE_VERDICTS = HERE / "upstream_suite_verdicts.json"
+LUNAFLOW = HERE / "lunaflow_qa.json"
 
 # The documents that publish the counts.
 DOCUMENTS = {"README.mbt.md": README, "AGENTS.md": AGENTS}
@@ -230,6 +231,16 @@ def suite_verdicts() -> dict:
     return json.loads(SUITE_VERDICTS.read_text(encoding="utf-8"))
 
 
+def lunaflow_qa() -> dict:
+    """The measurement of the audit of the tree with the dynamic analyzer."""
+    if not LUNAFLOW.exists():
+        raise SystemExit(
+            f"the file {LUNAFLOW} is missing: the audit of the tree is a "
+            "measurement that is committed with the repository"
+        )
+    return json.loads(LUNAFLOW.read_text(encoding="utf-8"))
+
+
 def measurements() -> dict[str, int]:
     """Every count the documents publish, measured again."""
     data = collected()
@@ -266,6 +277,75 @@ def measurements() -> dict[str, int]:
     suite = suite_verdicts()
     measured["the cases of the upstream that fail with the numpy-2 error"] = suite[
         "numpy-2 binary treatment"
+    ]
+    audit = lunaflow_qa()
+    level1 = audit["level1"]
+    level2 = audit["level2"]
+    tables = level1["by_rule_in_the_tables"]
+    measured["the files the audit of the tree reads"] = level1["files"]
+    measured["the functions the audit of the tree holds"] = level1["functions"]
+    measured[
+        "the statements the audit of the tree understands"
+    ] = level1["statements_understood"]
+    measured["the functions the audit of the tree enters"] = level1[
+        "functions_entered"
+    ]
+    measured["the findings the audit of the tree reports"] = level1[
+        "findings_in_the_tables"
+    ]
+    measured[
+        "the findings of the family TAINT-INDEX of the audit"
+    ] = tables["TAINT-INDEX"]
+    measured[
+        "the findings of the family BUDGET-EXCEEDED of the audit"
+    ] = tables["BUDGET-EXCEEDED"]
+    measured[
+        "the findings of the family TAINT-INDEX-RANGE of the audit"
+    ] = tables["TAINT-INDEX-RANGE"]
+    measured[
+        "the findings the sidecar of the audit holds"
+    ] = level1["findings_in_the_sidecar"]
+    measured[
+        "the accesses the audit watches go out of bounds"
+    ] = len(level1["out_of_bounds_observed"])
+    measured[
+        "the findings of the abstract interpretation of the audit"
+    ] = level2["findings_in_the_sidecar"]
+    measured[
+        "the findings of the family INDEX-OOB of the audit"
+    ] = level2["by_rule"]["INDEX-OOB"]
+    measured[
+        "the findings of the family INDEX-OOB of the second level of the audit"
+    ] = level2["by_rule"]["INDEX-OOB"]
+    measured[
+        "the findings of the family TAINT-INDEX of the second level of the audit"
+    ] = level2["by_rule"]["TAINT-INDEX"]
+    measured[
+        "the findings of the family UNSUPPORTED of the second level of the audit"
+    ] = level2["by_rule"]["UNSUPPORTED"]
+    measured[
+        "the findings of the family RANGE-VIOLATION of the second level of the audit"
+    ] = level2["by_rule"]["RANGE-VIOLATION"]
+    measured[
+        "the findings of the family BUDGET-EXCEEDED of the second level of the audit"
+    ] = level2["by_rule"]["BUDGET-EXCEEDED"]
+    measured[
+        "the findings of the family INTEGER-OVERFLOW of the second level of the audit"
+    ] = level2["by_rule"]["INTEGER-OVERFLOW"]
+    measured[
+        "the findings of the family DIVISION-BY-ZERO of the second level of the audit"
+    ] = level2["by_rule"]["DIVISION-BY-ZERO"]
+    measured[
+        "the findings of the family INFINITE-LOOP of the second level of the audit"
+    ] = level2["by_rule"]["INFINITE-LOOP"]
+    measured[
+        "the findings of the family UNREACHABLE of the second level of the audit"
+    ] = level2["by_rule"]["UNREACHABLE"]
+    measured["the entry points the audit can enter"] = audit["capacity"][
+        "entry_points_that_survive"
+    ]
+    measured["the entry points the audit cannot enter"] = audit["capacity"][
+        "entry_points_that_trap"
     ]
     return measured
 
@@ -420,6 +500,121 @@ CLAIMS: list[tuple[str, str, str]] = [
         "AGENTS.md",
         "the cases of the upstream that fail with the numpy-2 error",
         r"gives \*\*(\d+)\*\* cases\s+that fail with the numpy 2 error",
+    ),
+    (
+        "AGENTS.md",
+        "the files the audit of the tree reads",
+        r"the scan reads the \*\*(\d+)\*\* files of the tree",
+    ),
+    (
+        "AGENTS.md",
+        "the functions the audit of the tree holds",
+        r"holds the \*\*(\d+)\*\* functions and the",
+    ),
+    (
+        "AGENTS.md",
+        "the statements the audit of the tree understands",
+        r"the \*\*(\d+)\*\* statements it\s+understands",
+    ),
+    (
+        "AGENTS.md",
+        "the functions the audit of the tree enters",
+        r"enters the \*\*(\d+)\*\* of them of the cap",
+    ),
+    (
+        "AGENTS.md",
+        "the findings the audit of the tree reports",
+        r"reports the \*\*(\d+)\*\* findings of its tables",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family TAINT-INDEX of the audit",
+        r"\*\*(\d+)\*\* are of the family `TAINT-INDEX`",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family BUDGET-EXCEEDED of the audit",
+        r"\*\*(\d+)\*\* are of the family `BUDGET-EXCEEDED`",
+    ),
+    (
+        "AGENTS.md",
+        "the accesses the audit watches go out of bounds",
+        r"The (\w+) accesses that the scan watched go out of bounds",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family INDEX-OOB of the audit",
+        r"\*\*(\d+)\*\* are of the family `INDEX-OOB`",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the abstract interpretation of the audit",
+        r"the run with `--level 2` holds the \*\*(\d+)\*\*\s+findings",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family INDEX-OOB of the second level of the audit",
+        r"\*\*(\d+)\*\* are of the family `INDEX-OOB`",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family TAINT-INDEX of the second level of the audit",
+        r"\*\*(\d+)\*\* of the family `TAINT-INDEX`,",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family UNSUPPORTED of the second level of the audit",
+        r"\*\*(\d+)\*\* of the family `UNSUPPORTED`",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family RANGE-VIOLATION of the second level of the audit",
+        r"\*\*(\d+)\*\* of the family `RANGE-VIOLATION`",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family BUDGET-EXCEEDED of the second level of the audit",
+        r"\*\*(\d+)\*\* of the family `BUDGET-EXCEEDED`,",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family INTEGER-OVERFLOW of the second level of the audit",
+        r"\*\*(\d+)\*\* of the family `INTEGER-OVERFLOW`",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family DIVISION-BY-ZERO of the second level of the audit",
+        r"\*\*(\d+)\*\* of the family `DIVISION-BY-ZERO`",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family INFINITE-LOOP of the second level of the audit",
+        r"\*\*(\d+)\*\* of the family `INFINITE-LOOP`",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family UNREACHABLE of the second level of the audit",
+        r"\*\*(\d+)\*\* of the family `UNREACHABLE`",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family TAINT-INDEX-RANGE of the audit",
+        r"\*\*(\d+)\*\* are of the family `TAINT-INDEX-RANGE`",
+    ),
+    (
+        "AGENTS.md",
+        "the findings the sidecar of the audit holds",
+        r"The sidecar of the findings holds \*\*(\d+)\*\* of them",
+    ),
+    (
+        "AGENTS.md",
+        "the entry points the audit can enter",
+        r"between \*\*(\d+)\*\* and \*\*\d+\*\* entry\s+points",
+    ),
+    (
+        "AGENTS.md",
+        "the entry points the audit cannot enter",
+        r"between \*\*\d+\*\* and \*\*(\d+)\*\* entry\s+points",
     ),
 ]
 

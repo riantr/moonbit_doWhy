@@ -1,0 +1,85 @@
+{
+  "tool": "riantr/LunaFlow",
+  "version": "0.1.32",
+  "command": "moonx riantr/LunaFlow@latest <the path of the tree>",
+  "tree_version": "0.0.94",
+  "level1": {
+    "files": 226,
+    "functions": 3637,
+    "statements_understood": 25944,
+    "statements_unsupported": 691,
+    "functions_entered": 150,
+    "taint_sinks": 27,
+    "dead_code": 0,
+    "unreachable": 0,
+    "infinite_loop": 0,
+    "findings_in_the_tables": 47,
+    "findings_in_the_sidecar": 44,
+    "by_rule": {
+      "TAINT-INDEX": 25,
+      "BUDGET-EXCEEDED": 17,
+      "TAINT-INDEX-RANGE": 2
+    },
+    "out_of_bounds_observed": [
+      {
+        "rule": "TAINT-INDEX",
+        "fn": "neighbours",
+        "file": "src/cm/pc.mbt",
+        "line": 292,
+        "evidence": "adj[-1] of length 1"
+      },
+      {
+        "rule": "TAINT-INDEX",
+        "fn": "collect_combinations",
+        "file": "src/cm/pc.mbt",
+        "line": 341,
+        "evidence": "values[0] of length 0"
+      },
+      {
+        "rule": "TAINT-INDEX",
+        "fn": "pc_skeleton",
+        "file": "src/cm/pc.mbt",
+        "line": 365,
+        "evidence": "adj[0] of length 0"
+      },
+      {
+        "rule": "TAINT-INDEX",
+        "fn": "adjacent",
+        "file": "src/cm/pc.mbt",
+        "line": 550,
+        "evidence": "directed[-1] of length 0"
+      },
+      {
+        "rule": "TAINT-INDEX",
+        "fn": "build_cpdag",
+        "file": "src/cm/pc.mbt",
+        "line": 566,
+        "evidence": "adj[0] of length 0"
+      }
+    ],
+    "by_rule_in_the_tables": {
+      "TAINT-INDEX": 25,
+      "BUDGET-EXCEEDED": 20,
+      "TAINT-INDEX-RANGE": 2
+    }
+  },
+  "level2": {
+    "findings_in_the_sidecar": 968,
+    "by_rule": {
+      "INDEX-OOB": 533,
+      "TAINT-INDEX": 306,
+      "UNSUPPORTED": 70,
+      "BUDGET-EXCEEDED": 17,
+      "RANGE-VIOLATION": 17,
+      "INTEGER-OVERFLOW": 9,
+      "DIVISION-BY-ZERO": 6,
+      "INFINITE-LOOP": 6,
+      "TAINT-INDEX-RANGE": 2,
+      "UNREACHABLE": 2
+    }
+  },
+  "capacity": {
+    "entry_points_that_survive": 1200,
+    "entry_points_that_trap": 1500
+  }
+}

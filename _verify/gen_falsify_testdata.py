@@ -30,6 +30,7 @@ Usage:
 
 from __future__ import annotations
 
+import math
 import os
 import shutil
 import subprocess
@@ -45,6 +46,14 @@ SEED = 2025
 # The number of rows of every fixture. The upstream tests use five hundred
 # rows, and the outcome of the tests depends on that number.
 NUM_ROWS = 500
+
+# The sizes of the graphs whose number of the permutations of their nodes is
+# written into the generated file. The upstream computes it with
+# `math.factorial`, whose integers have no limit, so the numbers of the
+# upstream hold every factorial up to twenty nodes. The port computed it with a
+# thirty two bit integer, which holds the factorial of twelve nodes and not
+# the factorial of thirteen.
+PERMUTATION_SIZES = (4, 13, 17, 20)
 
 # The root of the repository.
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -161,6 +170,37 @@ def moonbit_frame(
     return lines
 
 
+def moonbit_permutation_constants() -> list[str]:
+    """The number of the permutations of the nodes of the graphs of the sizes.
+
+    The upstream computes the number with `math.factorial`, whose integers have
+    no limit, and it subtracts one when the original order is excluded. The
+    numbers are the ones of the upstream, and the reference script
+    `_verify/gcm_falsify_reference.py` measures them with the generator of the
+    upstream itself.
+    """
+    lines: list[str] = []
+    for size in PERMUTATION_SIZES:
+        for exclude in (True, False):
+            value = math.factorial(size) - int(exclude)
+            suffix = "_EXCLUDED" if exclude else ""
+            lines.append("///|")
+            lines.append(
+                "/// The number of the permutations of the nodes of a graph of"
+                " %d nodes," % size
+            )
+            lines.append(
+                "/// %s the original order."
+                % ("without" if exclude else "with")
+            )
+            lines.append(
+                "pub const FALSIFY_PERMUTATION_COUNT_%d%s : Int64 = %dL"
+                % (size, suffix, value)
+            )
+            lines.append("")
+    return lines
+
+
 def write_source(fixtures: dict[str, dict[str, np.ndarray]]) -> None:
     """Writes the generated file."""
     descriptions = {
@@ -178,6 +218,7 @@ def write_source(fixtures: dict[str, dict[str, np.ndarray]]) -> None:
     parts.append("/// which `_verify/gen_falsify_testdata.py` generates; do not edit the file")
     parts.append("/// by hand.")
     parts.append("")
+    parts.extend(moonbit_permutation_constants())
     for name in (
         "collider",
         "chain",

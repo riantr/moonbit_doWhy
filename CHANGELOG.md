@@ -5,6 +5,62 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.94] - 2026-11-22
+
+### Fixed
+
+- The number of the permutations of the nodes of a graph was computed with a
+  thirty two bit integer, and it wraps around silently from thirteen nodes on.
+  The graph of thirteen nodes held `1932053503` permutations instead of
+  `6227020799`, and the graph of seventeen nodes held `-288522241`, which is
+  negative, so the port compared the number of the permutations that were asked
+  for with a negative number and drew **all** the permutations of the graph
+  instead of the ones that were asked for. The upstream takes the number with
+  `math.factorial`, whose integers have no limit, so the port computes it with
+  sixty four bits now, which hold every factorial the upstream accepts, and it
+  raises the error of the upstream for a graph of more than twenty nodes.
+  MEASURED with the `_PermuteNodes` of the upstream and with a probe of the
+  port: the two hold `23` and `24` for the graph of four nodes,
+  `6227020799` and `6227020800` for the graph of thirteen nodes,
+  `355687428095999` and `355687428096000` for the graph of seventeen nodes and
+  `2432902008176639999` and `2432902008176640000` for the graph of twenty
+  nodes, and the upstream raises the error `Too many permutations specified`
+  for the graph of twenty one nodes.
+
+### Added
+
+- The tree is audited by the dynamic analyzer of the registry, the package
+  `riantr/LunaFlow`, with the command
+  `moonx riantr/LunaFlow@latest <the path of the tree>`. The analyzer reads the
+  tree and never writes to it, and it enters the functions with values that it
+  makes up, so its findings are about the inputs it invented and not about the
+  inputs of a user. **Its CLI cannot exit non-zero**, so a caller has to read
+  the report and not the exit code.
+  The scan of the release of 0.0.94 reads the **226** files of the tree, holds
+  the **3637** functions and the **25944** statements it understands, enters the
+  **150** of them of the cap of its entry points, and reports the **47**
+  findings of its tables, of which **25** are of the family `TAINT-INDEX`, **20**
+  are of the family `BUDGET-EXCEEDED` and **2** are of the family
+  `TAINT-INDEX-RANGE`. The scan finds no dead code, no unreachable statement
+  and no infinite loop.
+  The **five** accesses that the scan watched go out of bounds are the values
+  that the analyzer made up, and not defects of the port: the analyzer called
+  `neighbours` with the index `-1` and with an array of one row, it called
+  `adjacent` with the index `-1` and with an empty array, and it called
+  `collect_combinations` with an array of no rows and with a `missing` of
+  `-1926`. The port never makes those calls.
+  The abstract interpretation of the second level holds the **968** findings,
+  of which **533** are of the family `INDEX-OOB` and **306** of the family
+  `TAINT-INDEX`: the abstract domain cannot state that an index is smaller than
+  the length of the array, so it reports the same shape over and over. The
+  finding of the overflow of the factorial is the one that is gone: the scan of
+  the tree after the fix holds one finding less.
+- The measurements of the audit are committed with the repository, in the file
+  `_verify/lunaflow_qa.json`, and the script
+  `_verify/check_published_counts.py` requires the working agreements to state
+  the measured number, so a count of the audit cannot drift away from the
+  audit.
+
 ## [0.0.93] - 2026-11-22
 
 ### Fixed

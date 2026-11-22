@@ -1099,6 +1099,12 @@ pub fn run_validations(
 }
 
 ///|
+/// The largest number of permutations the upstream accepts: it raises an error
+/// when the number of the permutations of a graph of more than twenty nodes
+/// does not fit in a signed sixty four bit integer.
+const FALSIFY_MAX_PERMUTATIONS : Int64 = 9223372036854775807L
+
+///|
 /// The generator of the permutations of the nodes of a graph.
 ///
 /// This is the port of the `_PermuteNodes` of the upstream. The permutation
@@ -1113,7 +1119,7 @@ pub struct PermuteNodes {
   causal_graph : @graph.DirectedGraph
   exclude_original_order : Bool
   n_permutations : Int32
-  max_perms : Int32
+  max_perms : Int64
 }
 
 ///|
@@ -1124,18 +1130,29 @@ pub fn PermuteNodes::new(
   n_permutations : Int32,
 ) -> PermuteNodes {
   let count = causal_graph.node_count()
-  let max_perms = falsify_factorial(count) -
-    (if exclude_original_order { 1 } else { 0 })
+  let factorial = falsify_factorial(count)
+  let max_perms = match factorial {
+    Some(value) => value - (if exclude_original_order { 1L } else { 0L })
+    None => FALSIFY_MAX_PERMUTATIONS
+  }
+  // The upstream refuses the permutations of a graph of more than twenty nodes,
+  // because their number does not fit in an integer.
+  if factorial is None && n_permutations == -1 {
+    abort(
+      "too many permutations specified: the graph has more than twenty nodes",
+    )
+  }
   { causal_graph, exclude_original_order, n_permutations, max_perms, }
 }
 
 ///|
 /// The number of the permutations the generator yields.
-pub fn PermuteNodes::length(self : PermuteNodes) -> Int32 {
-  if self.n_permutations == -1 || self.n_permutations > self.max_perms {
+pub fn PermuteNodes::length(self : PermuteNodes) -> Int64 {
+  if self.n_permutations == -1 ||
+    self.n_permutations.to_int64() > self.max_perms {
     self.max_perms
   } else {
-    self.n_permutations
+    self.n_permutations.to_int64()
   }
 }
 
@@ -1152,7 +1169,8 @@ pub fn PermuteNodes::permutations(
   let nodes = self.causal_graph.node_list()
   let count = nodes.length()
   let out : Array[@graph.DirectedGraph] = []
-  if self.n_permutations == -1 || self.n_permutations > self.max_perms {
+  if self.n_permutations == -1 ||
+    self.n_permutations.to_int64() > self.max_perms {
     let orders = permutation_orders(count)
     for i in 0..<orders.length() {
       if self.exclude_original_order && i == 0 {
@@ -1174,12 +1192,22 @@ pub fn PermuteNodes::permutations(
 
 ///|
 /// The factorial of a number.
-fn falsify_factorial(n : Int32) -> Int32 {
-  let mut out = 1
+///
+/// The number is `None` when the factorial is larger than the largest number of
+/// permutations the upstream accepts, which is the case from twenty one nodes
+/// on. The upstream computes the factorial with the integers of Python, which
+/// have no limit, so the port computes it with sixty four bits, which hold
+/// every factorial the upstream accepts.
+fn falsify_factorial(n : Int32) -> Int64? {
+  let mut out = 1L
   for i in 1..<=n {
-    out = out * i
+    let factor = i.to_int64()
+    if out > FALSIFY_MAX_PERMUTATIONS / factor {
+      return None
+    }
+    out = out * factor
   }
-  out
+  Some(out)
 }
 
 ///|

@@ -188,10 +188,20 @@ fn falsify_non_minimality_graph() -> @graph.DirectedGraph {
 /// The graph is a directed path of four nodes, so that no permutation of its
 /// nodes gives the same graph again.
 fn falsify_permutation_graph() -> @graph.DirectedGraph {
+  falsify_permutation_graph_of(4)
+}
+
+///|
+/// The graph whose nodes are permuted by the tests of the permutations, with
+/// the given number of nodes.
+///
+/// The graph is a directed path, so that no permutation of its nodes gives the
+/// same graph again.
+fn falsify_permutation_graph_of(count : Int32) -> @graph.DirectedGraph {
   let graph = @graph.DirectedGraph::new()
-  graph.add_edge("X0", "X1")
-  graph.add_edge("X1", "X2")
-  graph.add_edge("X2", "X3")
+  for i in 0..<(count - 1) {
+    graph.add_edge("X" + i.to_string(), "X" + (i + 1).to_string())
+  }
   graph
 }
 
@@ -334,7 +344,7 @@ fn falsify_minimality_methods() -> Array[@gcm.ValidationMethod] {
 test "the permutations of the nodes exclude the original order when they are asked to" {
   let graph = falsify_permutation_graph()
   let generator = @gcm.PermuteNodes::new(graph, true, -1)
-  assert_eq(generator.length(), 23)
+  assert_eq(generator.length(), @gcm.FALSIFY_PERMUTATION_COUNT_4_EXCLUDED)
   let permutations = generator.permutations(@utils.Random::new(1UL))
   assert_eq(permutations.length(), 23)
   let original = graph.node_list()
@@ -355,7 +365,7 @@ test "the permutations of the nodes exclude the original order when they are ask
 test "the permutations of the nodes keep the original order when they are not asked to exclude it" {
   let graph = falsify_permutation_graph()
   let generator = @gcm.PermuteNodes::new(graph, false, -1)
-  assert_eq(generator.length(), 24)
+  assert_eq(generator.length(), @gcm.FALSIFY_PERMUTATION_COUNT_4)
   let permutations = generator.permutations(@utils.Random::new(1UL))
   assert_eq(permutations.length(), 24)
   let original = graph.node_list()
@@ -372,6 +382,55 @@ test "the permutations of the nodes keep the original order when they are not as
   }
   assert_true(found_original)
   assert_eq(distinct.length(), 24)
+}
+
+///|
+/// test "the number of the permutations of a graph of thirteen nodes is the
+/// factorial of thirteen"
+///
+/// The factorial of thirteen does not fit in a thirty two bit integer, so the
+/// number of the permutations of a graph of thirteen nodes is a sixty four bit
+/// number. The upstream computes it with the integers of Python, which have no
+/// limit, and the port does the same. The number is the one of the upstream,
+/// which `_verify/gen_falsify_testdata.py` writes into the generated file of
+/// the package.
+test "the number of the permutations of a graph of thirteen nodes is the factorial of thirteen" {
+  let graph = falsify_permutation_graph_of(13)
+  let excluded = @gcm.PermuteNodes::new(graph, true, -1)
+  assert_eq(excluded.length(), @gcm.FALSIFY_PERMUTATION_COUNT_13_EXCLUDED)
+  let kept = @gcm.PermuteNodes::new(graph, false, -1)
+  assert_eq(kept.length(), @gcm.FALSIFY_PERMUTATION_COUNT_13)
+}
+
+///|
+/// test "the number of the permutations of a graph of seventeen nodes is the
+/// factorial of seventeen"
+///
+/// The factorial of seventeen does not fit in a thirty two bit integer, and it
+/// is even negative when the integer wraps around, which made the port draw
+/// all the permutations of the graph at random instead of the number of them
+/// that were asked for.
+test "the number of the permutations of a graph of seventeen nodes is the factorial of seventeen" {
+  let graph = falsify_permutation_graph_of(17)
+  let excluded = @gcm.PermuteNodes::new(graph, true, -1)
+  assert_eq(excluded.length(), @gcm.FALSIFY_PERMUTATION_COUNT_17_EXCLUDED)
+  let kept = @gcm.PermuteNodes::new(graph, false, -1)
+  assert_eq(kept.length(), @gcm.FALSIFY_PERMUTATION_COUNT_17)
+}
+
+///|
+/// test "the number of the permutations of a graph of twenty nodes is the
+/// factorial of twenty"
+///
+/// The factorial of twenty is the last one that fits in a sixty four bit
+/// integer, and the upstream raises an error for the graph of twenty one nodes,
+/// whose factorial does not fit in one.
+test "the number of the permutations of a graph of twenty nodes is the factorial of twenty" {
+  let graph = falsify_permutation_graph_of(20)
+  let excluded = @gcm.PermuteNodes::new(graph, true, -1)
+  assert_eq(excluded.length(), @gcm.FALSIFY_PERMUTATION_COUNT_20_EXCLUDED)
+  let kept = @gcm.PermuteNodes::new(graph, false, -1)
+  assert_eq(kept.length(), @gcm.FALSIFY_PERMUTATION_COUNT_20)
 }
 
 ///|

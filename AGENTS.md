@@ -2015,6 +2015,95 @@ README makes, so they are tracked in the repository:
     cannot read measures its own blind spot and not the code, so the loops
     stay as they are. Rewriting them would buy the tool its coverage and cost
     the tree the shape of its own loops.
+- **The tree is audited by the dynamic analyzer of the registry, and the one
+  finding of the scan that is a defect of the port is an overflow of the
+  factorial of the number of the nodes.** The analyzer is the package
+  `riantr/LunaFlow`, and it runs on the tree without touching it:
+  `moonx riantr/LunaFlow@latest <the path of the tree>`, from a directory that
+  is not the tree, so that the report does not land in the tree. **The CLI
+  cannot exit non-zero**, so a caller has to read the report and not the exit
+  code.
+  The analyzer is **dynamic first**: it enters a function with values that it
+  makes up and it follows what the function does with them, so its findings
+  are about the inputs it invented and not about the inputs of a user. Its
+  three levels are the interpreter, the abstract interpretation and the
+  verification of the contracts.
+  MEASURED on the release of 0.0.94: the scan reads the **226** files of the
+  tree, holds the **3637** functions and the **25944** statements it
+  understands, enters the **150** of them of the cap of its entry points, and
+  reports the **47** findings of its tables, of which **25** are of the family
+  `TAINT-INDEX`, **20** are of the family `BUDGET-EXCEEDED` and **2** are of
+  the family `TAINT-INDEX-RANGE`. The sidecar of the findings holds **44** of them, the
+  three that are missing from it being the repeats of the rows of the budget.
+  The scan finds no dead code, no unreachable statement and no infinite loop.
+  - **The five accesses that the scan watched go out of bounds are artefacts of
+    the values that the analyzer made up, and not defects of the port.**
+    MEASURED with the trace of the scan: the analyzer called `neighbours` with
+    the index `-1` and with an array of one row, it called `adjacent` with the
+    index `-1` and with an empty array, it called `pc_skeleton` and
+    `build_cpdag` with an empty array and with a count of two, and it called
+    `collect_combinations` with an array of no rows and with a `missing` of
+    `-1926`. The port never makes those calls: `neighbours` is called with the
+    `x` of the loop that goes from zero to the number of the variables,
+    `pc_skeleton` and `build_cpdag` are called with the adjacency that
+    `complete_graph` builds for the very same count, `adjacent` is called with
+    the indices of the loop of the Meek rules, and `collect_combinations` is
+    called with a `current` that never holds more rows than the size that is
+    asked for, so the `missing` is never below one.
+  - **The abstract interpretation of the second level reports the same shape
+    over and over, because it cannot state that an index is smaller than the
+    length of the array.** MEASURED: the run with `--level 2` holds the **968**
+    findings, of which **533** are of the family `INDEX-OOB`, **306** of the
+    family `TAINT-INDEX`, **70** of the family `UNSUPPORTED`, **17** of the
+    family `RANGE-VIOLATION`, **17** of the family `BUDGET-EXCEEDED`, **9** of
+    the family `INTEGER-OVERFLOW`, **6** of the family `DIVISION-BY-ZERO`, **6**
+    of the family `INFINITE-LOOP`, **2** of the family `TAINT-INDEX-RANGE` and
+    **2** of the family `UNREACHABLE`. The **17** assertions of the family
+    `RANGE-VIOLATION` are the assertions of the test files, and not of the
+    library. All but one of the **6** loops of the family `INFINITE-LOOP` are
+    the work lists that empty themselves with a `pop`, which the analyzer does
+    not model, and the one that is left is the sampling without replacement of
+    the silhouette, which ends with the probability one. The **2** branches of the family
+    `UNREACHABLE` are reachable: the branch of the E-value of an interval that
+    crosses the null is the same branch the upstream takes, and the branch of
+    the rows of the cross validation that holds more than twenty thousand rows
+    is taken by a data set that holds more than twenty thousand rows.
+  - **The overflow of the factorial was a real defect of the port, and the
+    upstream does not have it.** The upstream takes the number of the
+    permutations with `math.factorial`, whose integers have no limit, and the
+    port took it with a thirty two bit integer, which holds the factorial of
+    twelve nodes and not the factorial of thirteen. MEASURED with a probe that
+    prints the number of the permutations of the generator and with the
+    `_PermuteNodes` of the upstream: for the graph of thirteen nodes the
+    upstream holds `6227020799` and the port held `1932053503`, and for the
+    graph of seventeen nodes the upstream holds `355687428095999` and the port
+    held `-288522241`, which is negative, so the port compared the number of
+    the permutations that were asked for with a negative number and drew **all**
+    the permutations of the graph instead of the ones that were asked for. The
+    port computes the factorial with sixty four bits now, which hold every
+    factorial the upstream accepts, and it raises the error of the upstream for
+    a graph of more than twenty nodes. MEASURED: the scan of the tree after
+    the fix holds one finding less, and the finding that is gone is the
+    overflow of the factorial -- the other findings that moved are the ones of
+    the same lines, which the fix moved down the file.
+  - **The analyzer cannot enter every function of this tree.** MEASURED: the
+    run with `--per-function` traps the runtime of the web assembly with the
+    error `RuntimeError: unreachable` after a minute, and the same happens
+    with `--max-functions 1500`, while the run with `--max-functions 1200`
+    ends. The cap of the tree is therefore between **1200** and **1500** entry
+    points, and the scan of the tree is a scan of the first of them.
+  - **The divisions of the families `DIVISION-BY-ZERO` and `INTEGER-OVERFLOW`
+    that are not the factorial are the edges of the parameters that the
+    upstream validates and the port does not.** The upstream splits its folds
+    with the `KFold` of scikit-learn, which raises an error for a number of
+    folds below two and for a number of folds above the number of the rows,
+    and the port splits them itself and divides by the number of the folds.
+    The upstream raises an error in both cases and the port divides by zero or
+    splits a sample into empty folds, so the port does not fail the way the
+    upstream fails. The numbers of the port and the numbers of the upstream
+    agree on every input the upstream accepts, and the guard of the upstream is
+    the guard of scikit-learn and not of DoWhy, so the port keeps its own
+    behaviour and the divergence is recorded here.
 - **The counts that the documents publish are measured again, and the documents
   have to state the measured number.** The README and this file publish a
   number of counts -- the cases of the upstream, the notebooks, the verdicts of
