@@ -73,6 +73,8 @@ def build_the_project(directory: Path, manifest: str, program: str) -> None:
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     package = directory / "app" / "cmd" / "main"
     package.mkdir(parents=True, exist_ok=True)
@@ -88,6 +90,8 @@ def install_the_package(directory: Path, version: str) -> None:
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
 
@@ -98,6 +102,8 @@ def run_the_program(directory: Path, target: str) -> str:
         cwd=directory / "app",
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     output = (result.stdout + result.stderr).strip()
     if result.returncode != 0:
