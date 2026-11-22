@@ -1,0 +1,174 @@
+{
+ "command": "moonx riantr/moonbit_static_analysis@latest <the path of the tree>",
+ "scans": {
+  "0.0.95": {
+   "actionable": 1,
+   "actionable_findings": [
+    {
+     "column": 3,
+     "confidence": "high",
+     "family": "MSA-015",
+     "file": "./src/utils/stats.mbt",
+     "kind": "warning",
+     "line": 261,
+     "message": "the value bound to 'x' is read on no path before the name is written again (DeadStore) [structural, MSA-015, high]"
+    }
+   ],
+   "by_kind": {
+    ".mbt": {
+     "defects": 1,
+     "files": 228,
+     "notices": 1728,
+     "parsed": 210
+    },
+    ".mbt.md": {
+     "defects": 0,
+     "files": 1,
+     "notices": 0,
+     "parsed": 1
+    },
+    ".mbti": {
+     "defects": 0,
+     "files": 19,
+     "notices": 0,
+     "parsed": 19
+    }
+   },
+   "files": 248,
+   "files_not_finished": [
+    "./src/cm/pc.mbt",
+    "./src/datasets/random_graph.mbt",
+    "./src/gcm/falsify.mbt",
+    "./src/gcm/falsify_test.mbt",
+    "./src/gcm/validation_test.mbt",
+    "./src/graph/causal_graph.mbt",
+    "./src/graph/causal_graph_test.mbt",
+    "./src/graph/directed_graph.mbt",
+    "./src/graph/graph_readers_test.mbt",
+    "./src/graph/operations.mbt",
+    "./src/identifiers/efficient_backdoor.mbt",
+    "./src/plotting/graphviz.mbt",
+    "./src/plotting/networkx.mbt",
+    "./src/plotting/plotting.mbt",
+    "./src/tests/causal_model_graph_test.mbt",
+    "./src/tests/notebook_cases.mbt",
+    "./src/timeseries/temporal_graph.mbt",
+    "./src/timeseries/timeseries_test.mbt"
+   ],
+   "interface": {
+    "dirs": 1,
+    "types": 174,
+    "values": 1373
+   },
+   "not_parsed_reasons": {
+    "expected a struct literal field here": 1,
+    "expected loop variable": 12,
+    "files": 18,
+    "unexpected token `,`": 5,
+    "withheld": 14
+   },
+   "notices": 1728,
+   "notices_aggregated": 1293,
+   "notices_by_shape": {
+    "const declaration is outside the analyzed subset": 283,
+    "enum declaration is outside the analyzed subset; its body was not analyzed": 44,
+    "extend declaration is outside the analyzed subset; its body was not analyzed": 1,
+    "struct declaration is outside the analyzed subset; its body was not analyzed": 162,
+    "test declaration is outside the analyzed subset; its body was not analyzed": 794,
+    "type declaration is outside the analyzed subset": 9
+   },
+   "notices_printed": 435,
+   "package_private": {
+    "names": 4244,
+    "packages": 19
+   },
+   "parsed": 230,
+   "parsed_share": "92.7%",
+   "total": 1874,
+   "tree_version": "0.0.95",
+   "unchecked": 9632,
+   "unreliable": 145,
+   "withheld": 14
+  },
+  "0.0.96": {
+   "actionable": 0,
+   "actionable_findings": [],
+   "by_kind": {
+    ".mbt": {
+     "defects": 0,
+     "files": 228,
+     "notices": 1728,
+     "parsed": 210
+    },
+    ".mbt.md": {
+     "defects": 0,
+     "files": 1,
+     "notices": 0,
+     "parsed": 1
+    },
+    ".mbti": {
+     "defects": 0,
+     "files": 19,
+     "notices": 0,
+     "parsed": 19
+    }
+   },
+   "files": 248,
+   "files_not_finished": [
+    "./src/cm/pc.mbt",
+    "./src/datasets/random_graph.mbt",
+    "./src/gcm/falsify.mbt",
+    "./src/gcm/falsify_test.mbt",
+    "./src/gcm/validation_test.mbt",
+    "./src/graph/causal_graph.mbt",
+    "./src/graph/causal_graph_test.mbt",
+    "./src/graph/directed_graph.mbt",
+    "./src/graph/graph_readers_test.mbt",
+    "./src/graph/operations.mbt",
+    "./src/identifiers/efficient_backdoor.mbt",
+    "./src/plotting/graphviz.mbt",
+    "./src/plotting/networkx.mbt",
+    "./src/plotting/plotting.mbt",
+    "./src/tests/causal_model_graph_test.mbt",
+    "./src/tests/notebook_cases.mbt",
+    "./src/timeseries/temporal_graph.mbt",
+    "./src/timeseries/timeseries_test.mbt"
+   ],
+   "interface": {
+    "dirs": 1,
+    "types": 174,
+    "values": 1373
+   },
+   "not_parsed_reasons": {
+    "expected a struct literal field here": 1,
+    "expected loop variable": 12,
+    "files": 18,
+    "unexpected token `,`": 5,
+    "withheld": 14
+   },
+   "notices": 1728,
+   "notices_aggregated": 1293,
+   "notices_by_shape": {
+    "const declaration is outside the analyzed subset": 283,
+    "enum declaration is outside the analyzed subset; its body was not analyzed": 44,
+    "extend declaration is outside the analyzed subset; its body was not analyzed": 1,
+    "struct declaration is outside the analyzed subset; its body was not analyzed": 162,
+    "test declaration is outside the analyzed subset; its body was not analyzed": 794,
+    "type declaration is outside the analyzed subset": 9
+   },
+   "notices_printed": 435,
+   "package_private": {
+    "names": 4245,
+    "packages": 19
+   },
+   "parsed": 230,
+   "parsed_share": "92.7%",
+   "total": 1873,
+   "tree_version": "0.0.96",
+   "unchecked": 9632,
+   "unreliable": 145,
+   "withheld": 14
+  }
+ },
+ "tool": "riantr/moonbit_static_analysis"
+}

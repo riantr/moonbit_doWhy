@@ -66,6 +66,8 @@ COLLECTED = HERE / "upstream_collected_cases.json"
 VERDICTS = HERE / "upstream_notebook_verdicts.json"
 SUITE_VERDICTS = HERE / "upstream_suite_verdicts.json"
 LUNAFLOW = HERE / "lunaflow_qa.json"
+STATIC_ANALYSIS = HERE / "static_analysis.json"
+NORMAL_PPF = HERE / "normal_ppf.json"
 
 # The documents that publish the counts.
 DOCUMENTS = {"README.mbt.md": README, "AGENTS.md": AGENTS}
@@ -241,6 +243,26 @@ def lunaflow_qa() -> dict:
     return json.loads(LUNAFLOW.read_text(encoding="utf-8"))
 
 
+def static_analysis() -> dict:
+    """The measurement of the audit of the tree with the static analyzer."""
+    if not STATIC_ANALYSIS.exists():
+        raise SystemExit(
+            "the file %s is missing: the audit of the tree is a measurement "
+            "that is committed with the repository" % STATIC_ANALYSIS
+        )
+    return json.loads(STATIC_ANALYSIS.read_text(encoding="utf-8"))
+
+
+def normal_ppf() -> dict:
+    """The measurement of the check of the quantile function."""
+    if not NORMAL_PPF.exists():
+        raise SystemExit(
+            "the file %s is missing: run `python _verify/check_normal_ppf.py`"
+            % NORMAL_PPF
+        )
+    return json.loads(NORMAL_PPF.read_text(encoding="utf-8"))
+
+
 def measurements() -> dict[str, int]:
     """Every count the documents publish, measured again."""
     data = collected()
@@ -400,6 +422,35 @@ def measurements() -> dict[str, int]:
     measured["the entry points the audit cannot enter"] = audit["capacity"][
         "entry_points_that_trap"
     ]
+    analysis = static_analysis()
+    scans = analysis["scans"]
+    current = scans[
+        max(scans, key=lambda version: tuple(int(p) for p in version.split(".")))
+    ]
+    measured["the files the static analyzer reads"] = current["files"]
+    measured["the files the static analyzer understands"] = current["parsed"]
+    measured["the actionable findings of the static analyzer"] = current[
+        "actionable"
+    ]
+    measured["the notices of the static analyzer"] = current["notices"]
+    measured["the unreliable regions of the static analyzer"] = current[
+        "unreliable"
+    ]
+    measured["the findings the static analyzer withholds"] = current["withheld"]
+    measured["the unchecked calls of the static analyzer"] = current["unchecked"]
+    measured["the files the static analyzer does not finish"] = current[
+        "not_parsed_reasons"
+    ]["files"]
+    measured[
+        "the actionable findings of the static analyzer of the release of 0.0.95"
+    ] = scans["0.0.95"]["actionable"]
+    quantile = normal_ppf()
+    measured[
+        "the arguments of the check of the quantile function"
+    ] = quantile["arguments"]
+    measured[
+        "the largest relative distance of the quantile function to the upstream"
+    ] = quantile["largest_relative_distance"]
     return measured
 
 
@@ -746,6 +797,64 @@ CLAIMS: list[tuple[str, str, str]] = [
     ),
     (
         "AGENTS.md",
+        "the files the static analyzer reads",
+        r"the static analyzer reads \*\*(\d+)\*\* files",
+    ),
+    (
+        "AGENTS.md",
+        "the files the static analyzer understands",
+        r"the static analyzer reads \*\*\d+\*\* files, "
+        r"understands \*\*(\d+)\*\* of them",
+    ),
+    (
+        "AGENTS.md",
+        "the actionable findings of the static analyzer",
+        r"reports \*\*(\d+)\*\* actionable findings",
+    ),
+    (
+        "AGENTS.md",
+        "the notices of the static analyzer",
+        r"The rest is \*\*(\d+)\*\* notices",
+    ),
+    (
+        "AGENTS.md",
+        "the unreliable regions of the static analyzer",
+        r"holds \*\*(\d+)\*\* unreliable regions",
+    ),
+    (
+        "AGENTS.md",
+        "the findings the static analyzer withholds",
+        r"of which \*\*(\d+)\*\* withhold a finding",
+    ),
+    (
+        "AGENTS.md",
+        "the unchecked calls of the static analyzer",
+        r"and \*\*(\d+)\*\* unchecked calls",
+    ),
+    (
+        "AGENTS.md",
+        "the files the static analyzer does not finish",
+        r"the \*\*(\d+)\*\* files the analyzer does not finish",
+    ),
+    (
+        "AGENTS.md",
+        "the actionable findings of the static analyzer of the release of 0.0.95",
+        r"The scan of the release of 0\.0\.95 reported \*\*(\d+)\*\* "
+        r"actionable finding",
+    ),
+    (
+        "AGENTS.md",
+        "the arguments of the check of the quantile function",
+        r"prints the quantile of the normal\s+distribution for "
+        r"\*\*(\d+)\*\* arguments",
+    ),
+    (
+        "AGENTS.md",
+        "the largest relative distance of the quantile function to the upstream",
+        r"to a relative distance of \*\*([0-9.]+e-[0-9]+)\*\* at worst",
+    ),
+    (
+        "AGENTS.md",
         "the entry points the audit can enter",
         r"between \*\*(\d+)\*\* and \*\*\d+\*\* entry\s+points",
     ),
@@ -786,8 +895,35 @@ def main() -> int:
             continue
         for value in found:
             checked += 1
-            stated = int(value) if value.isdigit() else number_of(value)
             expected = measured[key]
+            if isinstance(expected, float):
+                # a floating point measurement is compared with a relative
+                # distance of a thousandth, which is the rounding of the
+                # number in the document
+                tolerance = abs(expected) * 0.001
+                try:
+                    stated = float(value)
+                except ValueError:
+                    failures.append(
+                        f"{name}: the document states {value} for {key}, and "
+                        "the measurement is a number"
+                    )
+                    continue
+                checked += 1
+                if arguments.falsify:
+                    if abs(stated - expected) <= tolerance:
+                        failures.append(
+                            f"{name}: the document states the measured number "
+                            f"{expected} for {key}, and the falsifying run "
+                            "requires a wrong one"
+                        )
+                elif abs(stated - expected) > tolerance:
+                    failures.append(
+                        f"{name}: the document states {value} for {key}, and "
+                        f"the measurement is {expected}"
+                    )
+                continue
+            stated = int(value) if value.isdigit() else number_of(value)
             if arguments.falsify:
                 if stated == expected:
                     failures.append(

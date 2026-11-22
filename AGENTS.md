@@ -1963,19 +1963,27 @@ README makes, so they are tracked in the repository:
   `xfail`, and the two cases of the do sampler that fail on the scikit-learn
   without `multi_class`. It is a report and not a gate step, because the
   upstream's suite is slow and some of its cases are flaky.
-- **The tree is audited by the static analyzer of the registry, and the two
-  findings it gives are two dead stores.** The analyzer is the package
+- **The tree is audited by the static analyzer of the registry, and it reports
+  no actionable finding at all.** The analyzer is the package
   `riantr/moonbit_static_analysis`, and it runs on the tree without touching
   it: `moonx riantr/moonbit_static_analysis@latest <the path of the tree>`.
   **The CLI cannot exit non-zero**, so a caller has to read the report and not
-  the exit code. MEASURED on the release of 0.0.93: the scan reads **246**
-  files, understands **228** of them (**92.6%**), and reports **2** actionable
-  findings, both of them of the family `MSA-015` (a dead store: the value a
-  write put in the name is read on no path before the name is written again),
-  both with the confidence `high`. The rest is **1716** notices, which are the
-  scope limits of the frontend -- a `test` block, a `const`, a `struct`, an
-  `enum`, an `if` used as a value and an anonymous function literal -- and not
-  defects of the tree.
+  the exit code. MEASURED on the release of 0.0.96: the scan of the static
+  analyzer reads **248** files, understands **230** of them, and reports **0**
+  actionable findings. The rest is **1728** notices, which are the scope
+  limits of the frontend -- a `test` block, a `const`, a `struct`, an `enum`,
+  an `if` used as a value and an anonymous function literal -- and not defects
+  of the tree. The report holds **145** unreliable regions, of which **14**
+  withhold a finding, and **9632** unchecked calls, which are not findings at
+  all.
+  The scan of the release of 0.0.95 reported **1** actionable finding, and it
+  is the dead store of `src/utils/stats.mbt` that the release of 0.0.96
+  removes.
+  The measurements are committed with the repository, in the file
+  `_verify/static_analysis.json`, and the script
+  `_verify/static_analysis_report.py` writes them from a report of the
+  analyzer, so that the numbers the documents publish are measured and not
+  typed.
   - The finding of `src/refuters/dummy_outcome_models.mbt` was a **dead store**:
     the `index` of the walk of a tree was bound to zero and then written in
     the two arms of the `if` before anything read it. The fix reads the four
@@ -1986,31 +1994,44 @@ README makes, so they are tracked in the repository:
     refuter, `-1.316749893149489`, `4.700611528154843` and
     `-1.0294556710155225` in both runs -- and the scan reads the same number of
     files, notices and unreliable regions before and after.
-  - The finding of `src/utils/stats.mbt` is a **dead store too**, and it is
-    **kept on purpose**. The `x` of `normal_ppf` is bound to zero and then
-    written in each of the three arms of the `if` before anything reads it,
-    and the only way to remove the dead store is to make the arms the value of
-    an `if` used as a value. MEASURED: that change makes the frontend of the
-    analyzer stop reading the file at the `if`, so the file becomes `PARTIAL`
-    (`read up to line 274`) and the findings after that line are **counted and
-    not shown** -- a deliberate dead store placed after the `if` was **not
-    reported** in that run. The finding would therefore disappear because the
-    analyzer loses sight of the code, and not because the code got better, so
-    the dead store stays and the finding is a known one.
+  - The finding of `src/utils/stats.mbt` was a **dead store** as well, and it
+    was **kept on purpose** until the release of 0.0.96. The `x` of
+    `normal_ppf` is bound to zero and then written in each of the three arms
+    of the `if` before anything reads it, and the working agreements said that
+    the only way to remove the dead store is to make the arms the value of an
+    `if` used as a value -- a change that makes the frontend of the analyzer
+    stop reading the file at the `if`, so that the findings after that line
+    are counted and not shown, and a deliberate dead store placed after the
+    `if` is not reported in that run.
+    MEASURED: **that is not the only way.** A helper that returns from every
+    arm keeps the `if` a **statement**, and the third arm has to **name** its
+    value, because the parser of the analyzer trips on the closing parentheses
+    of a fraction that is the value of a block. With that shape the analyzer
+    reads the whole file again and reports **no** finding, and the file stays
+    one of the files it reads to the end.
+    The numbers of the function are **identical** before and after the change
+    -- MEASURED with a probe that prints the quantile of the normal
+    distribution for **41** arguments, which cover the three regions of
+    Acklam's inverse normal CDF and their borders: the two runs print the very
+    same numbers, and those numbers agree with the ones of
+    `scipy.stats.norm.ppf` to a relative distance of **2.2069e-12** at worst.
+    The script `_verify/check_normal_ppf.py` holds the numbers and requires
+    the port to produce the very same ones, and it has a `--falsify` mode that
+    requires a wrong one and checks that the check goes red.
   - **The blind spot of the analyzer on this tree is a `for` loop whose
-    variable is a tuple pattern**, and it is the only one. MEASURED: the 18
+    variable is a tuple pattern**, and it is the only one. MEASURED: the **18**
     files the analyzer does not finish are reported by the reason of the
     failure, and all three reasons are that one construct -- a `for` loop whose
     variable is a tuple pattern, as `for (from, to) in edges` -- read as the
     unexpected token of the comma, as `expected loop variable` and as
-    `expected a struct literal field here`. The 18 files are the ones of the
-    temporal graph, of the three files of the plotting, of the efficient
-    backdoor, of the causal graph and of its directed graph, of the falsify
-    layer and of its test, of the random graph of the data sets, of the PC
-    algorithm, of the graph test and of the test of the causal model. The
-    **14** findings of the files after that line are **withheld**, so the
-    report of the scan is a report of the **228** files it reads and not of the
-    246 of the tree.
+    `expected a struct literal field here`. They are the PC algorithm, the
+    random graph of the data sets, the falsification layer with its two tests,
+    the five files of the graph, the efficient backdoor, the three files of
+    the plotting, the two files of the tests of the tree and the two files of
+    the time series, and the file `_verify/static_analysis.json` names every
+    one of them. The **14** findings of the files after that line are
+    **withheld**, so the report of the scan is a report of the files it reads
+    and not of the whole tree.
     The construct is idiomatic MoonBit and the tool itself says that what it
     cannot read measures its own blind spot and not the code, so the loops
     stay as they are. Rewriting them would buy the tool its coverage and cost

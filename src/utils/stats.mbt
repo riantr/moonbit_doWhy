@@ -258,26 +258,52 @@ pub fn normal_ppf(p : Double) -> Double {
   ]
   let plow = 0.02425
   let phigh = 1.0 - plow
-  let mut x = 0.0
+  let x = normal_ppf_acklam(p, plow, phigh, a, b, c, d)
+  let e = normal_cdf(x) - p
+  let u = e * (2.0 * @math.PI).sqrt() * @math.exp(x * x / 2.0)
+  x - u / (1.0 + x * u / 2.0)
+}
+
+///|
+/// The three regions of Acklam's inverse normal CDF.
+///
+/// Every arm returns its own value, so that no value is bound before it is
+/// written, and the third arm names its value, because the parser of the
+/// analyzer of the registry trips on the closing parentheses of a fraction
+/// that is the value of a block.
+fn normal_ppf_acklam(
+  p : Double,
+  plow : Double,
+  phigh : Double,
+  a : Array[Double],
+  b : Array[Double],
+  c : Array[Double],
+  d : Array[Double],
+) -> Double {
   if p < plow {
     let q = (-2.0 * @math.ln(p)).sqrt()
-    x = (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+    let value = (
+        ((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]
+      ) /
       ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
+    return value
   } else if p <= phigh {
     let q = p - 0.5
     let r = q * q
-    x = (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) *
+    let value = (
+        ((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]
+      ) *
       q /
       (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1.0)
+    return value
   } else {
     let q = (-2.0 * @math.ln(1.0 - p)).sqrt()
-    x = -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+    let value = (
+        ((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]
+      ) /
       ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
+    return -value
   }
-  let e = normal_cdf(x) - p
-  let u = e * (2.0 * @math.PI).sqrt() * @math.exp(x * x / 2.0)
-  x = x - u / (1.0 + x * u / 2.0)
-  x
 }
 
 ///|

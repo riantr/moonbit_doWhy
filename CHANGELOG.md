@@ -5,6 +5,58 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.96] - 2026-11-23
+
+### Fixed
+
+- The quantile function of the normal distribution bound its result to zero
+  and wrote it in each of the three arms of the `if` before anything read it,
+  so the value of the first binding was a **dead store**. The static analyzer
+  of the registry reports it as a finding of the family `MSA-015` with the
+  confidence `high`, and the working agreements kept it on purpose, because
+  the only way to remove it that was known made the arms of the `if` the value
+  of an `if` used as a value, and the frontend of the analyzer then stops
+  reading the file at the `if`, so that the findings after that line are
+  counted and not shown.
+  MEASURED: that is not the only way. A helper that returns from every arm
+  keeps the `if` a **statement**, and the third arm has to **name** its value,
+  because the parser of the analyzer trips on the closing parentheses of a
+  fraction that is the value of a block. With that shape the analyzer reads
+  the whole file again and reports **no** finding, and the file stays one of
+  the files it reads to the end.
+  The numbers of the function are **identical** before and after the change:
+  MEASURED with a probe that prints the quantile for **41** arguments, which
+  cover the three regions of Acklam's inverse normal CDF and their borders,
+  the two runs print the very same numbers, and those numbers agree with the
+  ones of `scipy.stats.norm.ppf` to a relative distance of `2.2069e-12` at
+  worst. The script `_verify/check_normal_ppf.py` holds the numbers and
+  requires the port to produce the very same ones, and it has a `--falsify`
+  mode that requires a wrong one and checks that the check goes red.
+
+### Added
+
+- The tree is audited by the static analyzer of the registry, the package
+  `riantr/moonbit_static_analysis`, with the command
+  `moonx riantr/moonbit_static_analysis@latest <the path of the tree>`. The
+  analyzer reads the tree and never writes to it, and **its CLI cannot exit
+  non-zero**, so a caller has to read the report and not the exit code.
+  The scan of the release of 0.0.96 reads the **248** files of the tree,
+  understands **230** of them, and reports **0** actionable findings. The rest
+  is **1728** notices, which are the scope limits of the frontend -- a `test`
+  block, a `const`, a `struct`, an `enum`, an `if` used as a value and an
+  anonymous function literal -- and not defects of the tree. The report holds
+  **145** unreliable regions, of which **14** withhold a finding, and **9632**
+  unchecked calls, which are not findings at all.
+  The **18** files the analyzer does not finish are the ones with a `for` loop
+  whose variable is a tuple pattern, and the **14** findings of the files
+  after that line are withheld, so the report of the scan is a report of the
+  files it reads and not of the whole tree.
+  The measurements of the audit are committed with the repository, in the file
+  `_verify/static_analysis.json`, and the script
+  `_verify/static_analysis_report.py` writes them from a report of the
+  analyzer. The script `_verify/check_published_counts.py` requires the
+  working agreements to state the measured numbers.
+
 ## [0.0.95] - 2026-11-23
 
 ### Fixed
