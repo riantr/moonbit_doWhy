@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.91.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.92.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -115,6 +115,15 @@ The check of the cases is a count, and a count hides a case that was replaced
 by another one in a file whose port holds many more cases than its upstream.
 The argument `--audit` therefore prints the cases of the two sides of the
 twelve files whose margin is the tightest, so that the mapping can be read.
+
+The numbers this README publishes are measurements as well, so they are
+measured again and the README has to state the measured number. The script
+`_verify/check_published_counts.py` reads the file of the collected cases of
+the upstream, the file of the verdicts of the notebooks, the file of the
+verdicts of the suite of the upstream and the tree of the port, and requires
+every count of this README and of the `AGENTS.md` to be the measured one. A
+count that drifts away from its measurement fails the check, and the argument
+`--falsify` proves that the check fails when the documents drift.
 
 ## Install
 

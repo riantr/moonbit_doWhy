@@ -5,6 +5,43 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.92] - 2026-11-22
+
+### Added
+
+- The script `_verify/check_published_counts.py` measures every count that
+  the README and the `AGENTS.md` publish -- the number of the cases pytest
+  collects in the upstream, the number of the cases the task `test` of the
+  upstream runs, the number of the deselected cases, the number of the
+  notebooks of the upstream, the number of the notebooks the port mirrors and
+  the ones it does not mirror, the three verdicts of the run of the upstream,
+  the number of the graphs of the table of the backdoor identifier, and the
+  number of the files and of the cases of the upstream that fail with the
+  numpy-2 error -- and requires the documents to state the measured number.
+  Every one of those numbers is a measurement, and a measurement that is
+  written in a document and never checked drifts the moment the upstream or
+  the port changes. The script reads the number from the artefact that holds
+  it -- the file of the collected cases, the file of the verdicts of the
+  notebooks, the file of the verdicts of the suite and the tree of the port --
+  and never repeats a count of its own. The argument `--falsify` requires the
+  documents to state a wrong number, so that a run of it proves that the check
+  fails when the documents drift.
+- The script `_verify/upstream_verdicts.py` writes the counts of the run of
+  the suite of the upstream into the file `_verify/upstream_suite_verdicts.json`,
+  which is committed with the repository like the file of the verdicts of the
+  notebooks. The run of the suite takes minutes, so its counts are a
+  measurement that is committed, and the check of the published counts reads
+  it. The run of the suite of the upstream gives 69 cases that fail with the
+  numpy-2 error, in 15 of its files, and the file of the verdicts of the
+  notebooks gives the 23 notebooks that run as they are, the 10 that run once
+  the repairs are applied and the 12 that fail.
+
+### Changed
+
+- The workflow `check` and the workflow `publish` run the check of the
+  published counts, so a count that drifts away from its measurement fails
+  the gate of the repository and the gate of the release.
+
 ## [0.0.91] - 2026-11-22
 
 ### Added

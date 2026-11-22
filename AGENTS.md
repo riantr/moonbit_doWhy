@@ -1963,6 +1963,27 @@ README makes, so they are tracked in the repository:
   `xfail`, and the two cases of the do sampler that fail on the scikit-learn
   without `multi_class`. It is a report and not a gate step, because the
   upstream's suite is slow and some of its cases are flaky.
+- **The counts that the documents publish are measured again, and the documents
+  have to state the measured number.** The README and this file publish a
+  number of counts -- the cases of the upstream, the notebooks, the verdicts of
+  the run of the upstream, the graphs of a table of the port, and the files and
+  the cases that fail with the numpy-2 error. Every one of those numbers is a
+  **measurement**, and a measurement that is written in a document and never
+  checked is a number that drifts the moment the upstream or the port changes.
+  The script
+  `_verify/check_published_counts.py` measures every count again, from the
+  artefact that holds it -- the file of the collected cases, the file of the
+  verdicts of the notebooks, the file of the verdicts of the suite, and the
+  tree of the port itself -- and requires the documents to state it. It never
+  repeats a count of its own, so the check fails as soon as a measurement
+  changes and a document does not follow.
+  The counts of the run of the suite of the upstream are a measurement of a run
+  that takes minutes, so the script `_verify/upstream_verdicts.py` writes them
+  into the file `_verify/upstream_suite_verdicts.json`, which is committed
+  with the repository like the file of the verdicts of the notebooks. The
+  argument `--falsify` of the check requires the documents to state a wrong
+  number, so that a run of it proves that the check fails when the documents
+  drift.
 - `permute` of the upstream refuter writes into the array it is given, so a case
   that permutes a read-only array raises `ValueError: output array is read-only`
   on numpy 2.x, and the case of the permuted custom model raises `ValueError:

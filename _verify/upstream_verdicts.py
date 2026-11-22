@@ -27,6 +27,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import subprocess
@@ -35,6 +36,8 @@ import tempfile
 import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 from pathlib import Path
+
+VERDICTS_FILE = Path(__file__).resolve().parent / "upstream_suite_verdicts.json"
 
 UPSTREAM = Path(
     os.environ.get("DOWHY_UPSTREAM_ROOT", r"D:\src\MiniMax\git\dowhy\dowhy-0.14")
@@ -289,6 +292,30 @@ def main() -> int:
     print("the failures, by their reason:")
     for label, count in classes.most_common():
         print("   {:3d}  {}".format(count, label))
+    print()
+
+    # The counts of the run are a measurement, and the documents of the port
+    # publish some of them. The file holds them, so that the script
+    # `_verify/check_published_counts.py` can measure them again and require
+    # the documents to state the numbers of the measurement.
+    measured_counts = {
+        "numpy-2 binary treatment": classes["numpy-2 binary treatment"],
+        "pandas-3 read-only outcome": classes["pandas-3 read-only outcome"],
+        "scikit-learn without multi_class": classes[
+            "scikit-learn without multi_class"
+        ],
+        "cases": len(verdicts),
+        "passed": totals["passed"],
+        "failed": totals["failed"],
+        "skipped": totals["skipped"],
+        "files with a binary treatment": len(BINARY_TREATMENT_FILES),
+    }
+    VERDICTS_FILE.write_text(
+        json.dumps(measured_counts, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="",
+    )
+    print("the counts of the run are written to {}".format(VERDICTS_FILE))
     print()
 
     failures: list[str] = []

@@ -1,0 +1,10 @@
+{
+  "cases": 104,
+  "failed": 73,
+  "files with a binary treatment": 15,
+  "numpy-2 binary treatment": 69,
+  "pandas-3 read-only outcome": 1,
+  "passed": 27,
+  "scikit-learn without multi_class": 2,
+  "skipped": 4
+}

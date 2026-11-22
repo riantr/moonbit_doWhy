@@ -82,3 +82,12 @@ jobs:
 
       - name: Check the README names the released version
         run: python3 .github/scripts/check_readme_sync.py
+
+      # The README and the AGENTS file publish a number of counts -- the cases
+      # of the upstream, the notebooks, the verdicts of the run of the
+      # upstream. Every one of them is a measurement, and a measurement that is
+      # written in a document and never checked drifts the moment the
+      # measurement changes. The script measures every count again, from the
+      # artefact that holds it, and requires the documents to state it.
+      - name: Check the published counts against the measurements
+        run: python3 _verify/check_published_counts.py
