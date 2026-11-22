@@ -103,7 +103,7 @@ pub enum Transformation {
     (@api.DataFrame, Array[Double], @api.DataFrame) -> (
       Array[Double],
       Array[Double],
-    )
+    ),
   )
 }
 

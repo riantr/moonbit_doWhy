@@ -5,6 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.91] - 2026-11-22
+
+### Added
+
+- The script `_verify/gen_upstream_estimator_testdata.py` builds the data set
+  of the upstream tests of the estimators with the generator of the upstream,
+  `dowhy.datasets.linear_dataset`, and with the seed of the fixture
+  `fixed_seed` of the upstream, and it runs the estimator of the upstream on
+  those rows. The file `src/tests/upstream_estimator_testdata.mbt` holds the
+  rows of the upstream and the numbers the upstream computes on them, and the
+  test `src/tests/upstream_rows.mbt` runs the estimator of the port on the
+  rows of the upstream and asserts that the estimate of the port and the
+  estimate of the upstream are the same number: the estimate of the port is
+  9.998951343634294 and the one of the upstream is 9.99895134363435, so the two
+  differ by less than `1e-12`, which is the last bits of the double.
+
+### Fixed
+
+- The call of `String::parse_int` in `src/timeseries/temporal_shift.mbt` named
+  the radix with the label `base`, which the core of the toolchain `0.10.21`
+  renamed to `radix`. The call leaves the label out and takes the default of
+  the function, which is ten in both cores, so the source builds with the core
+  `0.10.20` and with the core `0.10.21` and warns with neither of them.
+- The formatter of the toolchain `0.1.20261117` puts a comma behind the last
+  element of a tuple type that is written over several lines, so
+  `moon fmt --check` failed on the file `src/refuters/dummy_outcome.mbt` with
+  the newest toolchain, which is the one the CI installs. The file is
+  formatted with it now.
+
 ## [0.0.90] - 2026-11-14
 
 ### Fixed

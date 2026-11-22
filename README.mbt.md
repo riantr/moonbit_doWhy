@@ -5,7 +5,7 @@ graph construction, effect identification, effect estimation and refutation, wit
 **zero external runtime dependencies**.
 
 [![CI](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml/badge.svg)](https://github.com/riantr/moonbit_doWhy/actions/workflows/check.yml)
-[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.90.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
+[![MoonBit](https://mooncakes.io/assets/badge/riantr/moonbit_dowhy-v0.0.91.svg)](https://mooncakes.io/riantr/moonbit_dowhy)
 
 The package ships as `riantr/moonbit_dowhy` and runs on `native`, `wasm`,
 `wasm-gc` and `js`. The test suite executes on all four.
@@ -54,6 +54,18 @@ gate runs, leaves the cases marked `advanced` and the ones marked `econml`
 out: it runs 620 of the 635 cases. The task `test_advanced` of the nightly
 run keeps every one of them, so the 635 are the cases the port has to mirror,
 and the file of the collected cases holds the 15 deselected cases as well.
+
+The port runs on the rows of the upstream as well. The script
+`_verify/gen_upstream_estimator_testdata.py` builds the data set of the
+upstream tests of the estimators with the generator of the upstream,
+`dowhy.datasets.linear_dataset`, and with the seed of the fixture
+`fixed_seed` of the upstream, and it runs the estimator of the upstream on
+those rows. The file `src/tests/upstream_estimator_testdata.mbt` holds the
+rows of the upstream and the numbers the upstream computes on them, and the
+test `src/tests/upstream_rows.mbt` runs the estimator of the port on those
+rows and asserts that the estimate of the port and the estimate of the
+upstream are the same number: they differ by less than `1e-12`, which is the
+last bits of the double.
 
 Every one of the 635 cases of the upstream is mirrored by a case of the port,
 so the table of the cases the port does not mirror is empty. Two files need a

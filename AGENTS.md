@@ -2121,3 +2121,46 @@ README makes, so they are tracked in the repository:
   as well: the estimate of the instrumental variable of the notebook of the
   upstream is 3.78 on the rows of the upstream and 4.03 on the rows of the
   port, and the true effect of that notebook is four.
+- The rows of the upstream **can be used as the rows of a test of the port**.
+  The generator of the upstream `dowhy.datasets.linear_dataset` draws its rows
+  with the generator of numpy, so a script that seeds the generator of numpy
+  the way the fixture `fixed_seed` of the upstream tests does writes the rows
+  of the upstream into a file of the port. The file
+  `src/tests/upstream_estimator_testdata.mbt` holds the rows of the data set of
+  the upstream tests of the estimators and the numbers the estimator of the
+  upstream computes on them, and the test `src/tests/upstream_rows.mbt` runs
+  the estimator of the port on those rows and asserts that the two numbers are
+  the same number: the estimate of the port is 9.998951343634294 and the one of
+  the upstream is 9.99895134363435, so the two differ by less than `1e-12`,
+  which is the last bits of the double. The script
+  `_verify/gen_upstream_estimator_testdata.py` writes the file.
+- The **core of the toolchain renamed the label of the radix of
+  `String::parse_int`**: the core `0.10.20` calls it `base` and the core
+  `0.10.21` calls it `radix`. A call with the label builds with one of the two
+  cores and warns with the other one, and the CI installs the newest core, so
+  the call in `src/timeseries/temporal_shift.mbt` leaves the label out and takes
+  the default of the function, which is ten in both cores.
+- The **formatter of the toolchain `0.1.20261117`** puts a comma behind the
+  last element of a tuple type that is written over several lines, so
+  `moon fmt --check` fails on a file that the formatter of the toolchain
+  `0.1.20261104` left alone. The whole module has to be formatted with the
+  newest formatter before it is published.
+- The **estimators of the propensity score of the port compute no confidence
+  interval and no standard error**: the interval of the estimate stays at
+  zero and the standard error stays at zero. The estimators of the upstream
+  compute both, with the **bootstrap** method: none of the estimators of the
+  upstream overrides the method of the base class, so the base class raises
+  its `NotImplementedError` and the estimate falls back to the bootstrap,
+  which resamples the rows a hundred times and takes a fraction of eight of
+  them. The test of the upstream calls the interval and the standard error
+  of every estimator, so the port mirrors the call and reports the zero,
+  which is the one difference the port knows of between its numbers and the
+  numbers of the upstream on the rows of the upstream: the weighted estimate
+  of the upstream is 10.251105347739053 with the interval
+  [10.009622506601062, 10.491868441724584] and the standard error
+  0.1217233804413221, and the estimate of the port is 10.251106345194941,
+  which is the solver of the logistic regression, while its interval and its
+  standard error are zero. The bootstrap of the upstream draws its resamples
+  with the generator of numpy and the bootstrap of the port draws them with
+  the generator of the port, so the two bootstraps are the same numbers only
+  in the distribution and not in the draw.

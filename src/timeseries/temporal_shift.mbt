@@ -6,8 +6,14 @@
 
 ///|
 /// Parse an integer, returning `None` when the text is not a number.
+///
+/// The radix is the default of the function, which is ten. The label of the
+/// argument is not given, because the core of the toolchain renamed it: the
+/// core `0.10.20` calls it `base` and the core `0.10.21` calls it `radix`.
+/// The default is the same in both, and a call without the label builds with
+/// both of them and warns with neither of them.
 fn parse_int(text : String) -> Int32? {
-  Some(@string.parse_int(text, base=10)) catch {
+  Some(@string.parse_int(text)) catch {
     _ => None
   }
 }
