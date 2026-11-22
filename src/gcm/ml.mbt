@@ -1109,7 +1109,15 @@ pub struct KnnModel {
 
 ///|
 /// An unfitted nearest neighbour prediction model.
+///
+/// The upstream builds the model with the `KNeighborsRegressor` of
+/// scikit-learn, which refuses a number of neighbours below one.  The port
+/// refuses it as well, so that a number of neighbours below one does not read
+/// outside the array of the neighbours.
 pub fn KnnModel::new(k : Int32) -> KnnModel {
+  if !@utils.has_valid_neighbour_count(k) {
+    abort(@utils.NEIGHBOUR_COUNT_ERROR)
+  }
   {
     k,
     rows: @utils.Matrix::zeros(0, 0),
@@ -1352,7 +1360,15 @@ pub struct KnnClassifier {
 
 ///|
 /// An unfitted nearest neighbour classification model.
+///
+/// The upstream builds the model with the `KNeighborsClassifier` of
+/// scikit-learn, which refuses a number of neighbours below one.  The port
+/// refuses it as well, so that a number of neighbours below one does not read
+/// outside the array of the neighbours.
 pub fn KnnClassifier::new(k : Int32) -> KnnClassifier {
+  if !@utils.has_valid_neighbour_count(k) {
+    abort(@utils.NEIGHBOUR_COUNT_ERROR)
+  }
   {
     k,
     rows: @utils.Matrix::zeros(0, 0),

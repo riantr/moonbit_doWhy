@@ -5,6 +5,81 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.95] - 2026-11-23
+
+### Fixed
+
+- The nearest neighbour estimators of the port read outside the array of the
+  neighbours when they were given a number of neighbours below one. The
+  upstream builds its nearest neighbour estimators with scikit-learn, whose
+  `NearestNeighbors`, its `KNeighborsRegressor` and its `KNeighborsClassifier`
+  all refuse such a number with an `InvalidParameterError`, and the port read
+  `best_distances[-1]` with a number of neighbours of zero, `nearest[-1]` with a
+  number of neighbours of zero and `distances[-1]` with a number of matches of
+  zero, so it read outside the array of the neighbours. MEASURED with the
+  upstream and with a probe of the port: the upstream raises
+  `InvalidParameterError: The 'n_neighbors' parameter of NearestNeighbors must
+  be an int in the range [1, inf) or None. Got 0 instead.` for a number of
+  neighbours of zero, and the run of the web assembly of the port names the
+  read that went out of bounds, `Array::at` inside `gcm.kth_distance`. The port
+  refuses the number now, in **five** places: the `KnnModel` and the
+  `KnnClassifier` of the `gcm` package, the
+  `estimate_kl_divergence_continuous_knn` of the same package, the
+  `nearest_rows` of the distance matching estimator and the `knn_predict` of the
+  dummy outcome refuter. The condition is the function
+  `has_valid_neighbour_count` and the message `NEIGHBOUR_COUNT_ERROR` of the
+  `utils` package, so that the three packages that use them share one
+  condition and one message.
+
+### Added
+
+- The audit of the tree reaches **every** function of it when it scans the
+  packages one by one. The scan of the whole tree enters the functions of the
+  cap of its entry points, so most of the tree is never interpreted. The scan
+  of the packages one by one enters every function it can enter: MEASURED on
+  the release of 0.0.95, the scan of the **19** packages of the tree enters the
+  **2751** functions it can enter and skips none of them. The tables of the
+  scan of the packages hold the **660** findings and its sidecar holds the
+  **582** of them. The family `TAINT-INDEX` holds the **269** of them, the
+  family `TAINT-INDEX-RANGE` holds the **164** of them, the family
+  `BUDGET-EXCEEDED` holds the **148** of them and the family `INFINITE-LOOP`
+  holds the **1** of them.
+- The verdict of the analyzer is not evidence of a defect of the port. The
+  analyzer reports a finding of the family `TAINT-INDEX` when a tainted value
+  may reach an array index, and it reports the very same verdict for a function
+  whose index is guarded and cannot read out of bounds. MEASURED with a package
+  of **10** known shapes of the guard around one array index, the script
+  `_verify/lunaflow_calibration.py`: the analyzer reports the **11** findings
+  of them, of which the family `TAINT-INDEX` holds **6** of them and the
+  family `TAINT-INDEX-RANGE` holds **4** of them, and the **1** shape of the
+  clamped index gets no finding at all. **The analyzer reports an error for
+  four of the shapes that are safe code** -- the disjunction guard, the two
+  separate guards, the disjunction guard with a constant bound and the loop
+  index into a parallel array -- and it reports **two** of the three shapes that
+  are holes, so the verdict of the analyzer has to be read against the source
+  and not taken for a defect.
+- The refusal of a number of neighbours below one is checked by the script
+  `_verify/check_knn_guard.py`. MoonBit cannot catch the abort of a function
+  and cannot catch an index that is out of bounds -- both of them end the
+  process -- so a test of the port cannot assert the refusal itself. The script
+  writes a probe package into `src/examples/`, runs the port in a process of its
+  own for every one of the four sites it probes, reads the message of the
+  refusal from its output and removes the probe. The script has a `--falsify`
+  mode, which removes the guard of the first site and checks that the check
+  goes red, and the gate of the release runs it.
+- The behaviour of the upstream for the whole family of the number of the
+  neighbours is measured by the script `_verify/knn_neighbours_reference.py`:
+  the `NearestNeighbors`, the `KNeighborsRegressor` and the
+  `KNeighborsClassifier` of the upstream refuse a number of neighbours below
+  one, and the script runs them.
+- The measurements of the audit are committed with the repository, in the file
+  `_verify/lunaflow_qa.json`, and the script `_verify/check_published_counts.py`
+  requires the working agreements to state the measured numbers. The file holds
+  the scan of the whole tree, the scan of the second level, the scan of the
+  packages one by one, the calibration of the analyzer, the number of the
+  places that refuse a number of neighbours below one and the capacity of the
+  analyzer.
+
 ## [0.0.94] - 2026-11-22
 
 ### Fixed

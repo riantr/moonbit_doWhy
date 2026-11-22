@@ -120,6 +120,9 @@ fn nearest_rows(
   num_matches : Int32,
   metric : DistanceMetric,
 ) -> Array[Int32] {
+  if !@utils.has_valid_neighbour_count(num_matches) {
+    abort(@utils.NEIGHBOUR_COUNT_ERROR)
+  }
   if num_matches > candidates.length() {
     abort(
       "Expected n_neighbors <= n_samples_fit, but n_neighbors = " +

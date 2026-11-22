@@ -341,6 +341,59 @@ def measurements() -> dict[str, int]:
     measured[
         "the findings of the family UNREACHABLE of the second level of the audit"
     ] = level2["by_rule"]["UNREACHABLE"]
+    packages = audit["per_package"]
+    calibration = audit["calibration"]
+    measured[
+        "the packages the audit of the tree scans one by one"
+    ] = packages["packages"]
+    measured[
+        "the functions the audit of the tree enters when it scans the packages one by one"
+    ] = packages["functions_entered"]
+    measured[
+        "the findings the audit of the tree reports when it scans the packages one by one"
+    ] = packages["findings_in_the_tables"]
+    measured[
+        "the findings the sidecar of the audit holds when it scans the packages one by one"
+    ] = packages["findings_in_the_sidecar"]
+    measured[
+        "the findings of the family TAINT-INDEX of the audit of the packages"
+    ] = packages["by_rule"]["TAINT-INDEX"]
+    measured[
+        "the findings of the family TAINT-INDEX-RANGE of the audit of the packages"
+    ] = packages["by_rule"]["TAINT-INDEX-RANGE"]
+    measured[
+        "the findings of the family BUDGET-EXCEEDED of the audit of the packages"
+    ] = packages["by_rule"]["BUDGET-EXCEEDED"]
+    measured[
+        "the findings of the family INFINITE-LOOP of the audit of the packages"
+    ] = packages["by_rule"]["INFINITE-LOOP"]
+    measured[
+        "the shapes of the calibration of the audit"
+    ] = calibration["shapes"]
+    measured[
+        "the findings of the calibration of the audit"
+    ] = calibration["findings"]
+    measured[
+        "the findings of the family TAINT-INDEX of the calibration of the audit"
+    ] = calibration["by_rule"]["TAINT-INDEX"]
+    measured[
+        "the findings of the family TAINT-INDEX-RANGE of the calibration of the audit"
+    ] = calibration["by_rule"]["TAINT-INDEX-RANGE"]
+    measured[
+        "the shapes of the calibration of the audit without a finding"
+    ] = calibration["shapes_without_a_finding"]
+    measured[
+        "the shapes the calibration of the audit reports as an error that are safe"
+    ] = calibration["shapes_reported_as_an_error_that_are_safe"]
+    measured[
+        "the shapes of the calibration of the audit that are holes"
+    ] = calibration["shapes_that_are_holes"]
+    measured[
+        "the shapes of the calibration of the audit that are holes and are reported as an error"
+    ] = calibration["shapes_reported_as_an_error_that_are_holes"]
+    measured[
+        "the places of the port that refuse a number of neighbours below one"
+    ] = audit["knn_guard"]["places"]
     measured["the entry points the audit can enter"] = audit["capacity"][
         "entry_points_that_survive"
     ]
@@ -605,6 +658,91 @@ CLAIMS: list[tuple[str, str, str]] = [
         "AGENTS.md",
         "the findings the sidecar of the audit holds",
         r"The sidecar of the findings holds \*\*(\d+)\*\* of them",
+    ),
+    (
+        "AGENTS.md",
+        "the packages the audit of the tree scans one by one",
+        r"the scan of the \*\*(\d+)\*\* packages of the tree",
+    ),
+    (
+        "AGENTS.md",
+        "the functions the audit of the tree enters when it scans the packages one by one",
+        r"packages of the tree enters the \*\*(\d+)\*\* functions",
+    ),
+    (
+        "AGENTS.md",
+        "the findings the audit of the tree reports when it scans the packages one by one",
+        r"The tables of the scan of the packages hold the \*\*(\d+)\*\* findings",
+    ),
+    (
+        "AGENTS.md",
+        "the findings the sidecar of the audit holds when it scans the packages one by one",
+        r"its sidecar holds the \*\*(\d+)\*\* of them",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family TAINT-INDEX of the audit of the packages",
+        r"The family `TAINT-INDEX` holds the \*\*(\d+)\*\* of them",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family TAINT-INDEX-RANGE of the audit of the packages",
+        r"the family `TAINT-INDEX-RANGE` holds the \*\*(\d+)\*\*",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family BUDGET-EXCEEDED of the audit of the packages",
+        r"the family `BUDGET-EXCEEDED` holds\s+the \*\*(\d+)\*\*",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family INFINITE-LOOP of the audit of the packages",
+        r"the family `INFINITE-LOOP` holds the \*\*(\d+)\*\*",
+    ),
+    (
+        "AGENTS.md",
+        "the shapes of the calibration of the audit",
+        r"a package of\s+\*\*(\d+)\*\* known shapes of the guard",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the calibration of the audit",
+        r"the analyzer reports the \*\*(\d+)\*\* findings of them",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family TAINT-INDEX of the calibration of the audit",
+        r"the family `TAINT-INDEX` holds \*\*(\d+)\*\* of them",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family TAINT-INDEX-RANGE of the calibration of the audit",
+        r"the family `TAINT-INDEX-RANGE` holds \*\*(\d+)\*\* of them",
+    ),
+    (
+        "AGENTS.md",
+        "the shapes of the calibration of the audit without a finding",
+        r"the \*\*(\d+)\*\* shape of the clamped index gets no finding",
+    ),
+    (
+        "AGENTS.md",
+        "the shapes the calibration of the audit reports as an error that are safe",
+        r"reports an error for\s+(\w+) of the shapes that are safe code",
+    ),
+    (
+        "AGENTS.md",
+        "the shapes of the calibration of the audit that are holes",
+        r"of the (\w+) shapes that are holes",
+    ),
+    (
+        "AGENTS.md",
+        "the shapes of the calibration of the audit that are holes and are reported as an error",
+        r"it reports \*\*(\w+)\*\* of the",
+    ),
+    (
+        "AGENTS.md",
+        "the places of the port that refuse a number of neighbours below one",
+        r"refuse[s]? the number of neighbours in \*\*(\w+)\*\* places",
     ),
     (
         "AGENTS.md",

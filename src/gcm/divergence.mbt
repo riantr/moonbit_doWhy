@@ -130,6 +130,11 @@ pub fn estimate_kl_divergence_of_probabilities(
 /// The rows of X that also occur in Y are removed first when
 /// `remove_common_elements` is true, because a distance of zero would make the
 /// estimate infinite.
+///
+/// The upstream builds a `NearestNeighbors` with `k + 1` neighbours and one with
+/// `k` neighbours, and scikit-learn refuses a number of neighbours below one.
+/// The port refuses it as well, so that a number of neighbours below one does
+/// not read outside the array of the neighbours.
 pub fn estimate_kl_divergence_continuous_knn(
   x : @utils.Matrix,
   y : @utils.Matrix,
@@ -137,6 +142,9 @@ pub fn estimate_kl_divergence_continuous_knn(
   remove_common_elements : Bool,
 ) -> Double {
   check_same_dimension(x, y)
+  if !@utils.has_valid_neighbour_count(k) {
+    abort(@utils.NEIGHBOUR_COUNT_ERROR)
+  }
   let samples = if remove_common_elements { setdiff2d(x, y) } else { x }
   if remove_common_elements && samples.nrows() < k + 1 {
     // All the elements are equal, or at least less than k samples are different.

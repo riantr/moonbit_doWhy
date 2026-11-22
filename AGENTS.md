@@ -2015,6 +2015,35 @@ README makes, so they are tracked in the repository:
     cannot read measures its own blind spot and not the code, so the loops
     stay as they are. Rewriting them would buy the tool its coverage and cost
     the tree the shape of its own loops.
+- **The nearest neighbour estimators of the port refuse a number of neighbours
+  below one, the way scikit-learn refuses it and the way the upstream raises
+  its error.** The upstream builds its nearest neighbour estimators with
+  scikit-learn, whose `NearestNeighbors`, `KNeighborsRegressor` and
+  `KNeighborsClassifier` all refuse a number of neighbours below one with an
+  `InvalidParameterError`. The port read `best_distances[-1]` with a number of
+  neighbours of zero, `nearest[-1]` with a number of neighbours of zero and
+  `distances[-1]` with a number of matches of zero, so it read outside the array
+  of the neighbours. MEASURED with the upstream and with a probe of the port:
+  the upstream raises `InvalidParameterError: The 'n_neighbors' parameter of
+  NearestNeighbors must be an int in the range [1, inf) or None. Got 0
+  instead.` for a number of neighbours of zero, and the run of the web assembly
+  of the port names the read that went out of bounds, `Array::at` inside
+  `gcm.kth_distance`.
+  The check of the number of the neighbours is in the `utils` package, the
+  function `has_valid_neighbour_count` and the message `NEIGHBOUR_COUNT_ERROR`,
+  and the port refuses the number of neighbours in **five** places: the
+  `KnnModel` and the `KnnClassifier` of the `gcm` package, the
+  `estimate_kl_divergence_continuous_knn` of the same package, the
+  `nearest_rows` of the distance matching estimator and the `knn_predict` of the
+  dummy outcome refuter.
+  **MoonBit cannot catch the abort of a function** -- the compiler warns that
+  the body of a `try` never raises an error, and the abort of a function and
+  the index that is out of bounds both end the process -- so a test of the port
+  cannot assert the refusal itself. The script `_verify/check_knn_guard.py`
+  therefore writes a probe package into `src/examples/`, runs the port in a
+  process of its own for every one of the four sites it probes and reads the
+  message of the refusal from its output. The script has a `--falsify` mode,
+  which removes the guard of the first site and checks that the check goes red.
 - **The tree is audited by the dynamic analyzer of the registry, and the one
   finding of the scan that is a defect of the port is an overflow of the
   factorial of the number of the nodes.** The analyzer is the package
@@ -2028,8 +2057,8 @@ README makes, so they are tracked in the repository:
   are about the inputs it invented and not about the inputs of a user. Its
   three levels are the interpreter, the abstract interpretation and the
   verification of the contracts.
-  MEASURED on the release of 0.0.94: the scan reads the **226** files of the
-  tree, holds the **3637** functions and the **25944** statements it
+  MEASURED on the release of 0.0.95: the scan reads the **228** files of the
+  tree, holds the **3640** functions and the **25958** statements it
   understands, enters the **150** of them of the cap of its entry points, and
   reports the **47** findings of its tables, of which **25** are of the family
   `TAINT-INDEX`, **20** are of the family `BUDGET-EXCEEDED` and **2** are of
@@ -2086,6 +2115,31 @@ README makes, so they are tracked in the repository:
     the fix holds one finding less, and the finding that is gone is the
     overflow of the factorial -- the other findings that moved are the ones of
     the same lines, which the fix moved down the file.
+  - **The audit of the tree reaches every function of it when it scans the
+    packages one by one.** The scan of the whole tree enters the functions of
+    the cap of its entry points, so most of the tree is never interpreted. The
+    scan of the packages one by one enters every function it can enter:
+    MEASURED on the release of 0.0.95, the scan of the **19** packages of the
+    tree enters the **2751** functions it can enter and skips none of them.
+    The tables of the scan of the packages hold the **660** findings and its
+    sidecar holds the **582** of them. The family `TAINT-INDEX` holds the
+    **269** of them, the family `TAINT-INDEX-RANGE` holds the **164** of them,
+    the family `BUDGET-EXCEEDED` holds the **148** of them and the family
+    `INFINITE-LOOP` holds the **1** of them.
+  - **The verdict of the analyzer is not evidence of a defect of the port.**
+    The analyzer reports a finding of the family `TAINT-INDEX` when a tainted
+    value may reach an array index, and it reports the very same verdict for a
+    function whose index is guarded and cannot read out of bounds. MEASURED
+    with a package of **10** known shapes of the guard around one array index,
+    the script `_verify/lunaflow_calibration.py`: the analyzer reports the
+    **11** findings of them, of which the family `TAINT-INDEX` holds **6** of
+    them and the family `TAINT-INDEX-RANGE` holds **4** of them, and the **1**
+    shape of the clamped index gets no finding at all.
+    **The analyzer reports an error for four of the shapes that are safe code**
+    -- the disjunction guard, the two separate guards, the disjunction guard
+    with a constant bound and the loop index into a parallel array -- and it
+    reports **two** of the three shapes that are holes, so the verdict of the
+    analyzer has to be read against the source and not taken for a defect.
   - **The analyzer cannot enter every function of this tree.** MEASURED: the
     run with `--per-function` traps the runtime of the web assembly with the
     error `RuntimeError: unreachable` after a minute, and the same happens

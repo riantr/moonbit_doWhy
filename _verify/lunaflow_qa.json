@@ -1,85 +1,390 @@
 {
-  "tool": "riantr/LunaFlow",
-  "version": "0.1.32",
-  "command": "moonx riantr/LunaFlow@latest <the path of the tree>",
-  "tree_version": "0.0.94",
-  "level1": {
-    "files": 226,
-    "functions": 3637,
-    "statements_understood": 25944,
-    "statements_unsupported": 691,
-    "functions_entered": 150,
-    "taint_sinks": 27,
-    "dead_code": 0,
-    "unreachable": 0,
-    "infinite_loop": 0,
-    "findings_in_the_tables": 47,
-    "findings_in_the_sidecar": 44,
-    "by_rule": {
-      "TAINT-INDEX": 25,
-      "BUDGET-EXCEEDED": 17,
-      "TAINT-INDEX-RANGE": 2
-    },
-    "out_of_bounds_observed": [
-      {
-        "rule": "TAINT-INDEX",
-        "fn": "neighbours",
-        "file": "src/cm/pc.mbt",
-        "line": 292,
-        "evidence": "adj[-1] of length 1"
-      },
-      {
-        "rule": "TAINT-INDEX",
-        "fn": "collect_combinations",
-        "file": "src/cm/pc.mbt",
-        "line": 341,
-        "evidence": "values[0] of length 0"
-      },
-      {
-        "rule": "TAINT-INDEX",
-        "fn": "pc_skeleton",
-        "file": "src/cm/pc.mbt",
-        "line": 365,
-        "evidence": "adj[0] of length 0"
-      },
-      {
-        "rule": "TAINT-INDEX",
-        "fn": "adjacent",
-        "file": "src/cm/pc.mbt",
-        "line": 550,
-        "evidence": "directed[-1] of length 0"
-      },
-      {
-        "rule": "TAINT-INDEX",
-        "fn": "build_cpdag",
-        "file": "src/cm/pc.mbt",
-        "line": 566,
-        "evidence": "adj[0] of length 0"
-      }
-    ],
+ "tool": "riantr/LunaFlow",
+ "version": "0.1.32",
+ "command": "moonx riantr/LunaFlow@latest <the path of the tree>",
+ "tree_version": "0.0.95",
+ "level1": {
+  "files": 228,
+  "functions": 3640,
+  "statements_understood": 25958,
+  "statements_unsupported": 691,
+  "functions_entered": 150,
+  "taint_sinks": 27,
+  "dead_code": 0,
+  "unreachable": 0,
+  "infinite_loop": 0,
+  "findings_in_the_tables": 47,
+  "findings_in_the_sidecar": 44,
+  "by_rule": {
+   "BUDGET-EXCEEDED": 17,
+   "TAINT-INDEX": 25,
+   "TAINT-INDEX-RANGE": 2
+  },
+  "by_rule_in_the_tables": {
+   "BUDGET-EXCEEDED": 20,
+   "TAINT-INDEX": 25,
+   "TAINT-INDEX-RANGE": 2
+  },
+  "out_of_bounds_observed": [
+   {
+    "rule": "TAINT-INDEX",
+    "fn": "neighbours",
+    "file": "src/cm/pc.mbt",
+    "line": 292,
+    "evidence": "adj[-1] of length 1"
+   },
+   {
+    "rule": "TAINT-INDEX",
+    "fn": "collect_combinations",
+    "file": "src/cm/pc.mbt",
+    "line": 341,
+    "evidence": "values[0] of length 0"
+   },
+   {
+    "rule": "TAINT-INDEX",
+    "fn": "pc_skeleton",
+    "file": "src/cm/pc.mbt",
+    "line": 365,
+    "evidence": "adj[0] of length 0"
+   },
+   {
+    "rule": "TAINT-INDEX",
+    "fn": "adjacent",
+    "file": "src/cm/pc.mbt",
+    "line": 550,
+    "evidence": "directed[-1] of length 0"
+   },
+   {
+    "rule": "TAINT-INDEX",
+    "fn": "build_cpdag",
+    "file": "src/cm/pc.mbt",
+    "line": 566,
+    "evidence": "adj[0] of length 0"
+   }
+  ]
+ },
+ "level2": {
+  "files": 228,
+  "functions": 3640,
+  "statements_understood": 25958,
+  "statements_unsupported": 691,
+  "functions_entered": 150,
+  "taint_sinks": 27,
+  "dead_code": 0,
+  "unreachable": 0,
+  "infinite_loop": 0,
+  "findings_in_the_tables": 647,
+  "findings_in_the_sidecar": 968,
+  "by_rule": {
+   "BUDGET-EXCEEDED": 17,
+   "TAINT-INDEX": 306,
+   "TAINT-INDEX-RANGE": 2,
+   "UNSUPPORTED": 70,
+   "INFINITE-LOOP": 6,
+   "RANGE-VIOLATION": 17,
+   "UNREACHABLE": 2,
+   "INDEX-OOB": 533,
+   "INTEGER-OVERFLOW": 9,
+   "DIVISION-BY-ZERO": 6
+  },
+  "by_rule_in_the_tables": {
+   "BUDGET-EXCEEDED": 20,
+   "TAINT-INDEX": 249,
+   "TAINT-INDEX-RANGE": 2,
+   "UNSUPPORTED": 56,
+   "INFINITE-LOOP": 4,
+   "RANGE-VIOLATION": 14,
+   "UNREACHABLE": 2,
+   "INDEX-OOB": 289,
+   "INTEGER-OVERFLOW": 5,
+   "DIVISION-BY-ZERO": 6
+  },
+  "out_of_bounds_observed": [
+   {
+    "rule": "TAINT-INDEX",
+    "fn": "neighbours",
+    "file": "src/cm/pc.mbt",
+    "line": 292,
+    "evidence": "adj[-1] of length 1"
+   },
+   {
+    "rule": "TAINT-INDEX",
+    "fn": "collect_combinations",
+    "file": "src/cm/pc.mbt",
+    "line": 341,
+    "evidence": "values[0] of length 0"
+   },
+   {
+    "rule": "TAINT-INDEX",
+    "fn": "pc_skeleton",
+    "file": "src/cm/pc.mbt",
+    "line": 365,
+    "evidence": "adj[0] of length 0"
+   },
+   {
+    "rule": "TAINT-INDEX",
+    "fn": "adjacent",
+    "file": "src/cm/pc.mbt",
+    "line": 550,
+    "evidence": "directed[-1] of length 0"
+   },
+   {
+    "rule": "TAINT-INDEX",
+    "fn": "build_cpdag",
+    "file": "src/cm/pc.mbt",
+    "line": 566,
+    "evidence": "adj[0] of length 0"
+   }
+  ]
+ },
+ "per_package": {
+  "packages": 19,
+  "functions": 3640,
+  "functions_entered": 2751,
+  "findings_in_the_tables": 660,
+  "findings_in_the_sidecar": 582,
+  "by_rule": {
+   "BUDGET-EXCEEDED": 148,
+   "TAINT-INDEX": 269,
+   "TAINT-INDEX-RANGE": 164,
+   "INFINITE-LOOP": 1
+  },
+  "by_package": {
+   "api": {
+    "package": "api",
+    "functions": 54,
+    "functions_entered": 47,
+    "findings_in_the_tables": 13,
+    "findings_in_the_sidecar": 13,
     "by_rule_in_the_tables": {
-      "TAINT-INDEX": 25,
-      "BUDGET-EXCEEDED": 20,
-      "TAINT-INDEX-RANGE": 2
+     "BUDGET-EXCEEDED": 2,
+     "TAINT-INDEX": 11
     }
-  },
-  "level2": {
-    "findings_in_the_sidecar": 968,
-    "by_rule": {
-      "INDEX-OOB": 533,
-      "TAINT-INDEX": 306,
-      "UNSUPPORTED": 70,
-      "BUDGET-EXCEEDED": 17,
-      "RANGE-VIOLATION": 17,
-      "INTEGER-OVERFLOW": 9,
-      "DIVISION-BY-ZERO": 6,
-      "INFINITE-LOOP": 6,
-      "TAINT-INDEX-RANGE": 2,
-      "UNREACHABLE": 2
+   },
+   "cm": {
+    "package": "cm",
+    "functions": 60,
+    "functions_entered": 53,
+    "findings_in_the_tables": 27,
+    "findings_in_the_sidecar": 25,
+    "by_rule_in_the_tables": {
+     "BUDGET-EXCEEDED": 14,
+     "TAINT-INDEX": 13
     }
-  },
-  "capacity": {
-    "entry_points_that_survive": 1200,
-    "entry_points_that_trap": 1500
+   },
+   "data_transformers": {
+    "package": "data_transformers",
+    "functions": 27,
+    "functions_entered": 20,
+    "findings_in_the_tables": 9,
+    "findings_in_the_sidecar": 6,
+    "by_rule_in_the_tables": {
+     "BUDGET-EXCEEDED": 7,
+     "TAINT-INDEX": 1,
+     "TAINT-INDEX-RANGE": 1
+    }
+   },
+   "datasets": {
+    "package": "datasets",
+    "functions": 182,
+    "functions_entered": 145,
+    "findings_in_the_tables": 31,
+    "findings_in_the_sidecar": 24,
+    "by_rule_in_the_tables": {
+     "BUDGET-EXCEEDED": 12,
+     "TAINT-INDEX-RANGE": 10,
+     "TAINT-INDEX": 9
+    }
+   },
+   "do_samplers": {
+    "package": "do_samplers",
+    "functions": 68,
+    "functions_entered": 55,
+    "findings_in_the_tables": 15,
+    "findings_in_the_sidecar": 15,
+    "by_rule_in_the_tables": {
+     "BUDGET-EXCEEDED": 5,
+     "TAINT-INDEX": 9,
+     "TAINT-INDEX-RANGE": 1
+    }
+   },
+   "estimators": {
+    "package": "estimators",
+    "functions": 120,
+    "functions_entered": 120,
+    "findings_in_the_tables": 35,
+    "findings_in_the_sidecar": 35,
+    "by_rule_in_the_tables": {
+     "BUDGET-EXCEEDED": 3,
+     "TAINT-INDEX": 29,
+     "TAINT-INDEX-RANGE": 3
+    }
+   },
+   "examples": {
+    "package": "examples",
+    "functions": 1,
+    "functions_entered": 1,
+    "findings_in_the_tables": 0,
+    "findings_in_the_sidecar": 0,
+    "by_rule_in_the_tables": {}
+   },
+   "gcm": {
+    "package": "gcm",
+    "functions": 1624,
+    "functions_entered": 1224,
+    "findings_in_the_tables": 249,
+    "findings_in_the_sidecar": 219,
+    "by_rule_in_the_tables": {
+     "BUDGET-EXCEEDED": 95,
+     "TAINT-INDEX-RANGE": 81,
+     "TAINT-INDEX": 73
+    }
+   },
+   "graph": {
+    "package": "graph",
+    "functions": 169,
+    "functions_entered": 124,
+    "findings_in_the_tables": 27,
+    "findings_in_the_sidecar": 25,
+    "by_rule_in_the_tables": {
+     "BUDGET-EXCEEDED": 5,
+     "TAINT-INDEX-RANGE": 13,
+     "TAINT-INDEX": 9
+    }
+   },
+   "identifiers": {
+    "package": "identifiers",
+    "functions": 252,
+    "functions_entered": 214,
+    "findings_in_the_tables": 40,
+    "findings_in_the_sidecar": 25,
+    "by_rule_in_the_tables": {
+     "BUDGET-EXCEEDED": 2,
+     "INFINITE-LOOP": 16,
+     "TAINT-INDEX-RANGE": 8,
+     "TAINT-INDEX": 14
+    }
+   },
+   "interpreters": {
+    "package": "interpreters",
+    "functions": 16,
+    "functions_entered": 14,
+    "findings_in_the_tables": 4,
+    "findings_in_the_sidecar": 4,
+    "by_rule_in_the_tables": {
+     "TAINT-INDEX": 2,
+     "TAINT-INDEX-RANGE": 2
+    }
+   },
+   "model": {
+    "package": "model",
+    "functions": 22,
+    "functions_entered": 22,
+    "findings_in_the_tables": 0,
+    "findings_in_the_sidecar": 0,
+    "by_rule_in_the_tables": {}
+   },
+   "overrule": {
+    "package": "overrule",
+    "functions": 69,
+    "functions_entered": 67,
+    "findings_in_the_tables": 53,
+    "findings_in_the_sidecar": 51,
+    "by_rule_in_the_tables": {
+     "BUDGET-EXCEEDED": 11,
+     "TAINT-INDEX-RANGE": 13,
+     "TAINT-INDEX": 29
+    }
+   },
+   "plotting": {
+    "package": "plotting",
+    "functions": 44,
+    "functions_entered": 31,
+    "findings_in_the_tables": 1,
+    "findings_in_the_sidecar": 1,
+    "by_rule_in_the_tables": {
+     "TAINT-INDEX-RANGE": 1
+    }
+   },
+   "refuters": {
+    "package": "refuters",
+    "functions": 221,
+    "functions_entered": 219,
+    "findings_in_the_tables": 56,
+    "findings_in_the_sidecar": 49,
+    "by_rule_in_the_tables": {
+     "BUDGET-EXCEEDED": 20,
+     "TAINT-INDEX": 33,
+     "TAINT-INDEX-RANGE": 3
+    }
+   },
+   "root": {
+    "package": "root",
+    "functions": 38,
+    "functions_entered": 38,
+    "findings_in_the_tables": 2,
+    "findings_in_the_sidecar": 2,
+    "by_rule_in_the_tables": {
+     "TAINT-INDEX": 1,
+     "TAINT-INDEX-RANGE": 1
+    }
+   },
+   "tests": {
+    "package": "tests",
+    "functions": 388,
+    "functions_entered": 149,
+    "findings_in_the_tables": 23,
+    "findings_in_the_sidecar": 22,
+    "by_rule_in_the_tables": {
+     "BUDGET-EXCEEDED": 11,
+     "TAINT-INDEX": 11,
+     "TAINT-INDEX-RANGE": 1
+    }
+   },
+   "timeseries": {
+    "package": "timeseries",
+    "functions": 82,
+    "functions_entered": 55,
+    "findings_in_the_tables": 17,
+    "findings_in_the_sidecar": 17,
+    "by_rule_in_the_tables": {
+     "BUDGET-EXCEEDED": 3,
+     "TAINT-INDEX-RANGE": 13,
+     "TAINT-INDEX": 1
+    }
+   },
+   "utils": {
+    "package": "utils",
+    "functions": 203,
+    "functions_entered": 153,
+    "findings_in_the_tables": 58,
+    "findings_in_the_sidecar": 49,
+    "by_rule_in_the_tables": {
+     "BUDGET-EXCEEDED": 21,
+     "TAINT-INDEX": 24,
+     "TAINT-INDEX-RANGE": 13
+    }
+   }
   }
+ },
+ "calibration": {
+  "shapes": 10,
+  "findings": 11,
+  "by_rule": {
+   "TAINT-INDEX": 6,
+   "TAINT-INDEX-RANGE": 4
+  },
+  "shapes_without_a_finding": 1,
+  "shapes_reported_as_an_error_that_are_safe": 4,
+  "shapes_that_are_holes": 3,
+  "shapes_reported_as_an_error_that_are_holes": 2
+ },
+ "knn_guard": {
+  "places": 5,
+  "message": "The number of neighbours has to be at least one"
+ },
+ "capacity": {
+  "entry_points_that_survive": 1200,
+  "entry_points_that_trap": 1500
+ }
 }

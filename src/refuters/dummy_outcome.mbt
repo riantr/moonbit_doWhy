@@ -1000,8 +1000,8 @@ fn knn_predict(
   let names = x_train.numeric_column_names()
   let train = design_of(x_train)
   let queries = design_of(x)
-  let neighbours = if k < 1 {
-    abort("The number of neighbours has to be at least one")
+  let neighbours = if !@utils.has_valid_neighbour_count(k) {
+    abort(@utils.NEIGHBOUR_COUNT_ERROR)
   } else if k > y_train.length() {
     y_train.length()
   } else {
