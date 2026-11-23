@@ -1,0 +1,11 @@
+{
+ "accesses": 31,
+ "lengths": {
+  "a": 6,
+  "b": 5,
+  "c": 6,
+  "d": 4
+ },
+ "out_of_bounds": 0,
+ "out_of_bounds_places": []
+}

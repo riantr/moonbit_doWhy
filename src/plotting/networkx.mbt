@@ -69,7 +69,9 @@ const LABEL_WRAP_LENGTH : Int32 = 3
 /// `ValueError` for such an edge. MoonBit cannot catch an abort, so the check
 /// is a function of its own and the plot of the graph is `None`.
 pub fn has_self_cycle(graph : @graph.DirectedGraph) -> Bool {
-  for (source, target) in graph.edge_list() {
+  for edge in graph.edge_list() {
+    let source = edge.0
+    let target = edge.1
     if source == target {
       return true
     }
@@ -114,7 +116,9 @@ pub fn networkx_plot(
     None => Map([])
   }
   let mut max_strength = 0.0
-  for (source, target) in graph.edge_list() {
+  for edge in graph.edge_list() {
+    let source = edge.0
+    let target = edge.1
     match strengths.get((source, target)) {
       Some(strength) => {
         let magnitude = strength.abs()
@@ -143,7 +147,9 @@ pub fn networkx_plot(
     nodes.push({ name, color, label: wrap_label(name), })
   }
   let edges : Array[NetworkxEdge] = []
-  for (source, target) in graph.edge_list() {
+  for edge in graph.edge_list() {
+    let source = edge.0
+    let target = edge.1
     let color = match colors.get((source, target)) {
       Some(value) => value
       None => "gray"

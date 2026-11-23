@@ -67,6 +67,8 @@ VERDICTS = HERE / "upstream_notebook_verdicts.json"
 SUITE_VERDICTS = HERE / "upstream_suite_verdicts.json"
 LUNAFLOW = HERE / "lunaflow_qa.json"
 STATIC_ANALYSIS = HERE / "static_analysis.json"
+ANALYSER_READABLE = HERE / "analyser_readable.json"
+QUANTILE_COEFFICIENTS = HERE / "quantile_coefficients.json"
 NORMAL_PPF = HERE / "normal_ppf.json"
 
 # The documents that publish the counts.
@@ -253,6 +255,16 @@ def static_analysis() -> dict:
     return json.loads(STATIC_ANALYSIS.read_text(encoding="utf-8"))
 
 
+def analyser_readable() -> dict:
+    """The measurement of the shape of the loops of the tree."""
+    if not ANALYSER_READABLE.exists():
+        raise SystemExit(
+            "the file %s is missing: run `python _verify/check_analyser_readable.py`"
+            % ANALYSER_READABLE
+        )
+    return json.loads(ANALYSER_READABLE.read_text(encoding="utf-8"))
+
+
 def normal_ppf() -> dict:
     """The measurement of the check of the quantile function."""
     if not NORMAL_PPF.exists():
@@ -261,6 +273,16 @@ def normal_ppf() -> dict:
             % NORMAL_PPF
         )
     return json.loads(NORMAL_PPF.read_text(encoding="utf-8"))
+
+
+def quantile_coefficients() -> dict:
+    """The measurement of the bounds of the coefficients of the quantile."""
+    if not QUANTILE_COEFFICIENTS.exists():
+        raise SystemExit(
+            "the file %s is missing: run "
+            "`python _verify/check_quantile_coefficients.py`" % QUANTILE_COEFFICIENTS
+        )
+    return json.loads(QUANTILE_COEFFICIENTS.read_text(encoding="utf-8"))
 
 
 def measurements() -> dict[str, int]:
@@ -303,6 +325,7 @@ def measurements() -> dict[str, int]:
     audit = lunaflow_qa()
     level1 = audit["level1"]
     level2 = audit["level2"]
+    before = audit["scans_before"]["0.0.95"]
     tables = level1["by_rule_in_the_tables"]
     measured["the files the audit of the tree reads"] = level1["files"]
     measured["the functions the audit of the tree holds"] = level1["functions"]
@@ -365,6 +388,16 @@ def measurements() -> dict[str, int]:
     ] = level2["by_rule"]["UNREACHABLE"]
     packages = audit["per_package"]
     calibration = audit["calibration"]
+    measured[
+        "the functions the audit of the tree holds in the release of 0.0.95"
+    ] = before["level1"]["functions"]
+    measured[
+        "the statements the audit of the tree understands in the release of 0.0.95"
+    ] = before["level1"]["statements_understood"]
+    measured[
+        "the functions the audit of the tree enters when it scans the packages "
+        "one by one in the release of 0.0.95"
+    ] = before["per_package"]["functions_entered"]
     measured[
         "the packages the audit of the tree scans one by one"
     ] = packages["packages"]
@@ -438,13 +471,52 @@ def measurements() -> dict[str, int]:
     ]
     measured["the findings the static analyzer withholds"] = current["withheld"]
     measured["the unchecked calls of the static analyzer"] = current["unchecked"]
-    measured["the files the static analyzer does not finish"] = current[
-        "not_parsed_reasons"
-    ]["files"]
+    measured["the files the static analyzer does not finish"] = len(
+        current["files_not_finished"]
+    )
+    delta = current.get("printed_findings_delta") or {}
+    measured[
+        "the findings the scan after the change holds and the scan before does not"
+    ] = delta.get("new", 0)
+    measured[
+        "the findings the scan before the change holds and the scan after does not"
+    ] = delta.get("gone", 0)
+    measured[
+        "the findings of the family MSA-001 that the scan after the change holds"
+    ] = (delta.get("new_by_family") or {}).get("MSA-001", 0)
     measured[
         "the actionable findings of the static analyzer of the release of 0.0.95"
     ] = scans["0.0.95"]["actionable"]
+    measured[
+        "the files the scan of the release of 0.0.96 does not finish"
+    ] = scans["0.0.96"]["not_parsed_reasons"].get("files", 0)
+    measured["the printed findings of the scan before the change"] = delta.get(
+        "printed_before", 0
+    )
+    measured["the printed findings of the scan after the change"] = delta.get(
+        "printed_after", 0
+    )
+    readable = analyser_readable()
+    measured[
+        "the loops of the tree that read a tuple by its index"
+    ] = readable["indexed_loops"]
+    measured[
+        "the files of the tree that hold a loop that reads a tuple by its index"
+    ] = readable["files_with_an_indexed_loop"]
+    measured[
+        "the loops of the tree of the release of 0.0.96 whose variable is a tuple"
+    ] = readable["before"]["tuple_loops"]
+    measured[
+        "the headers of the tree of the release of 0.0.96 that the formatter split"
+    ] = readable["before"]["split_headers"]
     quantile = normal_ppf()
+    coefficients = quantile_coefficients()
+    measured[
+        "the accesses of the coefficients of the quantile function"
+    ] = coefficients["accesses"]
+    measured[
+        "the accesses of the coefficients that are out of bounds"
+    ] = coefficients["out_of_bounds"]
     measured[
         "the arguments of the check of the quantile function"
     ] = quantile["arguments"]
@@ -618,7 +690,25 @@ CLAIMS: list[tuple[str, str, str]] = [
     (
         "AGENTS.md",
         "the statements the audit of the tree understands",
-        r"the \*\*(\d+)\*\* statements it\s+understands",
+        r"holds the \*\*\d+\*\* functions and the \*\*(\d+)\*\* statements it\s+"
+        r"understands",
+    ),
+    (
+        "AGENTS.md",
+        "the functions the audit of the tree holds in the release of 0.0.95",
+        r"held the \*\*(\d+)\*\* functions and the",
+    ),
+    (
+        "AGENTS.md",
+        "the statements the audit of the tree understands in the release of 0.0.95",
+        r"held the \*\*\d+\*\* functions and the \*\*(\d+)\*\* statements it\s+"
+        r"understands",
+    ),
+    (
+        "AGENTS.md",
+        "the functions the audit of the tree enters when it scans the packages "
+        "one by one in the release of 0.0.95",
+        r"entered the \*\*(\d+)\*\* of them",
     ),
     (
         "AGENTS.md",
@@ -844,9 +934,71 @@ CLAIMS: list[tuple[str, str, str]] = [
     ),
     (
         "AGENTS.md",
+        "the files the scan of the release of 0.0.96 does not finish",
+        r"[Tt]he scan of the release of 0\.0\.96 did not finish \*\*(\d+)\*\* files",
+    ),
+    (
+        "AGENTS.md",
+        "the printed findings of the scan before the change",
+        r"the scan before holds \*\*(\d+)\*\* printed findings",
+    ),
+    (
+        "AGENTS.md",
+        "the printed findings of the scan after the change",
+        r"the scan after holds \*\*(\d+)\*\* printed findings",
+    ),
+    (
+        "AGENTS.md",
+        "the findings the scan after the change holds and the scan before does not",
+        r"the \*\*(\d+)\*\* findings of the second report that the first one "
+        r"does not hold",
+    ),
+    (
+        "AGENTS.md",
+        "the findings the scan before the change holds and the scan after does not",
+        r"the \*\*(\d+)\*\* findings of the first report that the second one "
+        r"does not hold",
+    ),
+    (
+        "AGENTS.md",
+        "the findings of the family MSA-001 that the scan after the change holds",
+        r"all \*\*(\d+)\*\* of them of the family `MSA-001`",
+    ),
+    (
+        "AGENTS.md",
+        "the loops of the tree of the release of 0.0.96 whose variable is a tuple",
+        r"held \*\*(\d+)\*\* loops whose\s+variable is a tuple pattern",
+    ),
+    (
+        "AGENTS.md",
+        "the headers of the tree of the release of 0.0.96 that the formatter split",
+        r"\*\*(\d+)\*\* headers of a loop that the formatter\s+had split",
+    ),
+    (
+        "AGENTS.md",
+        "the loops of the tree that read a tuple by its index",
+        r"holds \*\*(\d+)\*\* loops that read a tuple by its\s+index",
+    ),
+    (
+        "AGENTS.md",
+        "the files of the tree that hold a loop that reads a tuple by its index",
+        r"index, in \*\*(\d+)\*\* of its files",
+    ),
+    (
+        "AGENTS.md",
         "the arguments of the check of the quantile function",
         r"prints the quantile of the normal\s+distribution for "
         r"\*\*(\d+)\*\* arguments",
+    ),
+    (
+        "AGENTS.md",
+        "the accesses of the coefficients of the quantile function",
+        r"every index that is read of them -- \*\*(\d+)\*\* of them --",
+    ),
+    (
+        "AGENTS.md",
+        "the accesses of the coefficients that are out of bounds",
+        r"requires that\s+\*\*(\d+)\*\* of them is out of bounds",
     ),
     (
         "AGENTS.md",

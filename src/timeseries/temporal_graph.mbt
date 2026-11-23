@@ -227,7 +227,9 @@ pub fn TemporalGraph::copy(self : TemporalGraph) -> TemporalGraph {
   for node in self.nodes {
     graph.add_node(node)
   }
-  for (from, to) in self.edges {
+  for edge in self.edges {
+    let from = edge.0
+    let to = edge.1
     graph.add_edge_with_lags(from, to, self.time_lags_of(from, to))
   }
   graph
@@ -316,7 +318,10 @@ pub fn create_graph_from_edges(
   edges : Array[(String, String, Int32)],
 ) -> TemporalGraph {
   let graph = TemporalGraph::new()
-  for (from, to, lag) in edges {
+  for edge in edges {
+    let from = edge.0
+    let to = edge.1
+    let lag = edge.2
     graph.add_edge(from, to, lag)
   }
   graph

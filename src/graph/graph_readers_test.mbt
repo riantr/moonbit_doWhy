@@ -68,7 +68,9 @@ fn gml_graph_of_the_letters() -> String {
     ("9", "2"),
     ("9", "8"),
   ]
-  for (source, target) in edges {
+  for edge in edges {
+    let source = edge.0
+    let target = edge.1
     text = text + "edge [ source " + source + " target " + target + " ]\n"
   }
   text + "]"
@@ -85,7 +87,9 @@ fn letter_at(index : Int32) -> String {
 /// The edges of the graph, as a sorted list of pairs.
 fn sorted_edges(graph : @graph.DirectedGraph) -> Array[String] {
   let out : Array[String] = []
-  for (from, to) in graph.edge_list() {
+  for edge in graph.edge_list() {
+    let from = edge.0
+    let to = edge.1
     out.push(from + "->" + to)
   }
   out.sort_by(fn(a, b) { compare_edges(a, b) })

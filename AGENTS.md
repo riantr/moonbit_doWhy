@@ -101,6 +101,16 @@ and costly to debug.
   inclusive range is `0..<=n`. `for i = 0..<n { }` is **not** the range loop:
   the `=` makes it a C style loop with no update, and the compiler reports
   `unused_loop_variable`.
+- **A `for` loop whose variable is a tuple pattern is not read by the static
+  analyzer of the registry.** The frontend of the analyzer stops at
+  `for (from, to) in edges`, so the file that holds it is a file the analyzer
+  does not finish and the findings after that line are withheld. The port
+  takes the tuple as a whole and reads the names out of it by their index --
+  `for edge in edges { let from = edge.0; let to = edge.1 }` -- and the script
+  `_verify/check_analyser_readable.py` requires the tree to hold no loop of
+  that shape. A header that the formatter has split over two lines, as a
+  `for` on a line of its own, is not read either: the collection of it is
+  bound to a name first, so that the formatter does not split it again.
 - **There is no record update syntax.** `{ self, field: value }` does not
   compile; every field of a record literal has to be written out. The
   `ProbabilisticCausalModel` of the `gcm` package is the reason this is
@@ -1968,14 +1978,15 @@ README makes, so they are tracked in the repository:
   `riantr/moonbit_static_analysis`, and it runs on the tree without touching
   it: `moonx riantr/moonbit_static_analysis@latest <the path of the tree>`.
   **The CLI cannot exit non-zero**, so a caller has to read the report and not
-  the exit code. MEASURED on the release of 0.0.96: the scan of the static
-  analyzer reads **248** files, understands **230** of them, and reports **0**
-  actionable findings. The rest is **1728** notices, which are the scope
+  the exit code. MEASURED on the release of 0.0.97: the scan of the static
+  analyzer reads **248** files, understands **248** of them, and reports **0**
+  actionable findings. The rest is **1859** notices, which are the scope
   limits of the frontend -- a `test` block, a `const`, a `struct`, an `enum`,
   an `if` used as a value and an anonymous function literal -- and not defects
-  of the tree. The report holds **145** unreliable regions, of which **14**
-  withhold a finding, and **9632** unchecked calls, which are not findings at
-  all.
+  of the tree. The report holds **0** unreliable regions, of which **0**
+  withhold a finding, and **9458** unchecked calls, which are not findings at
+  all, and the **0** files the analyzer does not finish, because it reads
+  every file of the tree to the end.
   The scan of the release of 0.0.95 reported **1** actionable finding, and it
   is the dead store of `src/utils/stats.mbt` that the release of 0.0.96
   removes.
@@ -2018,24 +2029,58 @@ README makes, so they are tracked in the repository:
     The script `_verify/check_normal_ppf.py` holds the numbers and requires
     the port to produce the very same ones, and it has a `--falsify` mode that
     requires a wrong one and checks that the check goes red.
-  - **The blind spot of the analyzer on this tree is a `for` loop whose
-    variable is a tuple pattern**, and it is the only one. MEASURED: the **18**
-    files the analyzer does not finish are reported by the reason of the
-    failure, and all three reasons are that one construct -- a `for` loop whose
-    variable is a tuple pattern, as `for (from, to) in edges` -- read as the
-    unexpected token of the comma, as `expected loop variable` and as
-    `expected a struct literal field here`. They are the PC algorithm, the
-    random graph of the data sets, the falsification layer with its two tests,
-    the five files of the graph, the efficient backdoor, the three files of
-    the plotting, the two files of the tests of the tree and the two files of
-    the time series, and the file `_verify/static_analysis.json` names every
-    one of them. The **14** findings of the files after that line are
-    **withheld**, so the report of the scan is a report of the files it reads
-    and not of the whole tree.
-    The construct is idiomatic MoonBit and the tool itself says that what it
-    cannot read measures its own blind spot and not the code, so the loops
-    stay as they are. Rewriting them would buy the tool its coverage and cost
-    the tree the shape of its own loops.
+  - **The helper of the quantile function took the coefficients of Acklam as
+    its arguments, and the release of 0.0.97 moves them into it.** MEASURED:
+    the dynamic analyzer of the registry cannot know how long an array that is
+    an argument of a function is, so it reported a finding of the family
+    `INDEX-OOB` for every index of the coefficients in the helper, and the scan
+    of the release of 0.0.95 did not report them, because the coefficients
+    were the locals of `normal_ppf` then, and the analyzer knew their length.
+    The helper is private and it has one caller, so every index of the
+    coefficients is in bounds and the findings were not defects of the port:
+    MEASURED with the script `_verify/check_quantile_coefficients.py`, which
+    reads the length of the four coefficient arrays out of the source and
+    every index that is read of them -- **31** of them -- and requires that
+    **0** of them is out of bounds. They were a blind spot of the tool, and
+    the blind spot is closed: the coefficients are in the function that reads
+    them, the analyzer knows their length again and the findings are gone.
+    The numbers of the function are **identical** before and after the change
+    -- MEASURED with the very same probe of **41** arguments, and the script
+    `_verify/check_normal_ppf.py` requires the port to produce the very same
+    numbers.
+  - **The blind spot of the analyzer on this tree was a `for` loop whose
+    variable is a tuple pattern, and the release of 0.0.97 removes it.**
+    MEASURED: the tree of the release of 0.0.96 held **30** loops whose
+    variable is a tuple pattern and **4** headers of a loop that the formatter
+    had split over two lines, and the release of 0.0.97 rewrites them: the
+    loop takes the tuple as a whole and the names are taken out of it by their
+    index, and the collection of a split header is bound to a name first, so
+    that the formatter does not split it again. The tree holds **0** loops
+    whose variable is a tuple pattern and **0** headers of a loop that are
+    split over two lines, and it holds **31** loops that read a tuple by its
+    index, in **17** of its files.
+    The script `_verify/check_analyser_readable.py` measures those counts in
+    the tree of the repository and in the tree of the release before, so that
+    the number of the loops that were rewritten is a measurement and not a
+    number that was typed, and it has a `--falsify` mode that requires a wrong
+    count and checks that the check goes red.
+    The scan of the release of 0.0.96 did not finish **18** files, and they
+    were exactly the files that held those loops and those headers.
+    MEASURED by comparing the report of the scan of the tree before the change
+    with the report of the scan of the tree after it: the scan before holds
+    **435** printed findings and the scan after holds **463** printed findings,
+    the **0** findings of the first report that the second one does not hold,
+    and the **28** findings of the second report that the first one does not
+    hold, all **28** of them of the family `MSA-001`. **No defect was hidden
+    in the eighteen files**: the findings that the files hold are the scope
+    limits of the frontend -- an `if` expression, an anonymous function
+    literal and an inclusive range end that the analyzer reads but does not
+    analyse -- and the same shape of notice is in every file of the tree.
+    The blind spot that is left is the one of the tool and it is the same over
+    the whole tree: the analyzer does not analyse the body of an `if`
+    expression and the body of an anonymous function literal, so it reports
+    them as notices, and those notices are the bulk of the **1859** notices of
+    the scan.
 - **The nearest neighbour estimators of the port refuse a number of neighbours
   below one, the way scikit-learn refuses it and the way the upstream raises
   its error.** The upstream builds its nearest neighbour estimators with
@@ -2078,14 +2123,19 @@ README makes, so they are tracked in the repository:
   are about the inputs it invented and not about the inputs of a user. Its
   three levels are the interpreter, the abstract interpretation and the
   verification of the contracts.
-  MEASURED on the release of 0.0.95: the scan reads the **228** files of the
-  tree, holds the **3640** functions and the **25958** statements it
+  MEASURED on the release of 0.0.97: the scan reads the **228** files of the
+  tree, holds the **3641** functions and the **26030** statements it
   understands, enters the **150** of them of the cap of its entry points, and
   reports the **47** findings of its tables, of which **25** are of the family
   `TAINT-INDEX`, **20** are of the family `BUDGET-EXCEEDED` and **2** are of
   the family `TAINT-INDEX-RANGE`. The sidecar of the findings holds **44** of them, the
   three that are missing from it being the repeats of the rows of the budget.
   The scan finds no dead code, no unreachable statement and no infinite loop.
+  The scan of the release of 0.0.95 held the **3640** functions and the
+  **25958** statements it understands, and the release of 0.0.97 holds one
+  function more -- the helper of the quantile function -- and the statements
+  of the loops that the release rewrites, and it reports the very same
+  findings as the scan of the release of 0.0.95.
   - **The five accesses that the scan watched go out of bounds are artefacts of
     the values that the analyzer made up, and not defects of the port.**
     MEASURED with the trace of the scan: the analyzer called `neighbours` with
@@ -2140,8 +2190,9 @@ README makes, so they are tracked in the repository:
     packages one by one.** The scan of the whole tree enters the functions of
     the cap of its entry points, so most of the tree is never interpreted. The
     scan of the packages one by one enters every function it can enter:
-    MEASURED on the release of 0.0.95, the scan of the **19** packages of the
-    tree enters the **2751** functions it can enter and skips none of them.
+    MEASURED on the release of 0.0.97, the scan of the **19** packages of the
+    tree enters the **2752** functions it can enter and skips none of them.
+    The scan of the release of 0.0.95 entered the **2751** of them.
     The tables of the scan of the packages hold the **660** findings and its
     sidecar holds the **582** of them. The family `TAINT-INDEX` holds the
     **269** of them, the family `TAINT-INDEX-RANGE` holds the **164** of them,

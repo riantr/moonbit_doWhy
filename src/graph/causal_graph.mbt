@@ -468,7 +468,9 @@ pub fn CausalGraph::get_adjacency_matrix(self : CausalGraph) -> @utils.Matrix {
   let nodes = self.graph.node_list()
   let n = nodes.length()
   let matrix = @utils.Matrix::zeros(n, n)
-  for (from, to) in self.graph.edge_list() {
+  for edge in self.graph.edge_list() {
+    let from = edge.0
+    let to = edge.1
     let mut i = 0
     let mut j = 0
     while i < nodes.length() {

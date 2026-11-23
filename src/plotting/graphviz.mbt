@@ -80,7 +80,9 @@ pub fn graphviz_plot(
     None => Map([])
   }
   let mut max_strength = 0.0
-  for (source, target) in graph.edge_list() {
+  for edge in graph.edge_list() {
+    let source = edge.0
+    let target = edge.1
     match strengths.get((source, target)) {
       Some(strength) => {
         let magnitude = strength.abs()
@@ -103,7 +105,9 @@ pub fn graphviz_plot(
     nodes.push({ name, color, fontcolor: color, })
   }
   let edges : Array[PlotEdge] = []
-  for (source, target) in graph.edge_list() {
+  for edge in graph.edge_list() {
+    let source = edge.0
+    let target = edge.1
     let color = match colors.get((source, target)) {
       Some(value) => value
       None => "black"

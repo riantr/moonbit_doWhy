@@ -135,7 +135,9 @@ pub fn bar_plot(
   let bars : Array[Double] = []
   let ci_minus : Array[Double] = []
   let ci_plus : Array[Double] = []
-  for (name, value) in entries {
+  for entry in entries {
+    let name = entry.0
+    let value = entry.1
     labels.push(name)
     bars.push(value)
     let (low, high) = match uncertainties {

@@ -269,8 +269,11 @@ fn EfficientBackdoorSearch::causal_vertices(
 ) -> Array[String] {
   let vertices : Array[String] = []
   let seen : Set[String] = Set::Set([])
-  for
-    path in self.graph.all_simple_paths(self.treatment_name, self.outcome_name) {
+  let paths = self.graph.all_simple_paths(
+    self.treatment_name,
+    self.outcome_name,
+  )
+  for path in paths {
     for node in path {
       if node != self.treatment_name && !seen.contains(node) {
         seen.add(node)
@@ -435,7 +438,9 @@ fn moral_graph(graph : @graph.DirectedGraph) -> Map[String, Array[String]] {
   for node in graph.node_list() {
     moral.set(node, [])
   }
-  for (from, to) in graph.edge_list() {
+  for edge in graph.edge_list() {
+    let from = edge.0
+    let to = edge.1
     add_undirected_edge(moral, from, to)
   }
   for node in graph.node_list() {

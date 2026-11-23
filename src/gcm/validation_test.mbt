@@ -297,7 +297,9 @@ fn fitted_model(
   data : @api.DataFrame,
 ) -> @gcm.ProbabilisticCausalModel {
   let graph = @graph.DirectedGraph::new()
-  for (from, to) in edges {
+  for edge in edges {
+    let from = edge.0
+    let to = edge.1
     graph.add_edge(from, to)
   }
   let model = @gcm.ProbabilisticCausalModel::new(graph)

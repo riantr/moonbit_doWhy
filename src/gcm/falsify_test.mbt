@@ -209,7 +209,9 @@ fn falsify_permutation_graph_of(count : Int32) -> @graph.DirectedGraph {
 /// The edges of a graph, as a string, so that two graphs can be compared.
 fn falsify_graph_key(graph : @graph.DirectedGraph) -> String {
   let mut out = ""
-  for (from, to) in graph.edge_list() {
+  for edge in graph.edge_list() {
+    let from = edge.0
+    let to = edge.1
     out = out + from + "->" + to + ";"
   }
   out

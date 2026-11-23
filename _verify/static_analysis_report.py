@@ -16,6 +16,14 @@ the measurement of two releases of the tree sit next to each other:
 
     python _verify/static_analysis_report.py --scan <the report> --version <the version>
 
+The report of the tree before can be given as well, and then the script
+measures the difference between the two reports -- the findings of the first
+report that the second one does not hold, and the findings of the second one
+that the first one does not hold:
+
+    python _verify/static_analysis_report.py --scan <the report> --version <the version> \
+        --scan-before <the report before> --version-before <the version before>
+
 Usage:
     python _verify/static_analysis_report.py
     python _verify/static_analysis_report.py --scan report.txt --version 0.0.95
@@ -251,6 +259,62 @@ def parse(report: str) -> dict:
     return measurements
 
 
+def printed_findings(report: str) -> list[tuple[str, str, str]]:
+    """The findings the report prints, one per line, with their place."""
+    findings = []
+    current_file = ""
+    for line in report.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        if parts[0] in ("CLEAN", "FOUND", "PARTIAL") and len(parts) >= 2:
+            current_file = parts[-1].strip()
+            continue
+        found = FINDING_LINE.match(line)
+        if found:
+            findings.append((current_file, found.group(3), found.group(4)))
+    return findings
+
+
+def delta_of_the_printed_findings(before: str, after: str) -> dict:
+    """The findings of the report of the tree before that the one after lacks,
+    and the findings of the report of the tree after that the one before lacks.
+
+    A finding is named by its file, its kind and its message, so that a change
+    of the line numbers of a file does not make a finding look new.
+    """
+    old = {}
+    for place, kind, message in printed_findings(before):
+        old[(place, kind, message)] = old.get((place, kind, message), 0) + 1
+    new = {}
+    for place, kind, message in printed_findings(after):
+        new[(place, kind, message)] = new.get((place, kind, message), 0) + 1
+    gone = 0
+    for key, count in old.items():
+        gone += max(0, count - new.get(key, 0))
+    grew = 0
+    families: dict[str, int] = {}
+    for key, count in new.items():
+        extra = max(0, count - old.get(key, 0))
+        grew += extra
+        if extra:
+            family = ""
+            tags = FAMILY.search(key[2])
+            if tags:
+                for part in tags.group(1).split(","):
+                    if part.strip().startswith("MSA-"):
+                        family = part.strip()
+            name = family or "no family"
+            families[name] = families.get(name, 0) + extra
+    return {
+        "gone": gone,
+        "new": grew,
+        "new_by_family": families,
+        "printed_before": len(printed_findings(before)),
+        "printed_after": len(printed_findings(after)),
+    }
+
+
 def run_the_analyzer() -> str:
     """Run the analyzer on the tree and return its report."""
     result = subprocess.run(
@@ -274,6 +338,15 @@ def main() -> int:
         "--version",
         help="the version of the tree the scan was taken of",
     )
+    parser.add_argument(
+        "--scan-before",
+        help="the report of the scan of the tree before, to measure the "
+        "difference between the two reports",
+    )
+    parser.add_argument(
+        "--version-before",
+        help="the version of the tree the scan before was taken of",
+    )
     arguments = parser.parse_args()
     if arguments.scan:
         with io.open(arguments.scan, "r", encoding="utf-8", errors="replace") as fh:
@@ -284,6 +357,17 @@ def main() -> int:
         version = version_of_the_tree()
     measurements = parse(report)
     measurements["tree_version"] = version
+    if arguments.scan_before:
+        with io.open(
+            arguments.scan_before, "r", encoding="utf-8", errors="replace"
+        ) as fh:
+            before = fh.read()
+        measurements["printed_findings_delta"] = delta_of_the_printed_findings(
+            before, report
+        )
+        measurements["printed_findings_delta"]["version_before"] = (
+            arguments.version_before or ""
+        )
     artefact = {"tool": TOOL, "command": COMMAND, "scans": {}}
     if ARTEFACT.exists():
         with io.open(ARTEFACT, "r", encoding="utf-8") as handle:

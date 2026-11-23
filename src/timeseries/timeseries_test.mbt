@@ -32,7 +32,10 @@ fn temporal_graph_with_lags(
   edges : Array[(String, String, Array[Int32])],
 ) -> @timeseries.TemporalGraph {
   let graph = @timeseries.TemporalGraph::new()
-  for (from, to, lags) in edges {
+  for edge in edges {
+    let from = edge.0
+    let to = edge.1
+    let lags = edge.2
     graph.add_edge_with_lags(from, to, lags)
   }
   graph
@@ -70,7 +73,11 @@ fn link_array(
     }
     array.push(row)
   }
-  for (i, j, t, label) in links {
+  for link in links {
+    let i = link.0
+    let j = link.1
+    let t = link.2
+    let label = link.3
     array[i][j][t] = label
   }
   array

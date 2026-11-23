@@ -319,7 +319,9 @@ fn edge_weights(
   random : @utils.Random,
 ) -> Map[(String, String), Double] {
   let weights : Map[(String, String), Double] = Map([])
-  for (from, to) in graph.edge_list() {
+  for edge in graph.edge_list() {
+    let from = edge.0
+    let to = edge.1
     weights.set((from, to), random.next_double())
   }
   weights
@@ -760,7 +762,9 @@ fn graph_to_gml(graph : @graph.DirectedGraph) -> String {
       nodes[i] +
       "\"\n  ]"
   }
-  for (from, to) in graph.edge_list() {
+  for edge in graph.edge_list() {
+    let from = edge.0
+    let to = edge.1
     let source = ids.get(from).unwrap_or(0)
     let target = ids.get(to).unwrap_or(0)
     out = out +

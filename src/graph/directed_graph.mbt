@@ -358,7 +358,9 @@ pub fn DirectedGraph::copy(self : DirectedGraph) -> DirectedGraph {
   for node in self.nodes {
     g.add_node(node)
   }
-  for (from, to) in self.edges {
+  for edge in self.edges {
+    let from = edge.0
+    let to = edge.1
     g.add_edge(from, to)
   }
   g
@@ -409,7 +411,9 @@ pub fn DirectedGraph::subgraph(
   for name in names {
     g.add_node(name)
   }
-  for (from, to) in self.edges {
+  for edge in self.edges {
+    let from = edge.0
+    let to = edge.1
     if g.has_node(from) && g.has_node(to) {
       g.add_edge(from, to)
     }
@@ -470,7 +474,9 @@ pub fn DirectedGraph::remove_node(self : DirectedGraph, name : String) -> Unit {
   self.succ.remove(name)
   self.pred.remove(name)
   let kept_edges : Array[(String, String)] = []
-  for (from, to) in self.edges {
+  for edge in self.edges {
+    let from = edge.0
+    let to = edge.1
     if from != name && to != name {
       kept_edges.push((from, to))
     }
@@ -503,7 +509,9 @@ pub fn DirectedGraph::to_dot(self : DirectedGraph) -> String {
   for node in self.nodes {
     out = out + "  \"" + node + "\";\n"
   }
-  for (from, to) in self.edges {
+  for edge in self.edges {
+    let from = edge.0
+    let to = edge.1
     out = out + "  \"" + from + "\" -> \"" + to + "\";\n"
   }
   out + "}\n"

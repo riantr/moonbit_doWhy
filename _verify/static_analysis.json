@@ -168,6 +168,71 @@
    "unchecked": 9632,
    "unreliable": 145,
    "withheld": 14
+  },
+  "0.0.97": {
+   "actionable": 0,
+   "actionable_findings": [],
+   "by_kind": {
+    ".mbt": {
+     "defects": 0,
+     "files": 228,
+     "notices": 1859,
+     "parsed": 228
+    },
+    ".mbt.md": {
+     "defects": 0,
+     "files": 1,
+     "notices": 0,
+     "parsed": 1
+    },
+    ".mbti": {
+     "defects": 0,
+     "files": 19,
+     "notices": 0,
+     "parsed": 19
+    }
+   },
+   "files": 248,
+   "files_not_finished": [],
+   "interface": {
+    "dirs": 1,
+    "types": 174,
+    "values": 1373
+   },
+   "not_parsed_reasons": {},
+   "notices": 1859,
+   "notices_aggregated": 1396,
+   "notices_by_shape": {
+    "const declaration is outside the analyzed subset": 283,
+    "enum declaration is outside the analyzed subset; its body was not analyzed": 45,
+    "extend declaration is outside the analyzed subset; its body was not analyzed": 1,
+    "struct declaration is outside the analyzed subset; its body was not analyzed": 168,
+    "suberror declaration is outside the analyzed subset; its body was not analyzed": 1,
+    "test declaration is outside the analyzed subset; its body was not analyzed": 889,
+    "type declaration is outside the analyzed subset": 9
+   },
+   "notices_printed": 463,
+   "package_private": {
+    "names": 4245,
+    "packages": 19
+   },
+   "parsed": 248,
+   "parsed_share": "100.0%",
+   "printed_findings_delta": {
+    "gone": 0,
+    "new": 28,
+    "new_by_family": {
+     "MSA-001": 28
+    },
+    "printed_after": 463,
+    "printed_before": 435,
+    "version_before": "0.0.96"
+   },
+   "total": 1859,
+   "tree_version": "0.0.97",
+   "unchecked": 9458,
+   "unreliable": 0,
+   "withheld": 0
   }
  },
  "tool": "riantr/moonbit_static_analysis"

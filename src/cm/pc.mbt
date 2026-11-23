@@ -210,7 +210,10 @@ pub fn Cpdag::has_undirected_edge(
 /// Every entry is the triple `(x, z, y)` of the collider `x -> z <- y`.
 pub fn Cpdag::v_structures(self : Cpdag) -> Array[(String, String, String)] {
   let out : Array[(String, String, String)] = []
-  for (x, z, y) in self.v_structures {
+  for structure in self.v_structures {
+    let x = structure.0
+    let z = structure.1
+    let y = structure.2
     out.push((self.labels[x], self.labels[z], self.labels[y]))
   }
   out
@@ -227,10 +230,14 @@ pub fn Cpdag::to_graph(self : Cpdag) -> @graph.DirectedGraph {
   for label in self.labels {
     graph.add_node(label)
   }
-  for (from, to) in self.directed_edges() {
+  for edge in self.directed_edges() {
+    let from = edge.0
+    let to = edge.1
     graph.add_edge(from, to)
   }
-  for (from, to) in self.undirected_edges() {
+  for edge in self.undirected_edges() {
+    let from = edge.0
+    let to = edge.1
     graph.add_edge(from, to)
     graph.add_edge(to, from)
   }

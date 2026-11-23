@@ -376,36 +376,36 @@ test "the confounder example notebook of the upstream recovers the effect of the
 /// The notebook builds the graph of a coach, a team, a fitness and an injury.
 fn notebook_efficient_graph() -> @graph.DirectedGraph {
   let graph = @graph.DirectedGraph::new()
-  for
-    node in [
-      "coach", "team motivation", "fitness", "pre-game prop", "intra-game prop",
-      "neuromusc fatigue", "warm-up", "previous injury", "contact sport", "genetics",
-      "injury", "tissue disorder", "tissue weakness",
-    ] {
+  let nodes = [
+    "coach", "team motivation", "fitness", "pre-game prop", "intra-game prop", "neuromusc fatigue",
+    "warm-up", "previous injury", "contact sport", "genetics", "injury", "tissue disorder",
+    "tissue weakness",
+  ]
+  for node in nodes {
     graph.add_node(node)
   }
-  for
-    edge in [
-      ("coach", "team motivation"),
-      ("coach", "fitness"),
-      ("fitness", "pre-game prop"),
-      ("fitness", "neuromusc fatigue"),
-      ("team motivation", "warm-up"),
-      ("team motivation", "previous injury"),
-      ("pre-game prop", "warm-up"),
-      ("warm-up", "intra-game prop"),
-      ("contact sport", "previous injury"),
-      ("contact sport", "intra-game prop"),
-      ("intra-game prop", "injury"),
-      ("genetics", "fitness"),
-      ("genetics", "neuromusc fatigue"),
-      ("genetics", "tissue disorder"),
-      ("tissue disorder", "neuromusc fatigue"),
-      ("tissue disorder", "tissue weakness"),
-      ("neuromusc fatigue", "intra-game prop"),
-      ("neuromusc fatigue", "injury"),
-      ("tissue weakness", "injury"),
-    ] {
+  let edges = [
+    ("coach", "team motivation"),
+    ("coach", "fitness"),
+    ("fitness", "pre-game prop"),
+    ("fitness", "neuromusc fatigue"),
+    ("team motivation", "warm-up"),
+    ("team motivation", "previous injury"),
+    ("pre-game prop", "warm-up"),
+    ("warm-up", "intra-game prop"),
+    ("contact sport", "previous injury"),
+    ("contact sport", "intra-game prop"),
+    ("intra-game prop", "injury"),
+    ("genetics", "fitness"),
+    ("genetics", "neuromusc fatigue"),
+    ("genetics", "tissue disorder"),
+    ("tissue disorder", "neuromusc fatigue"),
+    ("tissue disorder", "tissue weakness"),
+    ("neuromusc fatigue", "intra-game prop"),
+    ("neuromusc fatigue", "injury"),
+    ("tissue weakness", "injury"),
+  ]
+  for edge in edges {
     graph.add_edge(edge.0, edge.1)
   }
   graph
@@ -600,21 +600,21 @@ fn notebook_graph_refuter_graph() -> @graph.DirectedGraph {
   for name in ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"] {
     graph.add_node(name)
   }
-  for
-    edge in [
-      ("a", "b"),
-      ("a", "i"),
-      ("b", "c"),
-      ("b", "f"),
-      ("c", "d"),
-      ("c", "e"),
-      ("d", "e"),
-      ("e", "f"),
-      ("f", "g"),
-      ("g", "h"),
-      ("h", "i"),
-      ("i", "j"),
-    ] {
+  let edges = [
+    ("a", "b"),
+    ("a", "i"),
+    ("b", "c"),
+    ("b", "f"),
+    ("c", "d"),
+    ("c", "e"),
+    ("d", "e"),
+    ("e", "f"),
+    ("f", "g"),
+    ("g", "h"),
+    ("h", "i"),
+    ("i", "j"),
+  ]
+  for edge in edges {
     graph.add_edge(edge.0, edge.1)
   }
   graph

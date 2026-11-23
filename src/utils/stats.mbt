@@ -241,6 +241,26 @@ pub fn normal_ppf(p : Double) -> Double {
     return @double.infinity
   }
   // Acklam's inverse normal CDF, refined with one Halley step.
+  let plow = 0.02425
+  let phigh = 1.0 - plow
+  let x = normal_ppf_acklam(p, plow, phigh)
+  let e = normal_cdf(x) - p
+  let u = e * (2.0 * @math.PI).sqrt() * @math.exp(x * x / 2.0)
+  x - u / (1.0 + x * u / 2.0)
+}
+
+///|
+/// The three regions of Acklam's inverse normal CDF.
+///
+/// Every arm returns its own value, so that no value is bound before it is
+/// written, and the third arm names its value, because the parser of the
+/// analyzer of the registry trips on the closing parentheses of a fraction
+/// that is the value of a block.
+///
+/// The coefficients are in the function that reads them, and not in the
+/// argument list of it, so that the analyzer of the registry knows how long
+/// they are and can tell that every index of them is in bounds.
+fn normal_ppf_acklam(p : Double, plow : Double, phigh : Double) -> Double {
   let a = [
     -3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02,
     -3.066479806614716e+01, 2.506628277459239e+00,
@@ -256,30 +276,6 @@ pub fn normal_ppf(p : Double) -> Double {
   let d = [
     7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00,
   ]
-  let plow = 0.02425
-  let phigh = 1.0 - plow
-  let x = normal_ppf_acklam(p, plow, phigh, a, b, c, d)
-  let e = normal_cdf(x) - p
-  let u = e * (2.0 * @math.PI).sqrt() * @math.exp(x * x / 2.0)
-  x - u / (1.0 + x * u / 2.0)
-}
-
-///|
-/// The three regions of Acklam's inverse normal CDF.
-///
-/// Every arm returns its own value, so that no value is bound before it is
-/// written, and the third arm names its value, because the parser of the
-/// analyzer of the registry trips on the closing parentheses of a fraction
-/// that is the value of a block.
-fn normal_ppf_acklam(
-  p : Double,
-  plow : Double,
-  phigh : Double,
-  a : Array[Double],
-  b : Array[Double],
-  c : Array[Double],
-  d : Array[Double],
-) -> Double {
   if p < plow {
     let q = (-2.0 * @math.ln(p)).sqrt()
     let value = (

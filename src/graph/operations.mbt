@@ -295,7 +295,9 @@ pub fn convert_to_undirected_graph(graph : DirectedGraph) -> DirectedGraph {
   for node in graph.node_list() {
     result.add_node(node)
   }
-  for (from, to) in graph.edge_list() {
+  for edge in graph.edge_list() {
+    let from = edge.0
+    let to = edge.1
     result.add_edge(from, to)
     if from != to {
       result.add_edge(to, from)

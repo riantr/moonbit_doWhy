@@ -5,6 +5,72 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.97] - 2026-11-23
+
+### Changed
+
+- The thirty loops of the tree whose variable was a tuple pattern, as
+  `for (from, to) in edges`, and the four headers of a loop that the formatter
+  had split over two lines, are rewritten, so that the static analyzer of the
+  registry reads the whole tree. The loop takes the tuple as a whole and the
+  names are taken out of it by their index, and the collection of a split
+  header is bound to a name first, so that the formatter does not split it
+  again.
+  MEASURED: the analyzer of the registry did not finish the **18** files that
+  held those loops and those headers, and the **14** findings of the files
+  after that line were withheld, so the report of the scan was a report of the
+  files it reads and not of the whole tree. The release of 0.0.97 reads the
+  **248** files of the tree and understands every one of them, it reports no
+  actionable finding, and its report holds no unreliable region and withholds
+  no finding.
+  MEASURED by comparing the report of the scan of the tree before the change
+  with the report of the scan of the tree after it: no finding of the first
+  report is gone from the second one, and the **28** findings that the second
+  report holds and the first one does not are all of them the scope limits of
+  the frontend -- an `if` expression, an anonymous function literal and an
+  inclusive range end that the analyzer reads but does not analyse. **No
+  defect was hidden in the eighteen files.**
+  The script `_verify/check_analyser_readable.py` requires the tree to hold no
+  loop of that shape and no header of that shape, it measures the counts of
+  the tree of the repository and of the tree of the release before, and it has
+  a `--falsify` mode that requires a wrong count and checks that the check
+  goes red.
+- The coefficients of Acklam's inverse normal CDF are in the helper of the
+  quantile function and not in the argument list of it, so that the analyzer
+  of the registry knows how long they are.
+  MEASURED: the dynamic analyzer of the registry cannot know the length of an
+  array that is an argument of a function, so it reported a finding of the
+  family `INDEX-OOB` for every index of the coefficients of the helper, while
+  the scan of the release of 0.0.95 did not report them, because the
+  coefficients were the locals of `normal_ppf` then and the analyzer knew
+  their length. The findings were not defects of the port -- the script
+  `_verify/check_quantile_coefficients.py` reads the length of the four
+  coefficient arrays out of the source and every index that is read of them,
+  and requires that none of them is out of bounds -- but they were a blind
+  spot of the tool, and the blind spot is closed.
+  The numbers of the function are **identical** before and after the change:
+  MEASURED with the probe of **41** arguments of `_verify/check_normal_ppf.py`,
+  which requires the port to produce the very same numbers.
+
+### Added
+
+- The tree is audited by the dynamic analyzer of the registry, the package
+  `riantr/LunaFlow`, and the audit of the release of 0.0.97 reports the very
+  same findings as the audit of the release of 0.0.95.
+  MEASURED: the scan of the whole tree at the second level holds the **968**
+  findings of its sidecar, the same ones, the same family by family, and
+  **0** of them is new and **0** of them is gone. The scan of the packages one
+  by one enters every function it can enter and skips none of them, and it
+  holds the **660** findings of its tables and the **582** of its sidecar.
+  The measurements of the audit are committed with the repository, in the file
+  `_verify/lunaflow_qa.json`, and the measurement of the release of 0.0.95 is
+  kept beside the measurement of the release of 0.0.97, so that the two audits
+  can be compared.
+  The script `_verify/check_quantile_coefficients.py` and the script
+  `_verify/check_analyser_readable.py` hold the two checks of this release,
+  and both have a `--falsify` mode that requires a wrong number and checks
+  that the check goes red.
+
 ## [0.0.96] - 2026-11-23
 
 ### Fixed

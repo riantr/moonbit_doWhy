@@ -56,7 +56,9 @@ fn fixture_causal_graph() -> @graph.CausalGraph {
 /// The edges of a graph, sorted.
 fn fixture_edges(graph : @graph.DirectedGraph) -> Array[String] {
   let out : Array[String] = []
-  for (from, to) in graph.edge_list() {
+  for edge in graph.edge_list() {
+    let from = edge.0
+    let to = edge.1
     out.push(from + "->" + to)
   }
   out.sort_by(fn(a, b) { compare_names(a, b) })

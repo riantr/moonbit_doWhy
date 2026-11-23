@@ -1305,7 +1305,9 @@ fn relabel_nodes(
   for index in order {
     out.add_node(names[index])
   }
-  for (from, to) in causal_graph.edge_list() {
+  for edge in causal_graph.edge_list() {
+    let from = edge.0
+    let to = edge.1
     out.add_edge(
       new_names[positions.get(from).unwrap_or(0)],
       new_names[positions.get(to).unwrap_or(0)],

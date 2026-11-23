@@ -576,7 +576,9 @@ fn upstream_refutation_gml_graph() -> String {
       labels[i] +
       "\"\n  ]"
   }
-  for (source, target) in edges {
+  for edge in edges {
+    let source = edge.0
+    let target = edge.1
     out = out +
       "\n  edge [\n    source " +
       source.to_string() +
@@ -644,7 +646,10 @@ test "the refutation of a graph tests the conditional independences of the data"
     ("x|d|z", 0.93963, true),
     ("x|d|y", 0.80822, true),
   ]
-  for (key, value, holds) in expected {
+  for expected_item in expected {
+    let key = expected_item.0
+    let value = expected_item.1
+    let holds = expected_item.2
     let (actual_value, actual_holds) = implication_result(results, key)
     assert_true((actual_value - value).abs() < 0.000000001)
     assert_eq(actual_holds, holds)
